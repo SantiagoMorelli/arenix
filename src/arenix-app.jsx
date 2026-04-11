@@ -39,6 +39,8 @@ import TournamentTeamsSection from "./components/TournamentTeamsSection";
 import InformalWizard from "./components/InformalWizard";
 import GameSetupScreen from "./components/GameSetupScreen";
 import GameStats from "./components/GameStats";
+import ScoreBoard from "./components/ScoreBoard";
+import PointLog from "./components/PointLog";
 
 const LangCtx = React.createContext({ lang: "es", t: (k) => k });
 
@@ -673,65 +675,18 @@ function LiveScoreSection(props) {
         />
       ) : (
         <>
-          {/* Scoreboard — left/right position driven by side state so teams physically swap */}
-          {(() => {
-            const cols = {
-              1: { teamId: team1Id, teamNum: 1, score: score1, sets: t1Sets },
-              2: { teamId: team2Id, teamNum: 2, score: score2, sets: t2Sets },
-            };
-            // Whichever team has side "left" renders on the left of the screen
-            const leftCol  = side.t1 === "left" ? cols[1] : cols[2];
-            const rightCol = side.t1 === "left" ? cols[2] : cols[1];
-
-            const TeamPanel = ({ col }) => {
-              const isServing = srv.team === col.teamNum;
-              const rot = serveRotation();
-              const slotsForTeam = rot.filter(r => r.team === col.teamNum);
-              return (
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ color: G.sand, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
-                    {tName(col.teamId)}
-                  </div>
-                  <div style={{
-                    fontFamily: "'Bebas Neue'", fontSize: 72,
-                    color: isServing ? G.sun : G.white, lineHeight: 1, margin: "4px 0",
-                  }}>{col.score}</div>
-                  <div style={{ minHeight: 36 }}>
-                    {isServing ? (
-                      <div style={{ background: G.sun + "33", borderRadius: 8, padding: "4px 8px", display: "inline-block" }}>
-                        <div style={{ color: G.sun, fontSize: 11, fontWeight: 700 }}>{t("serving")}</div>
-                        <div style={{ color: G.sand, fontSize: 12, fontWeight: 700 }}>{playerName(srv.playerId)}</div>
-                      </div>
-                    ) : (
-                      <div style={{ color: G.sand + "66", fontSize: 11 }}>
-                        {t("ifScores")}<br />
-                        <b style={{ color: G.sand + "99", fontSize: 12 }}>
-                          {playerName(nextSrv.team === col.teamNum ? nextSrv.playerId : slotsForTeam[0].playerId)}
-                        </b>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ color: G.sand + "55", fontSize: 11, marginTop: 4 }}>Sets: {col.sets}</div>
-                </div>
-              );
-            };
-
-            return (
-              <div style={{
-                background: G.dark, borderRadius: 20, padding: "16px 14px", marginBottom: 12,
-                display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 10,
-              }}>
-                <TeamPanel col={leftCol} />
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ color: G.sand + "44", fontFamily: "'Bebas Neue'", fontSize: 24 }}>VS</div>
-                  <div style={{ color: G.warn, fontSize: 10, marginTop: 6, fontWeight: 600 }}>
-                    {points > 0 && points % 7 !== 0 ? `{t("changeIn")} ${7 - (points % 7)} pts` : ""}
-                  </div>
-                </div>
-                <TeamPanel col={rightCol} />
-              </div>
-            );
-          })()}
+          {/* Scoreboard */}
+          <ScoreBoard
+            teams={teams} players={players}
+            team1Id={team1Id} team2Id={team2Id}
+            score1={score1} score2={score2}
+            t1Sets={t1Sets} t2Sets={t2Sets}
+            side={side}
+            srv={srv} nextSrv={nextSrv}
+            serveRotation={serveRotation()}
+            points={points}
+            t={t}
+          />
 
           {/* Point buttons — color follows the TEAM (team1=ocean, team2=sun), position follows side */}
           {(() => {
@@ -772,38 +727,12 @@ function LiveScoreSection(props) {
           </div>
 
           {/* Log */}
-          <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ padding: "10px 16px", background: G.ocean, color: G.white }}>
-              <span style={{ fontFamily: "'Bebas Neue'", fontSize: 18, letterSpacing: 1 }}>{t("history")}</span>
-            </div>
-            <div ref={logRef} style={{ maxHeight: 160, overflowY: "auto", padding: "10px 16px" }}>
-              {log.length === 0 && <div style={{ color: G.textLight, fontSize: 13, textAlign: "center" }}>{t("noPoints")}</div>}
-              {[...log].reverse().map((entry) => {
-                if (!entry.team) return (
-                  <div key={entry.id} style={{ padding: "5px 0", fontSize: 12, fontWeight: 700, color: G.ocean, textAlign: "center", borderBottom: "1px solid " + G.sandDark }}>{entry.msg}</div>
-                );
-                const tc = entry.team === 1 ? G.ocean : G.sun;
-                return (
-                  <div key={entry.id} style={{ padding: "5px 0", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid " + G.sandDark }}>
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{entry.pointTypeIcon || "🏐"}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: tc }}>
-                        {entry.pointTypeLabel || "Punto"} · {tName(entry.team === 1 ? team1Id : team2Id)}
-                      </div>
-                      <div style={{ fontSize: 11, color: G.textLight }}>
-                        Sacó: {playerName(entry.serverPlayerId)}
-                        {entry.streak > 1 && <span style={{ color: G.warn, marginLeft: 6 }}>🔥 {entry.streak} seguidos</span>}
-                        {entry.sideChange && <span style={{ color: G.sun, marginLeft: 6 }}>{t("sideLeft") === t("sideLeft") ? "🔄" : "🔄"}</span>}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 18, color: G.text, background: G.sand, borderRadius: 8, padding: "2px 8px", flexShrink: 0 }}>
-                      {entry.t1}–{entry.t2}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
+          <PointLog
+            log={log} logRef={logRef}
+            team1Id={team1Id} team2Id={team2Id}
+            teams={teams} players={players}
+            t={t}
+          />
         </>
       )}
     </div>

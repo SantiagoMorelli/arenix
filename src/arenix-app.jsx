@@ -41,6 +41,7 @@ import GameSetupScreen from "./components/GameSetupScreen";
 import GameStats from "./components/GameStats";
 import ScoreBoard from "./components/ScoreBoard";
 import PointLog from "./components/PointLog";
+import PointButtons from "./components/PointButtons";
 
 const LangCtx = React.createContext({ lang: "es", t: (k) => k });
 
@@ -688,38 +689,13 @@ function LiveScoreSection(props) {
             t={t}
           />
 
-          {/* Point buttons — color follows the TEAM (team1=ocean, team2=sun), position follows side */}
-          {(() => {
-            const leftNum  = side.t1 === "left" ? 1 : 2;
-            const rightNum = side.t1 === "left" ? 2 : 1;
-            const teamColor = (num) => num === 1
-              ? { bg: `linear-gradient(135deg, ${G.ocean}, ${G.oceanDark})`, shadow: "0 6px 20px rgba(26,107,138,0.35)" }
-              : { bg: `linear-gradient(135deg, ${G.sun}, ${G.sunDark})`,   shadow: "0 6px 20px rgba(245,166,35,0.35)" };
-            const leftStyle  = teamColor(leftNum);
-            const rightStyle = teamColor(rightNum);
-            return (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                <button onClick={() => addPoint(leftNum)} style={{
-                  background: leftStyle.bg,
-                  color: G.white, border: "none", borderRadius: 16, padding: "18px 10px",
-                  fontSize: 15, fontWeight: 700, cursor: "pointer", lineHeight: 1.4,
-                  boxShadow: leftStyle.shadow, fontFamily: "'DM Sans', sans-serif",
-                  transition: "background 0.3s",
-                }}>
-                  +1 {tName(leftNum === 1 ? team1Id : team2Id)}
-                </button>
-                <button onClick={() => addPoint(rightNum)} style={{
-                  background: rightStyle.bg,
-                  color: G.white, border: "none", borderRadius: 16, padding: "18px 10px",
-                  fontSize: 15, fontWeight: 700, cursor: "pointer", lineHeight: 1.4,
-                  boxShadow: rightStyle.shadow, fontFamily: "'DM Sans', sans-serif",
-                  transition: "background 0.3s",
-                }}>
-                  +1 {tName(rightNum === 1 ? team1Id : team2Id)}
-                </button>
-              </div>
-            );
-          })()}
+          {/* Point buttons */}
+          <PointButtons
+            side={side}
+            onPoint={addPoint}
+            team1Id={team1Id} team2Id={team2Id}
+            teams={teams}
+          />
 
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             <Btn onClick={requestUndo} variant="secondary" style={{ flex: 1 }} disabled={history.length === 0}>{t("undo")}</Btn>

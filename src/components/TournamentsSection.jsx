@@ -32,15 +32,15 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 36, color: G.ocean, letterSpacing: 2 }}>
-          🏆 TORNEOS
+          🏆 TOURNAMENTS
         </h1>
-        <Btn onClick={() => setShowCreate(true)} variant="sun">+ Crear</Btn>
+        <Btn onClick={() => setShowCreate(true)} variant="sun">+ Create</Btn>
       </div>
 
       <div style={{ display: "grid", gap: 12 }}>
         {tournaments.length === 0 && (
           <Card style={{ textAlign: "center", color: G.textLight, padding: 40 }}>
-            No hay torneos aún. ¡Crea el primero!
+            No tournaments yet. Create the first one!
           </Card>
         )}
         {[...tournaments].reverse().map(tour => (
@@ -49,7 +49,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
               <div>
                 <div style={{ fontWeight: 700, fontSize: 17 }}>{tour.name}</div>
                 <div style={{ fontSize: 13, color: G.textLight, marginTop: 3 }}>
-                  {tour.date} · {tour.teamSize} jug/equipo · {tour.teams.length} equipos · {tour.setsPerMatch === 1 ? "1 set" : tour.setsPerMatch + " sets"}
+                  {tour.date} · {tour.teamSize} players/team · {tour.teams.length} teams · {tour.setsPerMatch === 1 ? "1 set" : tour.setsPerMatch + " sets"}
                 </div>
                 {tour.winner && (
                   <div style={{ marginTop: 8 }}>
@@ -58,7 +58,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
                 )}
               </div>
               <Badge color={tour.status === "completed" ? G.success : G.warn}>
-                {tour.status === "completed" ? "Finalizado" : "En curso"}
+                {tour.status === "completed" ? "Completed" : "In progress"}
               </Badge>
             </div>
           </Card>
@@ -66,14 +66,14 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
       </div>
 
       {showCreate && (
-        <Modal title="NUEVO TORNEO" onClose={() => setShowCreate(false)}>
+        <Modal title="NEW TOURNAMENT" onClose={() => setShowCreate(false)}>
           <div style={{ display: "grid", gap: 16 }}>
-            <Input value={name} onChange={setName} placeholder="Nombre del torneo" />
-            <Input value={date} onChange={setDate} placeholder="Fecha (dd/mm/aaaa)" />
+            <Input value={name} onChange={setName} placeholder="Tournament name" />
+            <Input value={date} onChange={setDate} placeholder="Date (dd/mm/yyyy)" />
 
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Jugadores por equipo
+                Players per team
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 {[2, 3].map(n => (
@@ -85,7 +85,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
                     fontSize: 15, cursor: "pointer", color: G.text,
                     fontFamily: "'DM Sans', sans-serif",
                   }}>
-                    {n} jugadores
+                    {n} players
                   </button>
                 ))}
               </div>
@@ -93,7 +93,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
 
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Sets por partido
+                Sets per match
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 {[1, 3, 5].map(n => (
@@ -112,7 +112,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
             </div>
 
             <Btn onClick={createTournament} variant="sun" size="lg" disabled={!name.trim()}>
-              Crear torneo
+              Create tournament
             </Btn>
           </div>
         </Modal>

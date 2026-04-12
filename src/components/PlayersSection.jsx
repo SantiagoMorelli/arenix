@@ -18,9 +18,9 @@ const PlayersSection = ({ players, setPlayers, contextual = false }) => {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 36, color: G.ocean, letterSpacing: 2 }}>
-          🏐 JUGADORES
+          🏐 PLAYERS
         </h1>
-        <Btn onClick={() => setShowModal(true)} variant="sun">+ Agregar</Btn>
+        <Btn onClick={() => setShowModal(true)} variant="sun">+ Add</Btn>
       </div>
       <div style={{ display: "grid", gap: 12 }}>
         {sorted.map((p, i) => {
@@ -35,7 +35,7 @@ const PlayersSection = ({ players, setPlayers, contextual = false }) => {
               }}>{i + 1}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{p.name}</div>
-                <div style={{ fontSize: 13, color: G.textLight, marginTop: 2 }}>{p.wins}V – {p.losses}D</div>
+                <div style={{ fontSize: 13, color: G.textLight, marginTop: 2 }}>{p.wins}W – {p.losses}L</div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.ocean, lineHeight: 1 }}>{p.points}</div>
@@ -51,12 +51,12 @@ const PlayersSection = ({ players, setPlayers, contextual = false }) => {
         })}
       </div>
       {showModal && (
-        <Modal title="NUEVO JUGADOR" onClose={() => { setShowModal(false); setName(""); setLevel("beginner"); }}>
+        <Modal title="NEW PLAYER" onClose={() => { setShowModal(false); setName(""); setLevel("beginner"); }}>
           <div style={{ display: "grid", gap: 14 }}>
-            <Input value={name} onChange={setName} placeholder="Nombre completo" />
+            <Input value={name} onChange={setName} placeholder="Full name" />
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Nivel
+                Level
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 {LEVELS.map(lv => (
@@ -76,7 +76,7 @@ const PlayersSection = ({ players, setPlayers, contextual = false }) => {
               </div>
             </div>
             <Btn onClick={addPlayer} variant="sun" size="lg" disabled={!name.trim()}>
-              Agregar jugador
+              Add player
             </Btn>
           </div>
         </Modal>

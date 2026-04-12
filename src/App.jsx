@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { G, globalStyle } from "./components/ui";
-import { LangCtx, LANGS, TR, getLang } from "./lib/i18n";
+import { LangCtx, TR } from "./lib/i18n";
 import PlayersSection from "./components/PlayersSection";
 import TournamentsSection from "./components/TournamentsSection";
 import TournamentMatchesSection from "./components/TournamentMatchesSection";
@@ -20,17 +20,17 @@ const initialTournaments = [];
 
 // Global nav (no active tournament)
 const GLOBAL_NAV = [
-  { id: "live",        icon: "🏐", label: "EN VIVO" },
-  { id: "tournaments", icon: "🏆", label: "TORNEOS" },
-  { id: "players",     icon: "👤", label: "JUGADORES" },
+  { id: "live",        icon: "🏐", label: "LIVE" },
+  { id: "tournaments", icon: "🏆", label: "TOURNAMENTS" },
+  { id: "players",     icon: "👤", label: "PLAYERS" },
 ];
 
 // Contextual nav (inside a tournament)
 const TOUR_NAV = [
-  { id: "tour_live",    icon: "🏐", label: "EN VIVO" },
-  { id: "tour_matches", icon: "🏆", label: "FIXTURE" },
-  { id: "tour_teams",   icon: "🤝", label: "EQUIPOS" },
-  { id: "tour_players", icon: "👤", label: "JUGADORES" },
+  { id: "tour_live",    icon: "🏐", label: "LIVE" },
+  { id: "tour_matches", icon: "🏆", label: "SCHEDULE" },
+  { id: "tour_teams",   icon: "🤝", label: "TEAMS" },
+  { id: "tour_players", icon: "👤", label: "PLAYERS" },
 ];
 
 export default function App() {
@@ -42,16 +42,7 @@ export default function App() {
   const [tourTab, setTourTab] = useState("tour_matches");
   const [activeMatchId, setActiveMatchId] = useState(null);
 
-  const [lang, setLang] = useState(getLang);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const r = (k) => (TR[lang] && TR[lang][k]) ? TR[lang][k] : (TR.es[k] || k);
-
-  const changeLang = (code) => {
-    setLang(code);
-    try { localStorage.setItem("bv_lang", code); } catch {}
-    setMenuOpen(false);
-  };
-  const cur = LANGS.find((l) => l.code === lang) || LANGS[0];
+  const r = (k) => TR[k] || k;
 
   const activeTournament = tournaments.find(tour => tour.id === activeTournamentId) || null;
 
@@ -80,7 +71,7 @@ export default function App() {
   const setCurrentTab = inTournament ? setTourTab : setTab;
 
   return (
-    <LangCtx.Provider value={{ lang, t: r }}>
+    <LangCtx.Provider value={{ t: r }}>
       <style>{globalStyle}</style>
 
       {/* Header */}
@@ -99,7 +90,7 @@ export default function App() {
         <div style={{ flex: 1 }}>
           {inTournament ? (
             <>
-              <div style={{ fontSize: 10, color: G.sky, letterSpacing: 1, textTransform: "uppercase" }}>TORNEO</div>
+              <div style={{ fontSize: 10, color: G.sky, letterSpacing: 1, textTransform: "uppercase" }}>TOURNAMENT</div>
               <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: G.white, letterSpacing: 1, lineHeight: 1 }}>
                 {activeTournament.name}
               </div>
@@ -116,43 +107,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Language picker */}
-        <div style={{ position: "relative" }}>
-          <button onClick={() => setMenuOpen((v) => !v)} style={{
-            background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.3)",
-            borderRadius: 10, padding: "6px 12px", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: 5,
-            color: G.white, fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 13,
-          }}>
-            <span>{cur.label}</span>
-            <span style={{ fontSize: 10, opacity: 0.7 }}>&#9662;</span>
-          </button>
-          {menuOpen && (
-            <React.Fragment>
-              <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 49 }} />
-              <div style={{
-                position: "absolute", top: "calc(100% + 6px)", right: 0,
-                background: G.white, borderRadius: 12, overflow: "hidden",
-                boxShadow: "0 8px 30px rgba(0,0,0,0.18)", zIndex: 50, minWidth: 110,
-              }}>
-                {LANGS.map((l) => (
-                  <button key={l.code} onClick={() => changeLang(l.code)} style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    width: "100%", padding: "10px 14px", border: "none",
-                    borderLeft: lang === l.code ? ("3px solid " + G.ocean) : "3px solid transparent",
-                    cursor: "pointer", background: lang === l.code ? (G.ocean + "22") : G.white,
-                    fontFamily: "'DM Sans', sans-serif", fontSize: 14,
-                    fontWeight: lang === l.code ? 700 : 400,
-                    color: lang === l.code ? G.ocean : G.text,
-                  }}>
-                    <span>{l.label}</span>
-                    {lang === l.code && <span style={{ marginLeft: "auto", color: G.ocean }}>&#10003;</span>}
-                  </button>
-                ))}
-              </div>
-            </React.Fragment>
-          )}
-        </div>
       </div>
 
       {/* Content */}

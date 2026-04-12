@@ -90,9 +90,9 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     const real = teams.find(tm => tm.id === id);
     if (real) return real;
     if (informalMode) {
-      if (id === "informal_1") return { id: "informal_1", name: informalTeam1.name || "Equipo 1",
+      if (id === "informal_1") return { id: "informal_1", name: informalTeam1.name || "Team 1",
         players: (informalTeam1.players || []).map(s => s.type === "global" ? s.playerId : "free_" + (s.name || "")) };
-      if (id === "informal_2") return { id: "informal_2", name: informalTeam2.name || "Equipo 2",
+      if (id === "informal_2") return { id: "informal_2", name: informalTeam2.name || "Team 2",
         players: (informalTeam2.players || []).map(s => s.type === "global" ? s.playerId : "free_" + (s.name || "")) };
     }
     return null;
@@ -239,7 +239,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     const rot = serveRotation();
     const firstLoserSlot = rot.findIndex(r => r.team === loserTeam);
     setServeIndex(firstLoserSlot);
-    setLog(prev => [...prev, { id: uid(), msg: `🏐 SET ${newSets.length} TERMINADO — Nuevo set`, sideChange: false }]);
+    setLog(prev => [...prev, { id: uid(), msg: `🏐 SET ${newSets.length} ENDED — New set`, sideChange: false }]);
     if (newSets.length === 2) setPointsToWin(15);
   };
 

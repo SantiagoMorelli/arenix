@@ -30,6 +30,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
   const [t1FirstServer, setT1FirstServer] = useState(0);
   const [t2FirstServer, setT2FirstServer] = useState(0);
   const [t1InitialSide, setT1InitialSide] = useState("left");
+  const [firstServingTeam, setFirstServingTeam] = useState(1);
 
   // ── In-game state ────────────────────────────────────────────────────────
   const [score1, setScore1] = useState(0);
@@ -310,6 +311,18 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     setShowRestore(false);
   };
 
+  // ── Start game (sets correct initial serve index) ─────────────────────────
+  const startGame = () => {
+    if (firstServingTeam === 2) {
+      const rot = serveRotation();
+      const firstT2Slot = rot.findIndex(r => r.team === 2);
+      setServeIndex(firstT2Slot >= 0 ? firstT2Slot : 0);
+    } else {
+      setServeIndex(0);
+    }
+    setGameStarted(true);
+  };
+
   return {
     // Restore
     showRestore, restoreGame, discardSaved,
@@ -328,7 +341,9 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     t1ServeOrder, setT1ServeOrder,
     t2ServeOrder, setT2ServeOrder,
     t1InitialSide, setT1InitialSide,
+    firstServingTeam, setFirstServingTeam,
     setSide, setPointsToWin,
+    startGame,
     // In-game state
     score1, score2, serveIndex, side, points,
     log, logRef, sets, winner, pointsToWin, history,

@@ -26,7 +26,7 @@ export const TR = {
   undoTitle: "UNDO POINT",
   undoMsg: "Confirm? Match returns to:",
   endTitle: "END MATCH",
-  endMsg: "Are you sure you want to end the match? All progress will be lost.",
+  endMsg: "The match will end and the result will be saved.",
   wasServing: "🏐 Was serving",
   cancel: "Cancel", confirm: "Confirm",
   pointFor: "Point for",

@@ -63,7 +63,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
     const groups = autoMode === "random" ? generateRandom(pool) : generateBalanced(pool);
     setProposedTeams(groups.map((pIds, i) => ({
       id: uid(),
-      name: "Equipo " + (tournament.teams.length + i + 1),
+      name: "Team " + (tournament.teams.length + i + 1),
       players: pIds,
       wins: 0, losses: 0, points: 0,
     })));
@@ -101,17 +101,17 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: G.ocean, letterSpacing: 2 }}>
-          🤝 EQUIPOS
+          🤝 TEAMS
         </h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <Btn onClick={() => setShowInvite(true)} variant="secondary" size="sm">+ Jugadores</Btn>
+          <Btn onClick={() => setShowInvite(true)} variant="secondary" size="sm">+ Players</Btn>
           <Btn onClick={() => { setShowAutoModal(true); setProposedTeams(null); }} variant="secondary" size="sm"
             disabled={availablePlayers.length < teamSize}>
             ⚡ Auto
           </Btn>
           <Btn onClick={() => setShowModal(true)} variant="sun" size="sm"
             disabled={invitedPlayers.length < teamSize}>
-            + Equipo
+            + Team
           </Btn>
         </div>
       </div>
@@ -120,7 +120,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
       {invitedPlayers.length > 0 && (
         <Card style={{ marginBottom: 14, padding: "14px 16px" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
-            Jugadores invitados ({invitedPlayers.length})
+            Invited players ({invitedPlayers.length})
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {invitedPlayers.map(p => {
@@ -153,8 +153,8 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
         {tournament.teams.length === 0 && (
           <Card style={{ textAlign: "center", color: G.textLight, padding: 32 }}>
             {invitedPlayers.length < teamSize
-              ? `Primero invitá al menos ${teamSize} jugadores`
-              : "No hay equipos aún. ¡Crea el primero!"}
+              ? `First invite at least ${teamSize} players`
+              : "No teams yet. Create the first one!"}
           </Card>
         )}
         {tournament.teams.map((tm, i) => (
@@ -170,7 +170,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
               <div style={{ fontSize: 13, color: G.textLight, marginTop: 2 }}>
                 {tm.players.map(pid => players.find(p => p.id === pid)?.name || "?").join(" · ")}
               </div>
-              <div style={{ fontSize: 12, color: G.textLight }}>{tm.wins}V – {tm.losses}D</div>
+              <div style={{ fontSize: 12, color: G.textLight }}>{tm.wins}W – {tm.losses}L</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.ocean, lineHeight: 1 }}>{tm.points}</div>
@@ -182,19 +182,19 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
 
       {/* Auto team generation modal */}
       {showAutoModal && (
-        <Modal title="ARMAR EQUIPOS AUTO" onClose={() => { setShowAutoModal(false); setProposedTeams(null); }}>
+        <Modal title="AUTO TEAMS" onClose={() => { setShowAutoModal(false); setProposedTeams(null); }}>
           <div style={{ display: "grid", gap: 16 }}>
 
             {!proposedTeams ? (
               <>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    Método
+                    Method
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
                     {[
-                      { id: "random",   icon: "🎲", label: "Al azar",   desc: "Distribución aleatoria" },
-                      { id: "balanced", icon: "⚖️", label: "Por nivel", desc: "Equipos equilibrados" },
+                      { id: "random",   icon: "🎲", label: "Random",   desc: "Random distribution" },
+                      { id: "balanced", icon: "⚖️", label: "By level", desc: "Balanced teams" },
                     ].map(m => (
                       <button key={m.id} onClick={() => setAutoMode(m.id)} style={{
                         flex: 1, padding: "14px 10px", borderRadius: 12, border: "2px solid",
@@ -213,7 +213,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
 
                 <div style={{ background: G.sand, borderRadius: 12, padding: "12px 14px" }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8 }}>
-                    Jugadores disponibles ({availablePlayers.length})
+                    Available players ({availablePlayers.length})
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {availablePlayers.map(p => (
@@ -226,20 +226,20 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
                     ))}
                   </div>
                   <div style={{ fontSize: 11, color: G.textLight, marginTop: 8 }}>
-                    Se formarán {Math.floor(availablePlayers.length / teamSize)} equipos de {teamSize}
-                    {availablePlayers.length % teamSize > 0 && ` (sobran ${availablePlayers.length % teamSize} jugadores)`}
+                    {Math.floor(availablePlayers.length / teamSize)} teams of {teamSize} will be formed
+                    {availablePlayers.length % teamSize > 0 && ` (${availablePlayers.length % teamSize} players left over)`}
                   </div>
                 </div>
 
                 <Btn onClick={proposeTeams} variant="sun" size="lg"
                   disabled={availablePlayers.length < teamSize}>
-                  {autoMode === "random" ? "🎲 Generar al azar" : "⚖️ Generar por nivel"}
+                  {autoMode === "random" ? "🎲 Random" : "⚖️ By level"}
                 </Btn>
               </>
             ) : (
               <>
                 <div style={{ fontSize: 14, color: G.textLight, textAlign: "center" }}>
-                  Propuesta de equipos — confirmá o regenerá
+                  Team proposal — confirm or regenerate
                 </div>
                 <div style={{ display: "grid", gap: 10 }}>
                   {proposedTeams.map((tm, i) => (
@@ -264,8 +264,8 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
                   ))}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <Btn onClick={proposeTeams} variant="secondary">🔄 Regenerar</Btn>
-                  <Btn onClick={confirmProposed} variant="sun">✓ Confirmar</Btn>
+                  <Btn onClick={proposeTeams} variant="secondary">🔄 Regenerate</Btn>
+                  <Btn onClick={confirmProposed} variant="sun">✓ Confirm</Btn>
                 </div>
               </>
             )}
@@ -275,11 +275,11 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
 
       {/* Invite modal */}
       {showInvite && (
-        <Modal title="INVITAR JUGADORES" onClose={() => setShowInvite(false)}>
+        <Modal title="INVITE PLAYERS" onClose={() => setShowInvite(false)}>
           <div style={{ display: "grid", gap: 10 }}>
             {uninvited.length === 0 && (
               <div style={{ textAlign: "center", color: G.textLight, padding: 20 }}>
-                Todos los jugadores ya están invitados
+                All players are already invited
               </div>
             )}
             {uninvited.map(p => (
@@ -297,12 +297,12 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
 
       {/* Create team modal */}
       {showModal && (
-        <Modal title="NUEVO EQUIPO" onClose={() => { setShowModal(false); setTeamName(""); setSelectedPlayers([]); }}>
+        <Modal title="NEW TEAM" onClose={() => { setShowModal(false); setTeamName(""); setSelectedPlayers([]); }}>
           <div style={{ display: "grid", gap: 14 }}>
-            <Input value={teamName} onChange={setTeamName} placeholder="Nombre del equipo" />
+            <Input value={teamName} onChange={setTeamName} placeholder="Team name" />
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8 }}>
-                Seleccioná {teamSize} jugadores ({selectedPlayers.length}/{teamSize})
+                Select {teamSize} players ({selectedPlayers.length}/{teamSize})
               </div>
               <div style={{ display: "grid", gap: 8 }}>
                 {invitedPlayers.map(p => {
@@ -319,7 +319,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
                       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 14 }}>{levelOf(p.level).icon}</span>{p.name}
                       </span>
-                      {inOtherTeam && <span style={{ fontSize: 11, color: G.textLight }}>ya en equipo</span>}
+                      {inOtherTeam && <span style={{ fontSize: 11, color: G.textLight }}>already in team</span>}
                     </div>
                   );
                 })}
@@ -327,7 +327,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
             </div>
             <Btn onClick={addTeam} variant="sun" size="lg"
               disabled={!teamName.trim() || selectedPlayers.length !== teamSize}>
-              Crear equipo
+              Create team
             </Btn>
           </div>
         </Modal>

@@ -69,10 +69,10 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
 
       {/* Info bar */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        <Badge color={G.ocean}>{tournament.teamSize} jug/equipo</Badge>
+        <Badge color={G.ocean}>{tournament.teamSize} players/team</Badge>
         <Badge color={G.ocean}>{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</Badge>
         <Badge color={tournament.status === "completed" ? G.success : G.warn}>
-          {tournament.status === "completed" ? "Finalizado" : "En curso"}
+          {tournament.status === "completed" ? "Completed" : "In progress"}
         </Badge>
       </div>
 
@@ -81,7 +81,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
         <Card style={{ background: "linear-gradient(135deg," + G.sun + "," + G.sunDark + ")", marginBottom: 16 }}>
           <div style={{ textAlign: "center", color: G.white }}>
             <div style={{ fontSize: 32 }}>🏆</div>
-            <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, letterSpacing: 1 }}>CAMPEÓN</div>
+            <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, letterSpacing: 1 }}>CHAMPION</div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{tName(tournament.winner)}</div>
           </div>
         </Card>
@@ -90,12 +90,12 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
       {/* Generate matches button */}
       {tournament.teams.length >= 2 && tournament.matches.length === 0 && (
         <Btn onClick={generateMatches} variant="sun" size="lg" style={{ width: "100%", marginBottom: 16 }}>
-          🎯 Generar fixture
+          🎯 Generate schedule
         </Btn>
       )}
       {tournament.teams.length < 2 && (
         <Card style={{ textAlign: "center", color: G.textLight, marginBottom: 16 }}>
-          Necesitás al menos 2 equipos para generar el fixture
+          You need at least 2 teams to generate the schedule
         </Card>
       )}
 
@@ -103,7 +103,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
       {standings.length > 0 && (
         <Card style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: "'Bebas Neue'", fontSize: 20, color: G.ocean, letterSpacing: 1, marginBottom: 12 }}>
-            TABLA DE POSICIONES
+            STANDINGS
           </div>
           {standings.map((s, i) => (
             <div key={s.id} style={{
@@ -114,7 +114,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
                 <span style={{ width: 24, fontWeight: 700, color: i === 0 ? G.sun : G.textLight }}>{i + 1}</span>
                 <span style={{ fontWeight: 600 }}>{tName(s.id)}</span>
               </div>
-              <Badge color={G.ocean}>{s.wins} V</Badge>
+              <Badge color={G.ocean}>{s.wins} W</Badge>
             </div>
           ))}
         </Card>
@@ -124,7 +124,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
       {unplayed.length > 0 && (
         <Card style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: "'Bebas Neue'", fontSize: 20, color: G.ocean, letterSpacing: 1, marginBottom: 12 }}>
-            PARTIDOS PENDIENTES
+            PENDING MATCHES
           </div>
           <div style={{ display: "grid", gap: 10 }}>
             {unplayed.map(m => (
@@ -137,9 +137,9 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
                 <div style={{ flex: 1, textAlign: "right", fontSize: 14, fontWeight: 600 }}>{tName(m.team2)}</div>
                 <div style={{ display: "flex", gap: 6, marginLeft: 10 }}>
                   <Btn onClick={() => onOpenLive && onOpenLive(m.id)}
-                    size="sm" variant="primary">🏐 Vivo</Btn>
+                    size="sm" variant="primary">🏐 Live</Btn>
                   <Btn onClick={() => { setShowScoreModal(m); setS1("0"); setS2("0"); }}
-                    size="sm" variant="sun">Cargar</Btn>
+                    size="sm" variant="sun">Score</Btn>
                 </div>
               </div>
             ))}
@@ -151,7 +151,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
       {played.length > 0 && (
         <Card>
           <div style={{ fontFamily: "'Bebas Neue'", fontSize: 20, color: G.ocean, letterSpacing: 1, marginBottom: 12 }}>
-            RESULTADOS
+            RESULTS
           </div>
           <div style={{ display: "grid", gap: 8 }}>
             {played.map(m => (
@@ -180,7 +180,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
       )}
 
       {showScoreModal && (
-        <Modal title="CARGAR RESULTADO" onClose={() => setShowScoreModal(null)}>
+        <Modal title="ENTER RESULT" onClose={() => setShowScoreModal(null)}>
           <div style={{ display: "grid", gap: 16 }}>
             <div style={{ textAlign: "center", fontSize: 14, color: G.textLight }}>
               {tName(showScoreModal.team1)} vs {tName(showScoreModal.team2)}
@@ -197,7 +197,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
               </div>
             </div>
             <Btn onClick={submitScore} variant="success" size="lg" disabled={parseInt(s1) === parseInt(s2)}>
-              Confirmar resultado
+              Confirm result
             </Btn>
           </div>
         </Modal>

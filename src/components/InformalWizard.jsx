@@ -31,7 +31,7 @@ const InformalWizard = ({
   // Build ad-hoc team object from informalTeam for rotation
   const buildTeamObj = (infTeam, teamNum) => ({
     id: "informal_" + teamNum,
-    name: infTeam.name || "Equipo " + teamNum,
+    name: infTeam.name || "Team " + teamNum,
     players: infTeam.players.map(s => resolveSlot(s).id),
   });
 
@@ -39,13 +39,13 @@ const InformalWizard = ({
   if (informalStep === "config") return (
     <div>
       <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 34, color: G.ocean, letterSpacing: 2, marginBottom: 20 }}>
-        🏐 PARTIDO INFORMAL
+        🏐 INFORMAL MATCH
       </h1>
       <Card>
         <div style={{ display: "grid", gap: 20 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Jugadores por equipo
+              Players per team
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               {[2, 3].map(n => (
@@ -58,14 +58,14 @@ const InformalWizard = ({
                   fontFamily: "'DM Sans', sans-serif",
                 }}>
                   <div style={{ fontSize: 24, marginBottom: 4 }}>👥</div>
-                  {n} jugadores
+                  {n} players
                 </button>
               ))}
             </div>
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Sets por partido
+              Sets per match
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               {[1, 3, 5].map(n => (
@@ -86,7 +86,7 @@ const InformalWizard = ({
             setInformalTeam1({ name: "", players: [] });
             setInformalTeam2({ name: "", players: [] });
             setInformalStep("team1");
-          }} variant="sun" size="lg">Siguiente →</Btn>
+          }} variant="sun" size="lg">Next →</Btn>
         </div>
       </Card>
     </div>
@@ -98,7 +98,7 @@ const InformalWizard = ({
     const infTeam = isTeam1 ? informalTeam1 : informalTeam2;
     const setInfTeam = isTeam1 ? setInformalTeam1 : setInformalTeam2;
     const teamColor = isTeam1 ? G.ocean : G.sun;
-    const teamLabel = isTeam1 ? "EQUIPO 1" : "EQUIPO 2";
+    const teamLabel = isTeam1 ? "TEAM 1" : "TEAM 2";
 
     const setSlot = (idx, slot) => {
       setInfTeam(prev => {
@@ -122,7 +122,7 @@ const InformalWizard = ({
             {teamLabel}
           </h1>
           <div style={{ fontSize: 13, color: G.textLight, marginLeft: "auto" }}>
-            Paso {isTeam1 ? "2" : "3"} de 4
+            Step {isTeam1 ? "2" : "3"} of 4
           </div>
         </div>
         <Card>
@@ -130,11 +130,11 @@ const InformalWizard = ({
             <Input
               value={infTeam.name}
               onChange={v => setInfTeam(prev => ({ ...prev, name: v }))}
-              placeholder={"Nombre del " + (isTeam1 ? "equipo 1" : "equipo 2")}
+              placeholder={"Team " + (isTeam1 ? "1" : "2") + " name"}
             />
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Jugadores ({informalTeamSize})
+                Players ({informalTeamSize})
               </div>
               <div style={{ display: "grid", gap: 10 }}>
                 {Array.from({ length: informalTeamSize }).map((_, idx) => {
@@ -142,13 +142,13 @@ const InformalWizard = ({
                   return (
                     <div key={idx} style={{ background: G.sand, borderRadius: 12, padding: "12px 14px" }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: teamColor, marginBottom: 8 }}>
-                        Jugador {idx + 1}
+                        Player {idx + 1}
                       </div>
                       {/* Toggle type */}
                       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                         {[
-                          { type: "global", label: "👤 De la lista" },
-                          { type: "free",   label: "✏️ Nombre libre" },
+                          { type: "global", label: "👤 From list" },
+                          { type: "free",   label: "✏️ Free name" },
                         ].map(opt => (
                           <button key={opt.type} onClick={() => setSlot(idx, { type: opt.type, playerId: "", name: "" })} style={{
                             flex: 1, padding: "8px", borderRadius: 8, border: "2px solid",
@@ -163,7 +163,7 @@ const InformalWizard = ({
                       {/* Input based on type */}
                       {slot?.type === "global" && (
                         <Select value={slot.playerId || ""} onChange={v => setSlot(idx, { type: "global", playerId: v })}>
-                          <option value="">Elegir jugador...</option>
+                          <option value="">Select player...</option>
                           {players.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
@@ -173,12 +173,12 @@ const InformalWizard = ({
                         <Input
                           value={slot.name || ""}
                           onChange={v => setSlot(idx, { type: "free", name: v })}
-                          placeholder={"Nombre del jugador " + (idx + 1)}
+                          placeholder={"Player " + (idx + 1) + " name"}
                         />
                       )}
                       {!slot && (
                         <div style={{ fontSize: 13, color: G.textLight }}>
-                          Elegí una opción arriba
+                          Select an option above
                         </div>
                       )}
                     </div>
@@ -200,7 +200,7 @@ const InformalWizard = ({
                 setInformalStep("serve");
               }
             }} variant="sun" size="lg" disabled={!canContinue}>
-              {isTeam1 ? "Siguiente → Equipo 2" : "Siguiente → Orden de saque"}
+              {isTeam1 ? "Next → Team 2" : "Next → Serve order"}
             </Btn>
           </div>
         </Card>
@@ -246,7 +246,7 @@ const InformalWizard = ({
                   <div style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 14, color: idx === 0 ? color : G.text }}>
                     {pl?.name || "?"}
                   </div>
-                  {idx === 0 && <div style={{ fontSize: 11, color, marginTop: 1 }}>🏐 Saca primero</div>}
+                  {idx === 0 && <div style={{ fontSize: 11, color, marginTop: 1 }}>🏐 Serves first</div>}
                 </div>
                 {idx > 0 && (
                   <button onClick={() => moveUp(idx)} style={{
@@ -268,30 +268,30 @@ const InformalWizard = ({
             background: "none", border: "none", fontSize: 20, cursor: "pointer", color: G.ocean,
           }}>←</button>
           <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.ocean, letterSpacing: 2 }}>
-            SAQUE Y LADO
+            SERVE & SIDE
           </h1>
-          <div style={{ fontSize: 13, color: G.textLight, marginLeft: "auto" }}>Paso 4 de 4</div>
+          <div style={{ fontSize: 13, color: G.textLight, marginLeft: "auto" }}>Step 4 of 4</div>
         </div>
         <Card>
           <div style={{ display: "grid", gap: 20 }}>
             {/* Team 1 serve order */}
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.ocean, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {informalTeam1.name || "Equipo 1"} — Orden de saque
+                {informalTeam1.name || "Team 1"} — Serve order
               </div>
               <ServeOrderInformal serveOrder={t1ServeOrder} setServeOrder={setT1ServeOrder} color={G.ocean} />
             </div>
             {/* Team 2 serve order */}
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.sun, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {informalTeam2.name || "Equipo 2"} — Orden de saque
+                {informalTeam2.name || "Team 2"} — Serve order
               </div>
               <ServeOrderInformal serveOrder={t2ServeOrder} setServeOrder={setT2ServeOrder} color={G.sun} />
             </div>
             {/* Initial side */}
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Lado inicial — {informalTeam1.name || "Equipo 1"}
+                Initial side — {informalTeam1.name || "Team 1"}
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 {["left", "right"].map(s => (

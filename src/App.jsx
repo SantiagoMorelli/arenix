@@ -150,12 +150,13 @@ export default function App() {
             setsPerMatch={activeTournament.setsPerMatch}
             preloadMatchId={activeMatchId}
             tournamentMatches={activeTournament.matches}
-            onSaveResult={(matchId, score1, score2, winnerTeamId) => {
+            onSaveResult={(matchId, score1, score2, winnerTeamId, log, sets) => {
               try { localStorage.removeItem(SAVE_KEY); } catch {}
               setTournaments(prev => prev.map(tour => {
                 if (tour.id !== activeTournamentId) return tour;
                 const matches = tour.matches.map(m =>
-                  m.id !== matchId ? m : { ...m, played: true, winner: winnerTeamId, score1, score2 }
+                  m.id !== matchId ? m : { ...m, played: true, winner: winnerTeamId, score1, score2,
+                    log: log || null, sets: sets || null }
                 );
                 const teams = tour.teams.map(tm => {
                   if (tm.id === winnerTeamId) return { ...tm, wins: tm.wins + 1, points: tm.points + 20 };

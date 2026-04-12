@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { G, Card, Btn, Badge, Input, Modal } from "./ui";
 import { uid } from "../lib/utils";
+import GameStats from "./GameStats";
+import PointLog from "./PointLog";
+import { TR } from "../lib/i18n";
 
 const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenLive }) => {
   const [showScoreModal, setShowScoreModal] = useState(null);
   const [s1, setS1] = useState("0");
   const [s2, setS2] = useState("0");
+  const [statsMatch, setStatsMatch] = useState(null);
 
   const tName = id => tournament.teams.find(tm => tm.id === id)?.name || "?";
 
@@ -28,7 +32,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
     setTournaments(prev => prev.map(tour => {
       if (tour.id !== tournament.id) return tour;
       const matches = tour.matches.map(m =>
-        m.id !== showScoreModal.id ? m : { ...m, played: true, winner, score1: sc1, score2: sc2 }
+        m.id !== showScoreModal.id ? m : { ...m, played: true, winner, score1: sc1, score2: sc2, log: null, sets: null }
       );
       // Update team stats
       const teams = tour.teams.map(tm => {
@@ -155,9 +159,10 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
           </div>
           <div style={{ display: "grid", gap: 8 }}>
             {played.map(m => (
-              <div key={m.id} style={{
+              <div key={m.id} onClick={() => setStatsMatch(m)} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "8px 14px", background: G.sand, borderRadius: 10,
+                cursor: "pointer",
               }}>
                 <div style={{
                   flex: 1, fontSize: 13,
@@ -202,6 +207,57 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
           </div>
         </Modal>
       )}
+
+      {statsMatch && (() => {
+        const t = (k) => TR[k] || k;
+        const hasStats = Array.isArray(statsMatch.log) && statsMatch.log.length > 0;
+        const hasSets  = Array.isArray(statsMatch.sets) && statsMatch.sets.length > 0;
+        const t1Sets   = hasSets ? statsMatch.sets.filter(s => s.winner === 1).length : 0;
+        const t2Sets   = hasSets ? statsMatch.sets.filter(s => s.winner === 2).length : 0;
+        const winner   = statsMatch.winner === statsMatch.team1 ? 1 : 2;
+        return (
+          <Modal
+            title={`${tName(statsMatch.team1)}  ${statsMatch.score1}–${statsMatch.score2}  ${tName(statsMatch.team2)}`}
+            onClose={() => setStatsMatch(null)}
+          >
+            {hasStats && hasSets ? (
+              <>
+                <GameStats
+                  winner={winner}
+                  team1Id={statsMatch.team1}
+                  team2Id={statsMatch.team2}
+                  sets={statsMatch.sets}
+                  t1Sets={t1Sets}
+                  t2Sets={t2Sets}
+                  log={statsMatch.log}
+                  teams={tournament.teams}
+                  players={players}
+                  onSaveResult={null}
+                  activeTourMatchId={null}
+                  reset={null}
+                  t={t}
+                />
+                <div style={{ marginTop: 16 }}>
+                  <PointLog
+                    log={statsMatch.log}
+                    logRef={null}
+                    team1Id={statsMatch.team1}
+                    team2Id={statsMatch.team2}
+                    teams={tournament.teams}
+                    players={players}
+                    t={t}
+                  />
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "32px 0", color: G.textLight, fontSize: 14 }}>
+                📋 No detailed stats available.<br />
+                This result was entered manually.
+              </div>
+            )}
+          </Modal>
+        );
+      })()}
     </div>
   );
 };

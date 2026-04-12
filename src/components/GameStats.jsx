@@ -162,13 +162,13 @@ const GameStats = ({
         const finalS1 = sets.reduce((acc, s) => acc + (s.winner === 1 ? 1 : 0), 0);
         const finalS2 = sets.reduce((acc, s) => acc + (s.winner === 2 ? 1 : 0), 0);
         return (
-          <Btn onClick={() => onSaveResult(activeTourMatchId, finalS1, finalS2, winnerTeamId)}
+          <Btn onClick={() => onSaveResult(activeTourMatchId, finalS1, finalS2, winnerTeamId, log, sets)}
             variant="success" size="lg" style={{ width: "100%", marginBottom: 10 }}>
             ✓ Guardar resultado en fixture
           </Btn>
         );
       })()}
-      <Btn onClick={reset} variant="sun" size="lg" style={{ width: "100%" }}>{t("newMatch")}</Btn>
+      {reset && <Btn onClick={reset} variant="sun" size="lg" style={{ width: "100%" }}>{t("newMatch")}</Btn>}
     </div>
   );
 };

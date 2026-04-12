@@ -277,6 +277,12 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
 
   const cancelUndo = () => setPendingUndo(false);
 
+  // ── End (finish match) ────────────────────────────────────────────────────
+  const [pendingEnd, setPendingEnd] = useState(false);
+  const requestEnd = () => setPendingEnd(true);
+  const confirmEnd = () => { setPendingEnd(false); reset(); };
+  const cancelEnd = () => setPendingEnd(false);
+
   // ── Restore / discard saved game ──────────────────────────────────────────
   const restoreGame = () => {
     const s = loadSaved();
@@ -320,11 +326,13 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     // Dialogs
     pendingSideChange, pendingUndo,
     pendingPoint, setPendingPoint,
+    pendingEnd,
     // Derived helpers
     serveRotation, currentServer,
     playerName, tName, POINT_TYPES,
     // Actions
     addPoint, confirmPointType, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
+    requestEnd, confirmEnd, cancelEnd,
   };
 }

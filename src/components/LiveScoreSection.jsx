@@ -23,10 +23,11 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     t1InitialSide, setT1InitialSide, setSide, setPointsToWin,
     score1, score2, serveIndex, side, points,
     log, logRef, sets, winner, pointsToWin, history,
-    pendingSideChange, pendingUndo, pendingPoint, setPendingPoint,
+    pendingSideChange, pendingUndo, pendingPoint, setPendingPoint, pendingEnd,
     serveRotation, currentServer, playerName, tName, POINT_TYPES,
     addPoint, confirmPointType, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
+    requestEnd, confirmEnd, cancelEnd,
   } = useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch });
 
   if (showRestore) {
@@ -215,6 +216,32 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
         );
       })()}
 
+      {/* End match confirmation dialog */}
+      {pendingEnd && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(0,0,0,0.65)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+        }}>
+          <div style={{
+            background: G.white, borderRadius: 24, padding: 28, textAlign: "center",
+            maxWidth: 340, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,0.3)",
+          }}>
+            <div style={{ fontSize: 44, marginBottom: 8 }}>🏁</div>
+            <div style={{ fontFamily: "'Bebas Neue'", fontSize: 30, color: G.danger, letterSpacing: 2, lineHeight: 1.1 }}>
+              {t("endTitle")}
+            </div>
+            <div style={{ fontSize: 14, color: G.textLight, margin: "12px 0 20px" }}>
+              {t("endMsg")}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Btn onClick={cancelEnd} variant="secondary" size="lg">{t("cancel")}</Btn>
+              <Btn onClick={confirmEnd} variant="danger" size="lg">{t("confirm")}</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Point type dialog */}
       {pendingPoint && (
         <div style={{
@@ -281,7 +308,7 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <button onClick={reset} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: G.ocean }}>←</button>
+        <button onClick={requestEnd} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: G.ocean }}>←</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: "'Bebas Neue'", fontSize: 24, color: G.ocean, letterSpacing: 1, lineHeight: 1 }}>
             {tName(team1Id)} vs {tName(team2Id)}
@@ -329,7 +356,7 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
           />
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             <Btn onClick={requestUndo} variant="secondary" style={{ flex: 1 }} disabled={history.length === 0}>{t("undo")}</Btn>
-            <Btn onClick={reset} variant="danger" style={{ flex: 1 }}>{t("finish")}</Btn>
+            <Btn onClick={requestEnd} variant="danger" style={{ flex: 1 }}>{t("finish")}</Btn>
           </div>
           <PointLog
             log={log} logRef={logRef}

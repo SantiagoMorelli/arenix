@@ -20,7 +20,8 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     informalTeamSize, setInformalTeamSize, informalTeam1, setInformalTeam1,
     informalTeam2, setInformalTeam2,
     t1ServeOrder, setT1ServeOrder, t2ServeOrder, setT2ServeOrder,
-    t1InitialSide, setT1InitialSide, setSide, setPointsToWin,
+    t1InitialSide, setT1InitialSide, firstServingTeam, setFirstServingTeam,
+    setSide, setPointsToWin, startGame,
     score1, score2, serveIndex, side, points,
     log, logRef, sets, winner, pointsToWin, history,
     pendingSideChange, pendingUndo, pendingPoint, setPendingPoint, pendingEnd,
@@ -98,9 +99,10 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
         t1ServeOrder={t1ServeOrder} setT1ServeOrder={setT1ServeOrder}
         t2ServeOrder={t2ServeOrder} setT2ServeOrder={setT2ServeOrder}
         t1InitialSide={t1InitialSide} setT1InitialSide={setT1InitialSide}
+        firstServingTeam={firstServingTeam} setFirstServingTeam={setFirstServingTeam}
         setSide={setSide}
         setActiveTourMatchId={setActiveTourMatchId}
-        setGameStarted={setGameStarted}
+        startGame={startGame}
         serveRotation={serveRotation()}
         t={t}
       />

@@ -7,7 +7,7 @@ export const loadSaved = () => {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
 };
 
-export function useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t }) {
+export function useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch = 1 }) {
   // ── Restore-prompt state ─────────────────────────────────────────────────
   const [showRestore, setShowRestore] = useState(() => !!loadSaved());
 
@@ -231,8 +231,10 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     setSets(newSets);
     const t1Sets = newSets.filter(s => s.winner === 1).length;
     const t2Sets = newSets.filter(s => s.winner === 2).length;
-    if (t1Sets >= 2) { setWinner(1); return; }
-    if (t2Sets >= 2) { setWinner(2); return; }
+    const effectiveSets = informalMode ? informalSets : setsPerMatch;
+    const setsToWin = Math.ceil(effectiveSets / 2);
+    if (t1Sets >= setsToWin) { setWinner(1); return; }
+    if (t2Sets >= setsToWin) { setWinner(2); return; }
     setScore1(0); setScore2(0); setPoints(0);
     setSide({ t1: "left", t2: "right" });
     const loserTeam = winnerTeam === 1 ? 2 : 1;
@@ -240,7 +242,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     const firstLoserSlot = rot.findIndex(r => r.team === loserTeam);
     setServeIndex(firstLoserSlot);
     setLog(prev => [...prev, { id: uid(), msg: `🏐 SET ${newSets.length} ENDED — New set`, sideChange: false }]);
-    if (newSets.length === 2) setPointsToWin(15);
+    if (newSets.length === effectiveSets - 1) setPointsToWin(15);
   };
 
   // ── Reset ─────────────────────────────────────────────────────────────────

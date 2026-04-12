@@ -30,7 +30,7 @@
  *  - PWA support (installable, offline)
  */
 
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useContext } from "react";
 import { G, globalStyle, Card, Btn, Badge, Input, Select, Modal } from "./components/ui";
 import PlayersSection from "./components/PlayersSection";
 import TournamentsSection from "./components/TournamentsSection";
@@ -42,6 +42,7 @@ import GameStats from "./components/GameStats";
 import ScoreBoard from "./components/ScoreBoard";
 import PointLog from "./components/PointLog";
 import PointButtons from "./components/PointButtons";
+import { useLiveGame, loadSaved } from "./hooks/useLiveGame";
 
 const LangCtx = React.createContext({ lang: "es", t: (k) => k });
 
@@ -84,315 +85,25 @@ const initialTournaments = [];
   index stays the same (they keep serving).
 */
 
-const SAVE_KEY = "bv_live_game";
-
-const loadSaved = () => {
-  try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
-};
-
-function LiveScoreSection(props) {
-  const { teams, players, setsPerMatch = 1, preloadMatchId = null,
-    tournamentMatches = null, onSaveResult = null, informalMode = false } = props;
+function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = null,
+  tournamentMatches = null, onSaveResult = null, informalMode = false }) {
   const { t } = useContext(LangCtx);
-  // ── Restore-prompt state ─────────────────────────────────────────────────
-  const [showRestore, setShowRestore] = useState(() => !!loadSaved());
-
-  // ── Setup state ──────────────────────────────────────────────────────────
-  const [team1Id, setTeam1Id] = useState("");
-  const [team2Id, setTeam2Id] = useState("");
-  const [gameStarted, setGameStarted] = useState(false);
-  // Which tournament match is being played (id or null)
-  const [activeTourMatchId, setActiveTourMatchId] = useState(preloadMatchId);
-
-  // ── Informal mode wizard state ────────────────────────────────────────────
-  // step: "config" | "team1" | "team2" | "serve"
-  const [informalStep, setInformalStep] = useState("config");
-  const [informalSets, setInformalSets] = useState(1);
-  const [informalTeamSize, setInformalTeamSize] = useState(2);
-  // Each team: { name, players: [{type:"global"|"free", playerId?:string, name?:string}] }
-  const [informalTeam1, setInformalTeam1] = useState({ name: "", players: [] });
-  const [informalTeam2, setInformalTeam2] = useState({ name: "", players: [] });
-
-  // When preloadMatchId changes (from fixture), preload teams + serve orders
-  useEffect(() => {
-    if (!preloadMatchId || !tournamentMatches) return;
-    const match = tournamentMatches.find(m => m.id === preloadMatchId);
-    if (!match) return;
-    setActiveTourMatchId(preloadMatchId);
-    setTeam1Id(match.team1);
-    setTeam2Id(match.team2);
-    // Init serve order to default player order for each team
-    const o1 = (() => { const tm = teams.find(t => t.id === match.team1); if (!tm) return []; return tm.players && tm.players.length ? tm.players : [tm.player1, tm.player2].filter(Boolean); })();
-    const o2 = (() => { const tm = teams.find(t => t.id === match.team2); if (!tm) return []; return tm.players && tm.players.length ? tm.players : [tm.player1, tm.player2].filter(Boolean); })();
-    setT1ServeOrder(o1);
-    setT2ServeOrder(o2);
-  }, [preloadMatchId]);
-
-  // Serve-order setup: full ordered array of player IDs per team
-  const [t1ServeOrder, setT1ServeOrder] = useState([]);
-  const [t2ServeOrder, setT2ServeOrder] = useState([]);
-  // Legacy fallback
-  const [t1FirstServer, setT1FirstServer] = useState(0);
-  const [t2FirstServer, setT2FirstServer] = useState(0);
-
-  // Initial sides
-  const [t1InitialSide, setT1InitialSide] = useState("left");
-
-  // ── In-game state ────────────────────────────────────────────────────────
-  const [score1, setScore1] = useState(0);
-  const [score2, setScore2] = useState(0);
-  const [serveIndex, setServeIndex] = useState(0);
-  const [side, setSide] = useState({ t1: "left", t2: "right" });
-  const [points, setPoints] = useState(0);
-  const [log, setLog] = useState([]);
-  const [sets, setSets] = useState([]);
-  const [winner, setWinner] = useState(null);
-  const [pointsToWin, setPointsToWin] = useState(21);
-  // Side-change dialog
-  const [pendingSideChange, setPendingSideChange] = useState(null);
-  // Undo confirmation
-  const [pendingUndo, setPendingUndo] = useState(false);
-  // Full game snapshot stack for undo
-  const [history, setHistory] = useState([]);
-  // Point type selection dialog
-  const [pendingPoint, setPendingPoint] = useState(null); // { teamNum } | null
-  const logRef = useRef(null);
-
-  // ── Auto-save to localStorage on every meaningful state change ───────────
-  useEffect(() => {
-    if (!gameStarted) return;
-    const snapshot = {
-      team1Id, team2Id, gameStarted,
-      t1FirstServer, t2FirstServer, t1InitialSide,
-      score1, score2, serveIndex, side, points,
-      log, sets, winner, pointsToWin, history,
-    };
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot)); } catch {}
-  }, [gameStarted, score1, score2, serveIndex, side, points, log, sets, winner, pointsToWin, history]);
-
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [log]);
-
-  // ── Restore saved game ───────────────────────────────────────────────────
-  const restoreGame = () => {
-    const s = loadSaved();
-    if (!s) return;
-    setTeam1Id(s.team1Id); setTeam2Id(s.team2Id); setGameStarted(s.gameStarted);
-    setT1FirstServer(s.t1FirstServer); setT2FirstServer(s.t2FirstServer);
-    setT1InitialSide(s.t1InitialSide);
-    setScore1(s.score1); setScore2(s.score2); setServeIndex(s.serveIndex);
-    setSide(s.side); setPoints(s.points); setLog(s.log); setSets(s.sets);
-    setWinner(s.winner); setPointsToWin(s.pointsToWin); setHistory(s.history || []);
-    setShowRestore(false);
-  };
-
-  const discardSaved = () => {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
-    setShowRestore(false);
-  };
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-  const getTeam = id => {
-    const real = teams.find(tm => tm.id === id);
-    if (real) return real;
-    if (informalMode) {
-      if (id === "informal_1") return { id: "informal_1", name: informalTeam1.name || "Equipo 1",
-        players: (informalTeam1.players || []).map(s => s.type === "global" ? s.playerId : "free_" + (s.name || "")) };
-      if (id === "informal_2") return { id: "informal_2", name: informalTeam2.name || "Equipo 2",
-        players: (informalTeam2.players || []).map(s => s.type === "global" ? s.playerId : "free_" + (s.name || "")) };
-    }
-    return null;
-  };
-  const getPlayer = id => {
-    if (id && id.startsWith("free_")) return { id, name: id.slice(5) };
-    return players.find(p => p.id === id);
-  };
-
-  // Works with both old {player1,player2} and new {players:[]} team shapes
-  const teamPlayerIds = (teamId) => {
-    const team = teams.find(tm => tm.id === teamId);
-    if (!team) return [];
-    if (team.players && team.players.length > 0) return team.players;
-    return [team.player1, team.player2].filter(Boolean);
-  };
-
-  const teamPlayers = (teamId, firstServerIdx) => {
-    const pIds = teamPlayerIds(teamId);
-    if (pIds.length === 0) return [null, null];
-    if (firstServerIdx === 0) return pIds;
-    return [...pIds.slice(firstServerIdx), ...pIds.slice(0, firstServerIdx)];
-  };
-
-  // Build serve rotation interleaving teams: [t1A,t2A,t1B,t2B] or [t1A,t2A,t1B,t2B,t1C,t2C]
-  const serveRotation = () => {
-    const o1 = t1ServeOrder.length > 0 ? t1ServeOrder : teamPlayers(team1Id, t1FirstServer);
-    const o2 = t2ServeOrder.length > 0 ? t2ServeOrder : teamPlayers(team2Id, t2FirstServer);
-    const maxLen = Math.max(o1.length, o2.length, 1);
-    const slots = [];
-    for (let i = 0; i < maxLen; i++) {
-      if (i < o1.length) slots.push({ team: 1, playerId: o1[i] });
-      if (i < o2.length) slots.push({ team: 2, playerId: o2[i] });
-    }
-    return slots.length > 0 ? slots : [{ team: 1, playerId: null }, { team: 2, playerId: null }];
-  };
-
-  const currentServer = () => {
-    const rot = serveRotation();
-    return rot[serveIndex % rot.length];
-  };
-
-  const playerName = id => getPlayer(id)?.name || "?";
-  const tName = id => getTeam(id)?.name || "?";
-
-  // ── Point types ────────────────────────────────────────────────────────────
-  const POINT_TYPES = [
-    { id: "ace",   label: t("ptAce"),   icon: "🎯", desc: t("ptAceDesc") },
-    { id: "spike", label: t("ptSpike"), icon: "💥", desc: t("ptSpikeDesc") },
-    { id: "block", label: t("ptBlock"), icon: "🛡️", desc: t("ptBlockDesc") },
-    { id: "tip",   label: t("ptTip"),   icon: "🤏", desc: t("ptTipDesc") },
-    { id: "error", label: t("ptError"), icon: "❌", desc: t("ptErrorDesc") },
-  ];
-
-  // ── Add point: open type dialog first ────────────────────────────────────
-  const addPoint = (teamNum) => { setPendingPoint({ teamNum }); };
-
-  const confirmPointType = (ptId) => {
-    if (!pendingPoint) return;
-    const teamNum = pendingPoint.teamNum;
-    setPendingPoint(null);
-    resolvePoint(teamNum, ptId);
-  };
-
-  const resolvePoint = (teamNum, ptId) => {
-    const newS1 = teamNum === 1 ? score1 + 1 : score1;
-    const newS2 = teamNum === 2 ? score2 + 1 : score2;
-    const newPoints = points + 1;
-
-    const srv = currentServer();
-    let newServeIndex = serveIndex;
-    if (srv.team !== teamNum) {
-      const rot = serveRotation();
-      for (let i = 1; i <= rot.length; i++) {
-        const candidate = (serveIndex + i) % rot.length;
-        if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
-      }
-    }
-
-    const isSideChange = newPoints % 7 === 0;
-    const newSide = isSideChange
-      ? { t1: side.t1 === "left" ? "right" : "left", t2: side.t2 === "left" ? "right" : "left" }
-      : side;
-
-    const rot = serveRotation(); const newServer = rot[newServeIndex % rot.length];
-    const pt = POINT_TYPES.find(p => p.id === ptId) || POINT_TYPES[4];
-
-    // streak
-    let streak = 1;
-    for (let i = log.length - 1; i >= 0; i--) {
-      if (log[i].team === teamNum) streak++; else break;
-    }
-
-    const logEntry = {
-      id: uid(), timestamp: Date.now(),
-      team: teamNum, t1: newS1, t2: newS2,
-      setNum: sets.length + 1, pointNum: newPoints,
-      pointType: ptId, pointTypeLabel: pt.label, pointTypeIcon: pt.icon,
-      serverPlayerId: srv.playerId, serverTeam: srv.team,
-      nextServerPlayerId: newServer.playerId, nextServerTeam: newServer.team,
-      sideBeforePoint: { ...side }, sideChange: isSideChange, streak,
-      msg: pt.icon + " " + pt.label + " • " + tName(teamNum === 1 ? team1Id : team2Id) + " • " + newS1 + ":" + newS2,
-    };
-
-    const isWin = (s, opp) => s >= pointsToWin && s - opp >= 2;
-    const setOver = isWin(newS1, newS2) || isWin(newS2, newS1);
-
-    if (isSideChange && !setOver) {
-      setPendingSideChange({ newS1, newS2, newPoints, newServeIndex, newSide, logEntry, setOver: false });
-    } else {
-      applyPoint({ newS1, newS2, newPoints, newServeIndex, newSide, logEntry, setOver });
-    }
-  };
-
-  const applyPoint = ({ newS1, newS2, newPoints, newServeIndex, newSide, logEntry, setOver }) => {
-    // Save snapshot before applying so undo can restore exactly
-    setHistory(prev => [...prev, { score1, score2, serveIndex, side: { ...side }, points, log: [...log] }]);
-    setScore1(newS1); setScore2(newS2);
-    setServeIndex(newServeIndex);
-    setSide(newSide);
-    setPoints(newPoints);
-    setLog(prev => [...prev, logEntry]);
-
-    const isWin = (s, opp) => s >= pointsToWin && s - opp >= 2;
-    if (isWin(newS1, newS2)) endSet(1, newS1, newS2, newServeIndex);
-    else if (isWin(newS2, newS1)) endSet(2, newS1, newS2, newServeIndex);
-  };
-
-  const confirmSideChange = () => {
-    if (!pendingSideChange) return;
-    applyPoint(pendingSideChange);
-    setPendingSideChange(null);
-  };
-
-  // ── End set ───────────────────────────────────────────────────────────────
-  const endSet = (winnerTeam, s1, s2, si) => {
-    const newSets = [...sets, { winner: winnerTeam, s1, s2 }];
-    setSets(newSets);
-    const t1Sets = newSets.filter(s => s.winner === 1).length;
-    const t2Sets = newSets.filter(s => s.winner === 2).length;
-    if (t1Sets >= 2) { setWinner(1); return; }
-    if (t2Sets >= 2) { setWinner(2); return; }
-    setScore1(0); setScore2(0); setPoints(0);
-    setSide({ t1: "left", t2: "right" });
-    // Loser of the set serves first in next set → find first slot of loser team
-    const loserTeam = winnerTeam === 1 ? 2 : 1;
-    const rot = serveRotation();
-    const firstLoserSlot = rot.findIndex(r => r.team === loserTeam);
-    setServeIndex(firstLoserSlot);
-    setLog(prev => [...prev, { id: uid(), msg: `🏐 SET ${newSets.length} TERMINADO — Nuevo set`, sideChange: false }]);
-    if (newSets.length === 2) setPointsToWin(15);
-  };
-
-  // ── Reset ─────────────────────────────────────────────────────────────────
-  const reset = () => {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
-    setTeam1Id(""); setTeam2Id(""); setGameStarted(false);
-    setScore1(0); setScore2(0); setServeIndex(0); setPoints(0);
-    setSide({ t1: "left", t2: "right" }); setLog([]); setSets([]);
-    setWinner(null); setPointsToWin(21); setPendingSideChange(null);
-    setHistory([]); setPendingUndo(false); setPendingPoint(null); setT1ServeOrder([]); setT2ServeOrder([]);
-    if (informalMode) { setInformalStep("config"); setInformalTeam1({ name: "", players: [] }); setInformalTeam2({ name: "", players: [] }); }
-    setT1FirstServer(0); setT2FirstServer(0); setT1InitialSide("left");
-  };
-
-  // ── Undo ──────────────────────────────────────────────────────────────────
-  const requestUndo = () => {
-    if (history.length === 0) return;
-    setPendingUndo(true);
-  };
-
-  const confirmUndo = () => {
-    if (history.length === 0) return;
-    const prev = history[history.length - 1];
-    setScore1(prev.score1);
-    setScore2(prev.score2);
-    setServeIndex(prev.serveIndex);
-    setSide(prev.side);
-    setPoints(prev.points);
-    setLog(prev.log);
-    setHistory(h => h.slice(0, -1));
-    setPendingUndo(false);
-  };
-
-  const cancelUndo = () => setPendingUndo(false);
-
-  // ── SETUP SCREEN ──────────────────────────────────────────────────────────
-  // If coming from fixture with preloaded match, auto-start
-  useEffect(() => {
-    if (preloadMatchId && tournamentMatches && team1Id && team2Id && !gameStarted) {
-      setGameStarted(true);
-    }
-  }, [team1Id, team2Id]);
+  const {
+    showRestore, restoreGame, discardSaved,
+    team1Id, setTeam1Id, team2Id, setTeam2Id,
+    gameStarted, setGameStarted, activeTourMatchId, setActiveTourMatchId,
+    informalStep, setInformalStep, informalSets, setInformalSets,
+    informalTeamSize, setInformalTeamSize, informalTeam1, setInformalTeam1,
+    informalTeam2, setInformalTeam2,
+    t1ServeOrder, setT1ServeOrder, t2ServeOrder, setT2ServeOrder,
+    t1InitialSide, setT1InitialSide, setSide, setPointsToWin,
+    score1, score2, serveIndex, side, points,
+    log, logRef, sets, winner, pointsToWin, history,
+    pendingSideChange, pendingUndo, pendingPoint, setPendingPoint,
+    serveRotation, currentServer, playerName, tName, POINT_TYPES,
+    addPoint, confirmPointType, confirmSideChange,
+    reset, requestUndo, confirmUndo, cancelUndo,
+  } = useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t });
 
   if (showRestore) {
     const s = loadSaved();

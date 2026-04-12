@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { G, globalStyle } from "./components/ui";
 import { LangCtx, TR } from "./lib/i18n";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 import PlayersSection from "./components/PlayersSection";
 import TournamentsSection from "./components/TournamentsSection";
 import TournamentMatchesSection from "./components/TournamentMatchesSection";
@@ -15,8 +16,6 @@ const initialPlayers = [
   { id: "p5", name: "Diego Pérez",      wins: 7,  losses: 6, points: 148, level: "beginner" },
   { id: "p6", name: "Sofía García",     wins: 6,  losses: 7, points: 126, level: "beginner" },
 ];
-
-const initialTournaments = [];
 
 // Global nav (no active tournament)
 const GLOBAL_NAV = [
@@ -35,10 +34,10 @@ const TOUR_NAV = [
 
 export default function App() {
   const [tab, setTab] = useState("tournaments");
-  const [players, setPlayers] = useState(initialPlayers);
-  const [tournaments, setTournaments] = useState(initialTournaments);
+  const [players, setPlayers] = useLocalStorage("arenix_players", initialPlayers);
+  const [tournaments, setTournaments] = useLocalStorage("arenix_tournaments", []);
 
-  const [activeTournamentId, setActiveTournamentId] = useState(null);
+  const [activeTournamentId, setActiveTournamentId] = useLocalStorage("arenix_active_tournament_id", null);
   const [tourTab, setTourTab] = useState("tour_matches");
   const [activeMatchId, setActiveMatchId] = useState(null);
 

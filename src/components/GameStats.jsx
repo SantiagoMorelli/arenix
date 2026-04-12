@@ -35,7 +35,7 @@ const GameStats = ({
     pointLog.forEach(e => { if (e.team === tn) { cur++; bestStreak = Math.max(bestStreak, cur); } else cur = 0; });
     const team = tn === 1 ? getTeam(team1Id) : getTeam(team2Id);
     const playerPts = {};
-    if (team) teamPlayerIds(tid).forEach(pid => { playerPts[pid] = pts.filter(e => e.serverPlayerId === pid).length; });
+    if (team) teamPlayerIds(tn === 1 ? team1Id : team2Id).forEach(pid => { playerPts[pid] = pts.filter(e => e.serverPlayerId === pid).length; });
     return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts };
   };
 

@@ -25,6 +25,8 @@ export const TR = {
   confirmSideChange: "OK, switching sides",
   undoTitle: "UNDO POINT",
   undoMsg: "Confirm? Match returns to:",
+  endTitle: "END MATCH",
+  endMsg: "Are you sure you want to end the match? All progress will be lost.",
   wasServing: "🏐 Was serving",
   cancel: "Cancel", confirm: "Confirm",
   pointFor: "Point for",

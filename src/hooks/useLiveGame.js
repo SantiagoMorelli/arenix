@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { uid } from "../lib/utils";
 
-const SAVE_KEY = "bv_live_game";
+export const SAVE_KEY = "bv_live_game";
 
 export const loadSaved = () => {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
@@ -77,13 +77,6 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [log]);
-
-  // ── Auto-start when preloaded teams are ready ────────────────────────────
-  useEffect(() => {
-    if (preloadMatchId && tournamentMatches && team1Id && team2Id && !gameStarted) {
-      setGameStarted(true);
-    }
-  }, [team1Id, team2Id]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const getTeam = id => {

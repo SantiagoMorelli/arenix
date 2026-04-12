@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { G, globalStyle } from "./components/ui";
 import { LangCtx, TR } from "./lib/i18n";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { SAVE_KEY } from "./hooks/useLiveGame";
 import PlayersSection from "./components/PlayersSection";
 import TournamentsSection from "./components/TournamentsSection";
 import TournamentMatchesSection from "./components/TournamentMatchesSection";
@@ -150,6 +151,7 @@ export default function App() {
             preloadMatchId={activeMatchId}
             tournamentMatches={activeTournament.matches}
             onSaveResult={(matchId, score1, score2, winnerTeamId) => {
+              try { localStorage.removeItem(SAVE_KEY); } catch {}
               setTournaments(prev => prev.map(tour => {
                 if (tour.id !== activeTournamentId) return tour;
                 const matches = tour.matches.map(m =>

@@ -280,7 +280,23 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
   // ── End (finish match) ────────────────────────────────────────────────────
   const [pendingEnd, setPendingEnd] = useState(false);
   const requestEnd = () => setPendingEnd(true);
-  const confirmEnd = () => { setPendingEnd(false); reset(); };
+  const confirmEnd = () => {
+    setPendingEnd(false);
+    // If nothing has been played at all, just reset without showing stats
+    if (score1 === 0 && score2 === 0 && sets.length === 0) { reset(); return; }
+    // Finalize the in-progress set (if any points were played in it)
+    let finalSets = [...sets];
+    if (score1 > 0 || score2 > 0) {
+      const setWin = score1 > score2 ? 1 : score2 > score1 ? 2 : 1;
+      finalSets = [...sets, { winner: setWin, s1: score1, s2: score2 }];
+      setSets(finalSets);
+    }
+    // Determine overall match winner (sets won, then score as tiebreaker)
+    const t1S = finalSets.filter(s => s.winner === 1).length;
+    const t2S = finalSets.filter(s => s.winner === 2).length;
+    const matchWinner = t1S > t2S ? 1 : t2S > t1S ? 2 : (score1 >= score2 ? 1 : 2);
+    setWinner(matchWinner);
+  };
   const cancelEnd = () => setPendingEnd(false);
 
   // ── Restore / discard saved game ──────────────────────────────────────────

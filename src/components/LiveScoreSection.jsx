@@ -27,7 +27,7 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     serveRotation, currentServer, playerName, tName, POINT_TYPES,
     addPoint, confirmPointType, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
-  } = useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t });
+  } = useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch });
 
   if (showRestore) {
     const s = loadSaved();

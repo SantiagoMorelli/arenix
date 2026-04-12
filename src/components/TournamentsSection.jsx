@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { G, Card, Btn, Badge, Input, Modal } from "./ui";
-
-const uid = () => Math.random().toString(36).slice(2, 8);
-const now = () => new Date().toLocaleDateString("es-UY");
+import { uid, now } from "../lib/utils";
 
 const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, onOpenTournament }) => {
   const [showCreate, setShowCreate] = useState(false);

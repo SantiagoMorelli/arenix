@@ -46,18 +46,7 @@ import { useLiveGame, loadSaved } from "./hooks/useLiveGame";
 
 const LangCtx = React.createContext({ lang: "es", t: (k) => k });
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-const uid = () => Math.random().toString(36).slice(2, 8);
-const now = () => new Date().toLocaleDateString("es-UY");
-
 // ── Initial Data ─────────────────────────────────────────────────────────────
-const LEVELS = [
-  { id: "beginner",     label: "Beginner",    color: G.success,  icon: "🟢" },
-  { id: "intermediate", label: "Intermedio",  color: G.warn,     icon: "🟡" },
-  { id: "advanced",     label: "Avanzado",    color: G.danger,   icon: "🔴" },
-];
-const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
-
 const initialPlayers = [
   { id: "p1", name: "Matías Torres",    wins: 12, losses: 3, points: 240, level: "advanced" },
   { id: "p2", name: "Camila Rodríguez", wins: 10, losses: 4, points: 204, level: "advanced" },

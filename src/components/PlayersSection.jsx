@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { G, Card, Btn, Badge, Input, Modal } from "./ui";
-
-const LEVELS = [
-  { id: "beginner",     label: "Beginner",   color: G.success, icon: "🟢" },
-  { id: "intermediate", label: "Intermedio", color: G.warn,    icon: "🟡" },
-  { id: "advanced",     label: "Avanzado",   color: G.danger,  icon: "🔴" },
-];
-const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
-const uid = () => Math.random().toString(36).slice(2, 8);
+import { uid, LEVELS, levelOf } from "../lib/utils";
 
 const PlayersSection = ({ players, setPlayers, contextual = false }) => {
   const [showModal, setShowModal] = useState(false);

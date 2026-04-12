@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { uid } from "../lib/utils";
 
 const SAVE_KEY = "bv_live_game";
 
 export const loadSaved = () => {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
 };
-
-const uid = () => Math.random().toString(36).slice(2, 9);
 
 export function useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t }) {
   // ── Restore-prompt state ─────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { G, Card, Btn, Badge, Input, Modal } from "./ui";
-
-const uid = () => Math.random().toString(36).slice(2, 8);
+import { uid } from "../lib/utils";
 
 const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenLive }) => {
   const [showScoreModal, setShowScoreModal] = useState(null);

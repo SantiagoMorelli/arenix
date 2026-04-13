@@ -12,7 +12,7 @@ function h2hStats(idA, idB, matches) {
     .forEach(m => {
       const [s1, s2] = [m.score1, m.score2];
       s[m.team1].gd += s1 - s2; s[m.team2].gd += s2 - s1;
-      if (s1 > s2) s[m.team1].pts += 3; else s[m.team2].pts += 3;
+      if (s1 > s2) s[m.team1].pts += 1; else s[m.team2].pts += 1; // W=1, L=0
     });
   return s;
 }
@@ -20,7 +20,7 @@ function h2hStats(idA, idB, matches) {
 // ── Standings calculator ─────────────────────────────────────────────────────
 function calcStandings(group) {
   return group.teamIds.map(teamId => {
-    let pts = 0, gf = 0, ga = 0, played = 0, wins = 0, draws = 0, losses = 0;
+    let mp = 0, pf = 0, pa = 0, played = 0, wins = 0, losses = 0;
     (group.matches || [])
       .filter(m => m.played && (m.team1 === teamId || m.team2 === teamId))
       .forEach(m => {
@@ -28,21 +28,60 @@ function calcStandings(group) {
         const isT1 = m.team1 === teamId;
         const scored   = isT1 ? m.score1 : m.score2;
         const conceded = isT1 ? m.score2 : m.score1;
-        gf += scored;
-        ga += conceded;
-        if (scored > conceded) { pts += 3; wins++;   }
-        else                   {           losses++; }
+        pf += scored; pa += conceded;
+        if (scored > conceded) { mp += 1; wins++;   }
+        else                   {          losses++; }
       });
-    return { teamId, played, wins, draws, losses, gf, ga, gd: gf - ga, pts };
+    return { teamId, played, wins, losses, pf, pa, pd: pf - pa, mp };
   }).sort((a, b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;  // wins (no draws in beach volleyball)
-    if (b.gd  !== a.gd)  return b.gd  - a.gd;  // set difference
-    if (b.gf  !== a.gf)  return b.gf  - a.gf;  // sets won
+    if (b.mp !== a.mp) return b.mp - a.mp;   // Match Points (W=1)
+    if (b.pd !== a.pd) return b.pd - a.pd;   // Point Difference
+    if (b.pf !== a.pf) return b.pf - a.pf;   // Points For
     // Head-to-head tiebreaker
     const h = h2hStats(a.teamId, b.teamId, group.matches || []);
     if (h[b.teamId].pts !== h[a.teamId].pts) return h[b.teamId].pts - h[a.teamId].pts;
     return h[b.teamId].gd - h[a.teamId].gd;
   });
+}
+
+// ── Standings legend ─────────────────────────────────────────────────────────
+const LEGEND = [
+  { key: "P",  label: "Matches played" },
+  { key: "W",  label: "Wins" },
+  { key: "L",  label: "Losses" },
+  { key: "PF", label: "Points For — rally points scored" },
+  { key: "PA", label: "Points Against — rally points conceded" },
+  { key: "PD", label: "Points Difference (PF − PA)" },
+  { key: "MP", label: "Match Points  ·  Win = 1  ·  Loss = 0" },
+];
+
+function StandingsLegend({ show, onToggle }) {
+  return (
+    <>
+      <button onClick={onToggle} style={{
+        background: "none", border: "none", cursor: "pointer",
+        color: G.textLight, fontSize: 12, padding: "2px 6px",
+        fontFamily: "'DM Sans', sans-serif",
+      }}>ℹ️ key</button>
+      {show && (
+        <div style={{
+          marginTop: 10, padding: "10px 12px",
+          background: G.sand, borderRadius: 8,
+          display: "grid", gap: 4,
+        }}>
+          {LEGEND.map(({ key, label }) => (
+            <div key={key} style={{ display: "flex", gap: 8, fontSize: 12, color: G.text }}>
+              <span style={{ fontWeight: 700, minWidth: 28, color: G.ocean }}>{key}</span>
+              <span style={{ color: G.textLight }}>{label}</span>
+            </div>
+          ))}
+          <div style={{ marginTop: 6, fontSize: 11, color: G.textLight, borderTop: "1px solid " + G.sandDark, paddingTop: 6 }}>
+            Tiebreaker order: MP → PD → PF → Head-to-head
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 // ── Knockout bracket builder ─────────────────────────────────────────────────
@@ -129,6 +168,7 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
   const [s2, setS2] = useState("0");
   const [drawError, setDrawError] = useState(false);
   const [statsMatch, setStatsMatch] = useState(null);
+  const [showLegend, setShowLegend] = useState(false);
 
   const tName = id => tournament.teams.find(tm => tm.id === id)?.name || "?";
 
@@ -184,33 +224,50 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
 
             {/* Standings table */}
             <Card style={{ marginBottom: 10, overflowX: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontFamily: "'Bebas Neue'", fontSize: 15, color: G.ocean, letterSpacing: 1 }}>
+                  STANDINGS
+                </span>
+                {gi === 0 && <StandingsLegend show={showLegend} onToggle={() => setShowLegend(v => !v)} />}
+              </div>
+              {gi === 0 && showLegend && (
+                <div style={{ marginBottom: 10, padding: "10px 12px", background: G.sand, borderRadius: 8, display: "grid", gap: 4 }}>
+                  {LEGEND.map(({ key, label }) => (
+                    <div key={key} style={{ display: "flex", gap: 8, fontSize: 12 }}>
+                      <span style={{ fontWeight: 700, minWidth: 28, color: G.ocean }}>{key}</span>
+                      <span style={{ color: G.textLight }}>{label}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 6, fontSize: 11, color: G.textLight, borderTop: "1px solid " + G.sandDark, paddingTop: 6 }}>
+                    Tiebreaker: MP → PD → PF → Head-to-head
+                  </div>
+                </div>
+              )}
               {/* Header row */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "24px 1fr 28px 28px 28px 28px 36px 36px 36px 36px",
+                gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",
                 gap: 4, alignItems: "center",
                 fontSize: 10, fontWeight: 700, color: G.textLight,
                 textTransform: "uppercase", letterSpacing: 0.5,
                 paddingBottom: 6, borderBottom: "1px solid " + G.sandDark,
                 marginBottom: 4,
               }}>
-                <span>#</span>
-                <span>Team</span>
+                <span>#</span><span>Team</span>
                 <span style={{ textAlign: "center" }}>P</span>
                 <span style={{ textAlign: "center" }}>W</span>
-                <span style={{ textAlign: "center" }}>D</span>
                 <span style={{ textAlign: "center" }}>L</span>
-                <span style={{ textAlign: "center" }}>GF</span>
-                <span style={{ textAlign: "center" }}>GA</span>
-                <span style={{ textAlign: "center" }}>GD</span>
-                <span style={{ textAlign: "center" }}>Pts</span>
+                <span style={{ textAlign: "center" }}>PF</span>
+                <span style={{ textAlign: "center" }}>PA</span>
+                <span style={{ textAlign: "center" }}>PD</span>
+                <span style={{ textAlign: "center" }}>MP</span>
               </div>
               {standings.map((row, rank) => {
                 const advances = rank < 2;
                 return (
                   <div key={row.teamId} style={{
                     display: "grid",
-                    gridTemplateColumns: "24px 1fr 28px 28px 28px 28px 36px 36px 36px 36px",
+                    gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",
                     gap: 4, alignItems: "center",
                     padding: "7px 0",
                     borderBottom: rank < standings.length - 1 ? "1px solid " + G.sandDark : "none",
@@ -224,11 +281,11 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
                       {tName(row.teamId)}
                       {advances && <span style={{ fontSize: 10, marginLeft: 4, color: G.success }}>↑</span>}
                     </span>
-                    {[row.played, row.wins, row.draws, row.losses, row.gf, row.ga, row.gd, row.pts].map((val, ci) => (
+                    {[row.played, row.wins, row.losses, row.pf, row.pa, row.pd, row.mp].map((val, ci) => (
                       <span key={ci} style={{
                         textAlign: "center", fontSize: 13,
-                        fontWeight: ci === 7 ? 700 : 400,
-                        color: ci === 7 ? G.ocean : ci === 6 ? (val > 0 ? G.success : val < 0 ? G.danger : G.text) : G.text,
+                        fontWeight: ci === 6 ? 700 : 400,
+                        color: ci === 6 ? G.ocean : ci === 5 ? (val > 0 ? G.success : val < 0 ? G.danger : G.text) : G.text,
                       }}>{val}</span>
                     ))}
                   </div>

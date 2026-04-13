@@ -402,24 +402,42 @@ function StandingsTable({ rows }) {
     <>
       {/* Legend toggle */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-        <button onClick={() => setShowLegend(v => !v)} style={{
+        <button onClick={() => setShowLegend(true)} style={{
           background: "none", border: "none", cursor: "pointer",
           color: G.textLight, fontSize: 12, padding: "2px 6px",
           fontFamily: "'DM Sans', sans-serif",
         }}>ℹ️ key</button>
       </div>
       {showLegend && (
-        <div style={{ marginBottom: 10, padding: "10px 12px", background: G.sand, borderRadius: 8, display: "grid", gap: 4 }}>
-          {BV_LEGEND.map(({ key, label }) => (
-            <div key={key} style={{ display: "flex", gap: 8, fontSize: 12 }}>
-              <span style={{ fontWeight: 700, minWidth: 28, color: G.ocean }}>{key}</span>
-              <span style={{ color: G.textLight }}>{label}</span>
-            </div>
-          ))}
-          <div style={{ marginTop: 6, fontSize: 11, color: G.textLight, borderTop: "1px solid " + G.sandDark, paddingTop: 6 }}>
-            Tiebreaker: MP → PD → PF
+        <Modal title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
+          <div style={{ display: "grid", gap: 0 }}>
+            {BV_LEGEND.map(({ key, label }, i) => (
+              <div key={key} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "12px 0",
+                borderBottom: i < BV_LEGEND.length - 1 ? "1px solid " + G.sandDark : "none",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, background: G.ocean,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "'Bebas Neue'", fontSize: 15, color: G.white, letterSpacing: 1, flexShrink: 0,
+                }}>
+                  {key}
+                </div>
+                <span style={{ fontSize: 14, color: G.text }}>{label}</span>
+              </div>
+            ))}
           </div>
-        </div>
+          <div style={{
+            marginTop: 16, padding: "12px 14px",
+            background: G.ocean + "12", borderRadius: 10, borderLeft: "3px solid " + G.ocean,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: G.ocean, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+              Tiebreaker order
+            </div>
+            <div style={{ fontSize: 13, color: G.text }}>MP → PD → PF</div>
+          </div>
+        </Modal>
       )}
       <div style={{
         display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",

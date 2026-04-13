@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { G, Card, Btn, Badge, Input, Modal } from "./ui";
+import { MatchStatsModal } from "./TournamentMatchesSection";
 
 const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive }) => {
   const [scoreModal, setScoreModal] = useState(null); // { roundIdx, match }
   const [s1, setS1] = useState("0");
   const [s2, setS2] = useState("0");
   const [drawError, setDrawError] = useState(false);
+  const [statsMatch, setStatsMatch] = useState(null);
 
   const tName = id => {
     if (!id) return "TBD";
@@ -171,11 +173,14 @@ const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive 
                 const canPlay = playable && bothTeamsKnown && !m.played;
 
                 return (
-                  <Card key={m.id} style={{
-                    padding: "12px 16px",
-                    opacity: !bothTeamsKnown ? 0.55 : 1,
-                    borderLeft: m.played ? "4px solid " + G.success : bothTeamsKnown ? "4px solid " + roundColor(round.id) : "4px solid " + G.sandDark,
-                  }}>
+                  <Card key={m.id}
+                    onClick={() => m.played && setStatsMatch(m)}
+                    style={{
+                      padding: "12px 16px",
+                      opacity: !bothTeamsKnown ? 0.55 : 1,
+                      cursor: m.played ? "pointer" : "default",
+                      borderLeft: m.played ? "4px solid " + G.success : bothTeamsKnown ? "4px solid " + roundColor(round.id) : "4px solid " + G.sandDark,
+                    }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       {/* Team 1 */}
                       <div style={{ flex: 1 }}>
@@ -229,6 +234,14 @@ const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive 
           </div>
         );
       })}
+
+      {/* Stats modal */}
+      {statsMatch && (
+        <MatchStatsModal
+          match={statsMatch} tournament={tournament} players={players}
+          onClose={() => setStatsMatch(null)}
+        />
+      )}
 
       {/* Score entry modal */}
       {scoreModal && (

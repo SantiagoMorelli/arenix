@@ -2,6 +2,29 @@ import React, { useState } from "react";
 import { G, Card, Btn, Input, Modal } from "./ui";
 import { uid, LEVELS, levelOf } from "../lib/utils";
 
+// ── Compute live team stats from all played matches ──────────────────────────
+function calcAllTeamStats(tournament) {
+  const allMatches = [
+    ...(tournament.groups || []).flatMap(g => g.matches || []),
+    ...(tournament.knockout?.rounds || []).flatMap(r => r.matches || []),
+    ...(tournament.matches || []),
+  ];
+
+  return tournament.teams.map(tm => {
+    let wins = 0, losses = 0, pf = 0, pa = 0;
+    allMatches
+      .filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
+      .forEach(m => {
+        const isT1 = m.team1 === tm.id;
+        const scored   = isT1 ? m.score1 : m.score2;
+        const conceded = isT1 ? m.score2 : m.score1;
+        pf += scored; pa += conceded;
+        if (scored > conceded) wins++; else losses++;
+      });
+    return { ...tm, wins, losses, pf, pa, pd: pf - pa, mp: wins };
+  }).sort((a, b) => b.mp - a.mp || b.pd - a.pd || b.pf - a.pf);
+}
+
 const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
   const [showModal, setShowModal] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -97,12 +120,22 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
     ));
   };
 
+  const sortedTeams = calcAllTeamStats(tournament);
+  const anyPlayed = sortedTeams.some(tm => tm.wins + tm.losses > 0);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: G.ocean, letterSpacing: 2 }}>
-          🤝 TEAMS
-        </h1>
+        <div>
+          <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: G.ocean, letterSpacing: 2, lineHeight: 1 }}>
+            {anyPlayed ? "📊 STANDINGS" : "🤝 TEAMS"}
+          </h1>
+          {anyPlayed && (
+            <div style={{ fontSize: 11, color: G.textLight, letterSpacing: 0.5, textTransform: "uppercase", marginTop: 2 }}>
+              MP → PD → PF tiebreaker
+            </div>
+          )}
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn onClick={() => setShowInvite(true)} variant="secondary" size="sm">+ Players</Btn>
           <Btn onClick={() => { setShowAutoModal(true); setProposedTeams(null); }} variant="secondary" size="sm"
@@ -148,36 +181,62 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
         </Card>
       )}
 
-      {/* Teams list */}
+      {/* Teams list — sorted by live performance */}
       <div style={{ display: "grid", gap: 12 }}>
-        {tournament.teams.length === 0 && (
+        {sortedTeams.length === 0 && (
           <Card style={{ textAlign: "center", color: G.textLight, padding: 32 }}>
             {invitedPlayers.length < teamSize
               ? `First invite at least ${teamSize} players`
               : "No teams yet. Create the first one!"}
           </Card>
         )}
-        {tournament.teams.map((tm, i) => (
-          <Card key={tm.id} style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: i === 0 ? G.sun : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : G.sandDark,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "'Bebas Neue'", fontSize: 20, color: i < 3 ? G.white : G.textLight, flexShrink: 0,
-            }}>{i + 1}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{tm.name}</div>
-              <div style={{ fontSize: 13, color: G.textLight, marginTop: 2 }}>
-                {tm.players.map(pid => players.find(p => p.id === pid)?.name || "?").join(" · ")}
+        {sortedTeams.map((tm, i) => {
+          const rankColors = ["#F5C842", "#C0C0C0", "#CD7F32"];
+          const rankBg = i < 3 ? rankColors[i] : G.sandDark;
+          const rankColor = i < 3 ? G.white : G.textLight;
+          const isWinner = tournament.winner === tm.id;
+          return (
+            <Card key={tm.id} style={{
+              display: "flex", alignItems: "center", gap: 14,
+              borderLeft: isWinner ? "4px solid " + G.sun : anyPlayed && i === 0 ? "4px solid " + G.success : "none",
+            }}>
+              {/* Rank badge */}
+              <div style={{
+                width: 40, height: 40, borderRadius: "50%",
+                background: rankBg, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontFamily: "'Bebas Neue'", fontSize: 20, color: rankColor,
+              }}>{i + 1}</div>
+
+              {/* Name + players + stats */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: G.text }}>{tm.name}</span>
+                  {isWinner && <span style={{ fontSize: 13 }}>🏆</span>}
+                </div>
+                <div style={{ fontSize: 12, color: G.textLight, marginTop: 1 }}>
+                  {tm.players.map(pid => players.find(p => p.id === pid)?.name || "?").join(" · ")}
+                </div>
+                {anyPlayed && (
+                  <div style={{ display: "flex", gap: 10, marginTop: 5 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: G.success }}>{tm.wins}W</span>
+                    <span style={{ fontSize: 12, color: G.textLight }}>{tm.losses}L</span>
+                    <span style={{ fontSize: 12, color: tm.pd > 0 ? G.success : tm.pd < 0 ? G.danger : G.textLight }}>
+                      PD {tm.pd > 0 ? "+" : ""}{tm.pd}
+                    </span>
+                    <span style={{ fontSize: 12, color: G.textLight }}>PF {tm.pf}</span>
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 12, color: G.textLight }}>{tm.wins}W – {tm.losses}L</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.ocean, lineHeight: 1 }}>{tm.points}</div>
-              <div style={{ fontSize: 11, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5 }}>pts</div>
-            </div>
-          </Card>
-        ))}
+
+              {/* MP (match points) */}
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 30, color: G.ocean, lineHeight: 1 }}>{tm.mp}</div>
+                <div style={{ fontSize: 10, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5 }}>MP</div>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Auto team generation modal */}

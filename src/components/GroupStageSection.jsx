@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { G, Card, Btn, Badge, Input, Modal } from "./ui";
 import { uid } from "../lib/utils";
+import { MatchStatsModal } from "./TournamentMatchesSection";
 
 // ── Standings calculator ─────────────────────────────────────────────────────
 function calcStandings(group) {
@@ -105,6 +106,7 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
   const [scoreModal, setScoreModal] = useState(null); // { groupIdx, match }
   const [s1, setS1] = useState("0");
   const [s2, setS2] = useState("0");
+  const [statsMatch, setStatsMatch] = useState(null);
 
   const tName = id => tournament.teams.find(tm => tm.id === id)?.name || "?";
 
@@ -246,9 +248,9 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
                   {played.map(m => (
-                    <div key={m.id} style={{
+                    <div key={m.id} onClick={() => setStatsMatch(m)} style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "6px 12px", background: G.sand, borderRadius: 8,
+                      padding: "6px 12px", background: G.sand, borderRadius: 8, cursor: "pointer",
                     }}>
                       <span style={{
                         flex: 1, fontSize: 13,
@@ -285,6 +287,14 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
           {allGroupMatchesPlayed ? "⚡ Advance to Knockout Stage" : "⏳ Complete all group matches first"}
         </Btn>
       </div>
+
+      {/* Stats modal */}
+      {statsMatch && (
+        <MatchStatsModal
+          match={statsMatch} tournament={tournament} players={players}
+          onClose={() => setStatsMatch(null)}
+        />
+      )}
 
       {/* Score entry modal */}
       {scoreModal && (

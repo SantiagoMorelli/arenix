@@ -55,35 +55,6 @@ const LEGEND = [
   { key: "MP", label: "Match Points  ·  Win = 1  ·  Loss = 0" },
 ];
 
-function StandingsLegend({ show, onToggle }) {
-  return (
-    <>
-      <button onClick={onToggle} style={{
-        background: "none", border: "none", cursor: "pointer",
-        color: G.textLight, fontSize: 12, padding: "2px 6px",
-        fontFamily: "'DM Sans', sans-serif",
-      }}>ℹ️ key</button>
-      {show && (
-        <div style={{
-          marginTop: 10, padding: "10px 12px",
-          background: G.sand, borderRadius: 8,
-          display: "grid", gap: 4,
-        }}>
-          {LEGEND.map(({ key, label }) => (
-            <div key={key} style={{ display: "flex", gap: 8, fontSize: 12, color: G.text }}>
-              <span style={{ fontWeight: 700, minWidth: 28, color: G.ocean }}>{key}</span>
-              <span style={{ color: G.textLight }}>{label}</span>
-            </div>
-          ))}
-          <div style={{ marginTop: 6, fontSize: 11, color: G.textLight, borderTop: "1px solid " + G.sandDark, paddingTop: 6 }}>
-            Tiebreaker order: MP → PD → PF → Head-to-head
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 // ── Knockout bracket builder ─────────────────────────────────────────────────
 function buildKnockout(groups) {
   // top2[i] = [{ teamId, position: 1|2, groupIdx }, ...]
@@ -228,21 +199,14 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
                 <span style={{ fontFamily: "'Bebas Neue'", fontSize: 15, color: G.ocean, letterSpacing: 1 }}>
                   STANDINGS
                 </span>
-                {gi === 0 && <StandingsLegend show={showLegend} onToggle={() => setShowLegend(v => !v)} />}
+                {gi === 0 && (
+                  <button onClick={() => setShowLegend(true)} style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: G.textLight, fontSize: 12, padding: "2px 6px",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}>ℹ️ key</button>
+                )}
               </div>
-              {gi === 0 && showLegend && (
-                <div style={{ marginBottom: 10, padding: "10px 12px", background: G.sand, borderRadius: 8, display: "grid", gap: 4 }}>
-                  {LEGEND.map(({ key, label }) => (
-                    <div key={key} style={{ display: "flex", gap: 8, fontSize: 12 }}>
-                      <span style={{ fontWeight: 700, minWidth: 28, color: G.ocean }}>{key}</span>
-                      <span style={{ color: G.textLight }}>{label}</span>
-                    </div>
-                  ))}
-                  <div style={{ marginTop: 6, fontSize: 11, color: G.textLight, borderTop: "1px solid " + G.sandDark, paddingTop: 6 }}>
-                    Tiebreaker: MP → PD → PF → Head-to-head
-                  </div>
-                </div>
-              )}
               {/* Header row */}
               <div style={{
                 display: "grid",
@@ -369,6 +333,39 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
             {allGroupMatchesPlayed ? "⚡ Advance to Knockout Stage" : "⏳ Complete all group matches first"}
           </Btn>
         </div>
+      )}
+
+      {/* Legend modal */}
+      {showLegend && (
+        <Modal title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
+          <div style={{ display: "grid", gap: 0 }}>
+            {LEGEND.map(({ key, label }, i) => (
+              <div key={key} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "12px 0",
+                borderBottom: i < LEGEND.length - 1 ? "1px solid " + G.sandDark : "none",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, background: G.ocean,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "'Bebas Neue'", fontSize: 15, color: G.white, letterSpacing: 1, flexShrink: 0,
+                }}>
+                  {key}
+                </div>
+                <span style={{ fontSize: 14, color: G.text }}>{label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{
+            marginTop: 16, padding: "12px 14px",
+            background: G.ocean + "12", borderRadius: 10, borderLeft: "3px solid " + G.ocean,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: G.ocean, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+              Tiebreaker order
+            </div>
+            <div style={{ fontSize: 13, color: G.text }}>MP → PD → PF → Head-to-head</div>
+          </div>
+        </Modal>
       )}
 
       {/* Stats modal */}

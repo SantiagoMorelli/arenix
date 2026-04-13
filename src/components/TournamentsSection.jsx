@@ -8,6 +8,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
   const [date, setDate] = useState(now());
   const [teamSize, setTeamSize] = useState(2);
   const [setsPerMatch, setSetsPerMatch] = useState(1);
+  const [numGroups, setNumGroups] = useState(2);
 
   const createTournament = () => {
     if (!name.trim()) return;
@@ -17,10 +18,14 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
       date,
       teamSize,       // 2 or 3 players per team
       setsPerMatch,   // 1, 3 or 5
+      numGroups,      // number of groups for the group stage
+      phase: "group", // "group" | "knockout" | "completed"
       status: "active",
       invitedPlayers: [], // player ids invited to this tournament
       teams: [],          // teams created within this tournament
-      matches: [],
+      groups: [],         // populated when schedule is generated
+      knockout: null,     // populated when advancing to knockout
+      matches: [],        // legacy flat list (kept for backwards compat)
       winner: null,
     };
     setTournaments(prev => [...prev, newT]);
@@ -49,7 +54,7 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
               <div>
                 <div style={{ fontWeight: 700, fontSize: 17 }}>{tour.name}</div>
                 <div style={{ fontSize: 13, color: G.textLight, marginTop: 3 }}>
-                  {tour.date} · {tour.teamSize} players/team · {tour.teams.length} teams · {tour.setsPerMatch === 1 ? "1 set" : tour.setsPerMatch + " sets"}
+                  {tour.date} · {tour.teamSize} players/team · {tour.teams.length} teams · {tour.setsPerMatch === 1 ? "1 set" : tour.setsPerMatch + " sets"} · {tour.numGroups || 2} groups
                 </div>
                 {tour.winner && (
                   <div style={{ marginTop: 8 }}>
@@ -106,6 +111,26 @@ const TournamentsSection = ({ tournaments, setTournaments, players, setPlayers, 
                     fontFamily: "'DM Sans', sans-serif",
                   }}>
                     {n === 1 ? "1 set" : n + " sets"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Number of groups
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                {[2, 4, 8].map(n => (
+                  <button key={n} onClick={() => setNumGroups(n)} style={{
+                    flex: 1, padding: "12px", borderRadius: 12, border: "2px solid",
+                    borderColor: numGroups === n ? G.ocean : G.sandDark,
+                    background: numGroups === n ? G.ocean + "11" : G.white,
+                    fontWeight: numGroups === n ? 700 : 400,
+                    fontSize: 15, cursor: "pointer", color: G.text,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}>
+                    {n} groups
                   </button>
                 ))}
               </div>

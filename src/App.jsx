@@ -33,6 +33,115 @@ const TOUR_NAV = [
   { id: "tour_players", icon: "👤", label: "PLAYERS" },
 ];
 
+// Collect all matches across group and knockout phases for live score lookup
+function getAllTournamentMatches(tour) {
+  const groupMatches = (tour.groups || []).flatMap(g => g.matches || []);
+  const knockoutMatches = (tour.knockout?.rounds || []).flatMap(r => r.matches || []);
+  return [...groupMatches, ...knockoutMatches, ...(tour.matches || [])];
+}
+
+// Apply a live-scored result to the correct location in the tournament structure
+function saveLiveResult(tour, matchId, score1, score2, winnerTeamId, log, sets) {
+  const updated = { ...tour };
+
+  // Try group stage first
+  const groups = (tour.groups || []).map(g => {
+    const match = g.matches.find(m => m.id === matchId);
+    if (!match) return g;
+    return {
+      ...g,
+      matches: g.matches.map(m =>
+        m.id !== matchId ? m : { ...m, played: true, winner: winnerTeamId, score1, score2, log: log || null, sets: sets || null }
+      ),
+    };
+  });
+  updated.groups = groups;
+
+  // Try knockout
+  if (tour.knockout) {
+    const rounds = tour.knockout.rounds.map(r => {
+      const match = r.matches.find(m => m.id === matchId);
+      if (!match) return r;
+      return {
+        ...r,
+        matches: r.matches.map(m =>
+          m.id !== matchId ? m : { ...m, played: true, winner: winnerTeamId, score1, score2, log: log || null, sets: sets || null }
+        ),
+      };
+    });
+    updated.knockout = { ...tour.knockout, rounds };
+    // Advance knockout bracket after saving
+    updated.knockout = advanceKnockout(updated.knockout, updated.teams);
+    // Check if final is played
+    const finalRound = updated.knockout.rounds.find(r => r.id === "final");
+    if (finalRound?.matches[0]?.played) {
+      updated.phase = "completed";
+      updated.status = "completed";
+      updated.winner = finalRound.matches[0].winner;
+    }
+  }
+
+  // Legacy flat matches fallback
+  if ((tour.matches || []).find(m => m.id === matchId)) {
+    updated.matches = tour.matches.map(m =>
+      m.id !== matchId ? m : { ...m, played: true, winner: winnerTeamId, score1, score2, log: log || null, sets: sets || null }
+    );
+  }
+
+  return updated;
+}
+
+// After each knockout match, propagate winners into subsequent rounds
+function advanceKnockout(knockout, teams) {
+  const rounds = knockout.rounds.map(r => ({ ...r, matches: r.matches.map(m => ({ ...m })) }));
+
+  for (let ri = 0; ri < rounds.length; ri++) {
+    const round = rounds[ri];
+    if (round.id === "third_place" || round.id === "final") continue;
+    const nextRound = rounds[ri + 1];
+    if (!nextRound) continue;
+
+    round.matches.forEach((m, mi) => {
+      if (!m.played || !m.winner) return;
+      const loser = m.winner === m.team1 ? m.team2 : m.team1;
+
+      // Winners advance to next round (pairs: 0→slot0, 1→slot0; 2→slot1, 3→slot1 etc.)
+      const nextMatchIdx = Math.floor(mi / 2);
+      const isFirstOfPair = mi % 2 === 0;
+      if (nextRound.matches[nextMatchIdx]) {
+        if (isFirstOfPair) nextRound.matches[nextMatchIdx] = { ...nextRound.matches[nextMatchIdx], team1: m.winner };
+        else              nextRound.matches[nextMatchIdx] = { ...nextRound.matches[nextMatchIdx], team2: m.winner };
+      }
+
+      // Semi-final losers → 3rd place match
+      if (round.id === "semi") {
+        const thirdPlace = rounds.find(r => r.id === "third_place");
+        if (thirdPlace) {
+          if (mi === 0) thirdPlace.matches[0] = { ...thirdPlace.matches[0], team1: loser };
+          if (mi === 1) thirdPlace.matches[0] = { ...thirdPlace.matches[0], team2: loser };
+        }
+      }
+    });
+
+    // After last non-final round fills semi, fill final from semi winners
+    if (nextRound.id === "final") {
+      const semis = round.matches;
+      if (semis[0]?.played && semis[1]?.played) {
+        const finalRound = rounds.find(r => r.id === "final");
+        if (finalRound) {
+          finalRound.matches[0] = {
+            ...finalRound.matches[0],
+            team1: semis[0].winner,
+            team2: semis[1].winner,
+          };
+        }
+      }
+    }
+  }
+
+  return { ...knockout, rounds };
+}
+
 export default function App() {
   const [tab, setTab] = useState("tournaments");
   const [players, setPlayers] = useLocalStorage("arenix_players", initialPlayers);
@@ -149,29 +258,12 @@ export default function App() {
             players={players}
             setsPerMatch={activeTournament.setsPerMatch}
             preloadMatchId={activeMatchId}
-            tournamentMatches={activeTournament.matches}
+            tournamentMatches={getAllTournamentMatches(activeTournament)}
             onSaveResult={(matchId, score1, score2, winnerTeamId, log, sets) => {
               try { localStorage.removeItem(SAVE_KEY); } catch {}
               setTournaments(prev => prev.map(tour => {
                 if (tour.id !== activeTournamentId) return tour;
-                const matches = tour.matches.map(m =>
-                  m.id !== matchId ? m : { ...m, played: true, winner: winnerTeamId, score1, score2,
-                    log: log || null, sets: sets || null }
-                );
-                const teams = tour.teams.map(tm => {
-                  if (tm.id === winnerTeamId) return { ...tm, wins: tm.wins + 1, points: tm.points + 20 };
-                  const inMatch = tour.matches.find(mx => mx.id === matchId);
-                  if (inMatch && (tm.id === inMatch.team1 || tm.id === inMatch.team2))
-                    return { ...tm, losses: tm.losses + 1, points: tm.points + 5 };
-                  return tm;
-                });
-                const allPlayed = matches.every(m => m.played);
-                const winnerIds = tour.teams.map(tm => tm.id);
-                const wins = {};
-                winnerIds.forEach(id => wins[id] = 0);
-                matches.forEach(m => { if (m.winner) wins[m.winner] = (wins[m.winner] || 0) + 1; });
-                const tourWinner = allPlayed ? Object.entries(wins).sort((a, b) => b[1] - a[1])[0]?.[0] : null;
-                return { ...tour, matches, teams, status: allPlayed ? "completed" : "active", winner: tourWinner };
+                return saveLiveResult(tour, matchId, score1, score2, winnerTeamId, log, sets);
               }));
               setActiveMatchId(null);
               setTourTab("tour_matches");

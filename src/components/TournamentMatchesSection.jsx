@@ -16,21 +16,30 @@ function getValidGroupOptions(numTeams) {
 
 function calcFreePlayStandings(teams, matches) {
   return teams.map(tm => {
-    let pts = 0, gf = 0, ga = 0, played = 0, wins = 0, draws = 0, losses = 0;
+    let mp = 0, pf = 0, pa = 0, played = 0, wins = 0, losses = 0;
     (matches || []).filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
       .forEach(m => {
         played++;
         const isT1 = m.team1 === tm.id;
         const scored   = isT1 ? m.score1 : m.score2;
         const conceded = isT1 ? m.score2 : m.score1;
-        gf += scored; ga += conceded;
-        if (scored > conceded)       { pts += 3; wins++;   }
-        else if (scored === conceded) { pts += 1; draws++;  }
-        else                          {           losses++; }
+        pf += scored; pa += conceded;
+        if (scored > conceded) { mp += 1; wins++;   }
+        else                   {          losses++; }
       });
-    return { id: tm.id, name: tm.name, played, wins, draws, losses, gf, ga, gd: gf - ga, pts };
-  }).sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    return { id: tm.id, name: tm.name, played, wins, losses, pf, pa, pd: pf - pa, mp };
+  }).sort((a, b) => b.mp - a.mp || b.pd - a.pd || b.pf - a.pf);
 }
+
+const BV_LEGEND = [
+  { key: "P",  label: "Matches played" },
+  { key: "W",  label: "Wins" },
+  { key: "L",  label: "Losses" },
+  { key: "PF", label: "Points For — rally points scored" },
+  { key: "PA", label: "Points Against — rally points conceded" },
+  { key: "PD", label: "Points Difference (PF − PA)" },
+  { key: "MP", label: "Match Points  ·  Win = 1  ·  Loss = 0" },
+];
 
 const selBtnStyle = (active) => ({
   flex: 1, padding: "12px", borderRadius: 12, border: "2px solid",
@@ -299,8 +308,8 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
                   <Input value={s2} onChange={setS2} placeholder="0" />
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: G.textLight, textAlign: "center" }}>Draws are allowed.</div>
-              <Btn onClick={submitFpScore} variant="success" size="lg">Confirm result</Btn>
+              <Btn onClick={submitFpScore} variant="success" size="lg"
+                disabled={parseInt(s1) === parseInt(s2)}>Confirm result</Btn>
             </div>
           </Modal>
         )}
@@ -387,11 +396,33 @@ function SectionLabel({ children }) {
 }
 
 function StandingsTable({ rows }) {
-  const cols = ["#", "Team", "P", "W", "D", "L", "GF", "GA", "GD", "Pts"];
+  const [showLegend, setShowLegend] = React.useState(false);
+  const cols = ["#", "Team", "P", "W", "L", "PF", "PA", "PD", "MP"];
   return (
     <>
+      {/* Legend toggle */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+        <button onClick={() => setShowLegend(v => !v)} style={{
+          background: "none", border: "none", cursor: "pointer",
+          color: G.textLight, fontSize: 12, padding: "2px 6px",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>ℹ️ key</button>
+      </div>
+      {showLegend && (
+        <div style={{ marginBottom: 10, padding: "10px 12px", background: G.sand, borderRadius: 8, display: "grid", gap: 4 }}>
+          {BV_LEGEND.map(({ key, label }) => (
+            <div key={key} style={{ display: "flex", gap: 8, fontSize: 12 }}>
+              <span style={{ fontWeight: 700, minWidth: 28, color: G.ocean }}>{key}</span>
+              <span style={{ color: G.textLight }}>{label}</span>
+            </div>
+          ))}
+          <div style={{ marginTop: 6, fontSize: 11, color: G.textLight, borderTop: "1px solid " + G.sandDark, paddingTop: 6 }}>
+            Tiebreaker: MP → PD → PF
+          </div>
+        </div>
+      )}
       <div style={{
-        display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 28px 36px 36px 36px 36px",
+        display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",
         gap: 4, fontSize: 10, fontWeight: 700, color: G.textLight, textTransform: "uppercase",
         letterSpacing: 0.5, paddingBottom: 6, borderBottom: "1px solid " + G.sandDark, marginBottom: 4,
       }}>
@@ -399,17 +430,17 @@ function StandingsTable({ rows }) {
       </div>
       {rows.map((row, rank) => (
         <div key={row.id} style={{
-          display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 28px 36px 36px 36px 36px",
+          display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",
           gap: 4, alignItems: "center", padding: "7px 0",
           borderBottom: rank < rows.length - 1 ? "1px solid " + G.sandDark : "none",
         }}>
           <span style={{ fontWeight: 700, fontSize: 12, color: rank === 0 ? G.sun : G.textLight }}>{rank + 1}</span>
           <span style={{ fontWeight: 600, fontSize: 13 }}>{row.name}</span>
-          {[row.played, row.wins, row.draws, row.losses, row.gf, row.ga, row.gd, row.pts].map((val, ci) => (
+          {[row.played, row.wins, row.losses, row.pf, row.pa, row.pd, row.mp].map((val, ci) => (
             <span key={ci} style={{
               textAlign: "center", fontSize: 13,
-              fontWeight: ci === 7 ? 700 : 400,
-              color: ci === 7 ? G.ocean : ci === 6 ? (val > 0 ? G.success : val < 0 ? G.danger : G.text) : G.text,
+              fontWeight: ci === 6 ? 700 : 400,
+              color: ci === 6 ? G.ocean : ci === 5 ? (val > 0 ? G.success : val < 0 ? G.danger : G.text) : G.text,
             }}>{val}</span>
           ))}
         </div>

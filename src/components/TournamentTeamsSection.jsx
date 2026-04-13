@@ -2,14 +2,18 @@ import React, { useState } from "react";
 import { G, Card, Btn, Input, Modal } from "./ui";
 import { uid, LEVELS, levelOf } from "../lib/utils";
 
-// ── Position bonus for finishing 1st–4th in knockout ────────────────────────
-const POSITION_BONUS = { 1: 12, 2: 8, 3: 5, 4: 3 };
+// ── Knockout depth: how far a team went in the bracket ───────────────────────
+// Higher weight = further round reached.
+const ROUND_WEIGHT = { r16: 1, qf: 2, semi: 3, third_place: 4, final: 5 };
+
+// PTS: Win=1 + position bonus for top-4 finish + round bonus for depth reached
+const POSITION_BONUS = { 1: 12, 2: 8, 3: 5, 4: 3 }; // 1st–4th place
+const ROUND_BONUS    = { 2: 2, 1: 1 };                // QF reached = +2, R16 = +1
 
 function getKnockoutPositions(tournament) {
   const pos = {};
   const rounds = tournament.knockout?.rounds || [];
 
-  // Champion and runner-up from the final
   const finalM = rounds.find(r => r.id === "final")?.matches[0];
   if (finalM?.played && finalM.winner) {
     const loser = finalM.winner === finalM.team1 ? finalM.team2 : finalM.team1;
@@ -17,7 +21,6 @@ function getKnockoutPositions(tournament) {
     if (loser) pos[loser] = 2;
   }
 
-  // 3rd and 4th from the 3rd-place match
   const thirdM = rounds.find(r => r.id === "third_place")?.matches[0];
   if (thirdM?.played && thirdM.winner) {
     const loser = thirdM.winner === thirdM.team1 ? thirdM.team2 : thirdM.team1;
@@ -28,6 +31,19 @@ function getKnockoutPositions(tournament) {
   return pos;
 }
 
+// For each team, the highest knockout round weight they participated in
+function getKnockoutDepth(tournament) {
+  const depth = {};
+  (tournament.knockout?.rounds || []).forEach(round => {
+    const w = ROUND_WEIGHT[round.id] || 0;
+    round.matches.forEach(m => {
+      if (m.team1) depth[m.team1] = Math.max(depth[m.team1] || 0, w);
+      if (m.team2) depth[m.team2] = Math.max(depth[m.team2] || 0, w);
+    });
+  });
+  return depth;
+}
+
 // ── Compute live team stats from all played matches ──────────────────────────
 function calcAllTeamStats(tournament) {
   const allMatches = [
@@ -36,7 +52,8 @@ function calcAllTeamStats(tournament) {
     ...(tournament.matches || []),
   ];
 
-  const koPos = getKnockoutPositions(tournament);
+  const koPos   = getKnockoutPositions(tournament);
+  const koDepth = getKnockoutDepth(tournament);
 
   const teams = tournament.teams.map(tm => {
     let wins = 0, losses = 0, pf = 0, pa = 0;
@@ -49,16 +66,22 @@ function calcAllTeamStats(tournament) {
         pf += scored; pa += conceded;
         if (scored > conceded) wins++; else losses++;
       });
-    const kp = koPos[tm.id] || null;
-    const pts = wins * 3 + (POSITION_BONUS[kp] || 0);
-    return { ...tm, wins, losses, pf, pa, pd: pf - pa, kp, pts };
+    const kp    = koPos[tm.id]   || null;
+    const depth = koDepth[tm.id] || 0;
+    // PTS = wins (W=1) + position bonus (top 4) + round bonus (QF/R16 depth)
+    const pts = wins + (POSITION_BONUS[kp] || ROUND_BONUS[depth] || 0);
+    return { ...tm, wins, losses, pf, pa, pd: pf - pa, kp, depth, pts };
   });
 
-  // Sort: known KO positions first (1→4), then by wins → PD → PF
+  // Sort priority:
+  // 1. Known final positions (1–4)
+  // 2. Knockout depth — semi > QF > R16 > group only
+  // 3. Wins → PD → PF tiebreaker
   teams.sort((a, b) => {
     if (a.kp && b.kp) return a.kp - b.kp;
     if (a.kp) return -1;
     if (b.kp) return 1;
+    if (b.depth !== a.depth) return b.depth - a.depth;
     return b.wins - a.wins || b.pd - a.pd || b.pf - a.pf;
   });
 
@@ -173,7 +196,7 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
           </h1>
           {anyPlayed && (
             <div style={{ fontSize: 11, color: G.textLight, letterSpacing: 0.3, marginTop: 2 }}>
-              PTS = W×3 + position bonus (1st+12, 2nd+8, 3rd+5, 4th+3)
+              PTS = W + position bonus · 1st+12 · 2nd+8 · 3rd+5 · 4th+3
             </div>
           )}
         </div>

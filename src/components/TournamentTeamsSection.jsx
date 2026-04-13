@@ -2,6 +2,32 @@ import React, { useState } from "react";
 import { G, Card, Btn, Input, Modal } from "./ui";
 import { uid, LEVELS, levelOf } from "../lib/utils";
 
+// ── Position bonus for finishing 1st–4th in knockout ────────────────────────
+const POSITION_BONUS = { 1: 12, 2: 8, 3: 5, 4: 3 };
+
+function getKnockoutPositions(tournament) {
+  const pos = {};
+  const rounds = tournament.knockout?.rounds || [];
+
+  // Champion and runner-up from the final
+  const finalM = rounds.find(r => r.id === "final")?.matches[0];
+  if (finalM?.played && finalM.winner) {
+    const loser = finalM.winner === finalM.team1 ? finalM.team2 : finalM.team1;
+    pos[finalM.winner] = 1;
+    if (loser) pos[loser] = 2;
+  }
+
+  // 3rd and 4th from the 3rd-place match
+  const thirdM = rounds.find(r => r.id === "third_place")?.matches[0];
+  if (thirdM?.played && thirdM.winner) {
+    const loser = thirdM.winner === thirdM.team1 ? thirdM.team2 : thirdM.team1;
+    pos[thirdM.winner] = 3;
+    if (loser) pos[loser] = 4;
+  }
+
+  return pos;
+}
+
 // ── Compute live team stats from all played matches ──────────────────────────
 function calcAllTeamStats(tournament) {
   const allMatches = [
@@ -10,7 +36,9 @@ function calcAllTeamStats(tournament) {
     ...(tournament.matches || []),
   ];
 
-  return tournament.teams.map(tm => {
+  const koPos = getKnockoutPositions(tournament);
+
+  const teams = tournament.teams.map(tm => {
     let wins = 0, losses = 0, pf = 0, pa = 0;
     allMatches
       .filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
@@ -21,8 +49,21 @@ function calcAllTeamStats(tournament) {
         pf += scored; pa += conceded;
         if (scored > conceded) wins++; else losses++;
       });
-    return { ...tm, wins, losses, pf, pa, pd: pf - pa, mp: wins };
-  }).sort((a, b) => b.mp - a.mp || b.pd - a.pd || b.pf - a.pf);
+    const kp = koPos[tm.id] || null;
+    const pts = wins * 3 + (POSITION_BONUS[kp] || 0);
+    return { ...tm, wins, losses, pf, pa, pd: pf - pa, kp, pts };
+  });
+
+  // Sort: known KO positions first (1→4), then by wins → PD → PF
+  teams.sort((a, b) => {
+    if (a.kp && b.kp) return a.kp - b.kp;
+    if (a.kp) return -1;
+    if (b.kp) return 1;
+    return b.wins - a.wins || b.pd - a.pd || b.pf - a.pf;
+  });
+
+  // Attach final rank index (1-based) after sort
+  return teams.map((tm, i) => ({ ...tm, rank: i + 1 }));
 }
 
 const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
@@ -131,8 +172,8 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
             {anyPlayed ? "📊 STANDINGS" : "🤝 TEAMS"}
           </h1>
           {anyPlayed && (
-            <div style={{ fontSize: 11, color: G.textLight, letterSpacing: 0.5, textTransform: "uppercase", marginTop: 2 }}>
-              MP → PD → PF tiebreaker
+            <div style={{ fontSize: 11, color: G.textLight, letterSpacing: 0.3, marginTop: 2 }}>
+              PTS = W×3 + position bonus (1st+12, 2nd+8, 3rd+5, 4th+3)
             </div>
           )}
         </div>
@@ -190,49 +231,57 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
               : "No teams yet. Create the first one!"}
           </Card>
         )}
-        {sortedTeams.map((tm, i) => {
-          const rankColors = ["#F5C842", "#C0C0C0", "#CD7F32"];
-          const rankBg = i < 3 ? rankColors[i] : G.sandDark;
-          const rankColor = i < 3 ? G.white : G.textLight;
-          const isWinner = tournament.winner === tm.id;
+        {sortedTeams.map(tm => {
+          const rankColors = { 1: "#F5C842", 2: "#C0C0C0", 3: "#CD7F32" };
+          const rankBg    = rankColors[tm.rank] || G.sandDark;
+          const rankColor = rankColors[tm.rank] ? G.white : G.textLight;
+          const posLabels = { 1: "🥇 Champion", 2: "🥈 Runner-up", 3: "🥉 3rd place", 4: "4th place" };
+          const isWinner  = tournament.winner === tm.id;
           return (
             <Card key={tm.id} style={{
               display: "flex", alignItems: "center", gap: 14,
-              borderLeft: isWinner ? "4px solid " + G.sun : anyPlayed && i === 0 ? "4px solid " + G.success : "none",
+              borderLeft: tm.rank === 1 && anyPlayed
+                ? "4px solid " + (isWinner ? G.sun : G.success)
+                : "none",
             }}>
-              {/* Rank badge */}
+              {/* Rank badge — uses computed tm.rank from sorted position */}
               <div style={{
                 width: 40, height: 40, borderRadius: "50%",
                 background: rankBg, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontFamily: "'Bebas Neue'", fontSize: 20, color: rankColor,
-              }}>{i + 1}</div>
+              }}>{tm.rank}</div>
 
               {/* Name + players + stats */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontWeight: 700, fontSize: 16, color: G.text }}>{tm.name}</span>
-                  {isWinner && <span style={{ fontSize: 13 }}>🏆</span>}
                 </div>
                 <div style={{ fontSize: 12, color: G.textLight, marginTop: 1 }}>
                   {tm.players.map(pid => players.find(p => p.id === pid)?.name || "?").join(" · ")}
                 </div>
                 {anyPlayed && (
-                  <div style={{ display: "flex", gap: 10, marginTop: 5 }}>
+                  <div style={{ display: "flex", gap: 10, marginTop: 5, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: G.success }}>{tm.wins}W</span>
-                    <span style={{ fontSize: 12, color: G.textLight }}>{tm.losses}L</span>
+                    <span style={{ fontSize: 12, color: G.danger }}>{tm.losses}L</span>
                     <span style={{ fontSize: 12, color: tm.pd > 0 ? G.success : tm.pd < 0 ? G.danger : G.textLight }}>
                       PD {tm.pd > 0 ? "+" : ""}{tm.pd}
                     </span>
-                    <span style={{ fontSize: 12, color: G.textLight }}>PF {tm.pf}</span>
+                    {tm.kp && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: G.sun }}>
+                        {posLabels[tm.kp]}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* MP (match points) */}
+              {/* PTS = W×3 + position bonus */}
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 30, color: G.ocean, lineHeight: 1 }}>{tm.mp}</div>
-                <div style={{ fontSize: 10, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5 }}>MP</div>
+                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 30, color: G.ocean, lineHeight: 1 }}>
+                  {tm.pts}
+                </div>
+                <div style={{ fontSize: 10, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5 }}>PTS</div>
               </div>
             </Card>
           );

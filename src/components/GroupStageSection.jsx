@@ -3,6 +3,20 @@ import { G, Card, Btn, Badge, Input, Modal } from "./ui";
 import { uid } from "../lib/utils";
 import { MatchStatsModal } from "./TournamentMatchesSection";
 
+// ── Head-to-head stats between two teams ─────────────────────────────────────
+function h2hStats(idA, idB, matches) {
+  const s = { [idA]: { pts: 0, gd: 0 }, [idB]: { pts: 0, gd: 0 } };
+  (matches || [])
+    .filter(m => m.played &&
+      ((m.team1 === idA && m.team2 === idB) || (m.team1 === idB && m.team2 === idA)))
+    .forEach(m => {
+      const [s1, s2] = [m.score1, m.score2];
+      s[m.team1].gd += s1 - s2; s[m.team2].gd += s2 - s1;
+      if (s1 > s2) s[m.team1].pts += 3; else s[m.team2].pts += 3;
+    });
+  return s;
+}
+
 // ── Standings calculator ─────────────────────────────────────────────────────
 function calcStandings(group) {
   return group.teamIds.map(teamId => {
@@ -16,12 +30,19 @@ function calcStandings(group) {
         const conceded = isT1 ? m.score2 : m.score1;
         gf += scored;
         ga += conceded;
-        if (scored > conceded)      { pts += 3; wins++;   }
-        else if (scored === conceded){ pts += 1; draws++;  }
-        else                         {           losses++; }
+        if (scored > conceded) { pts += 3; wins++;   }
+        else                   {           losses++; }
       });
     return { teamId, played, wins, draws, losses, gf, ga, gd: gf - ga, pts };
-  }).sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  }).sort((a, b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts;  // wins (no draws in beach volleyball)
+    if (b.gd  !== a.gd)  return b.gd  - a.gd;  // set difference
+    if (b.gf  !== a.gf)  return b.gf  - a.gf;  // sets won
+    // Head-to-head tiebreaker
+    const h = h2hStats(a.teamId, b.teamId, group.matches || []);
+    if (h[b.teamId].pts !== h[a.teamId].pts) return h[b.teamId].pts - h[a.teamId].pts;
+    return h[b.teamId].gd - h[a.teamId].gd;
+  });
 }
 
 // ── Knockout bracket builder ─────────────────────────────────────────────────
@@ -102,10 +123,11 @@ function buildKnockout(groups) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) => {
+const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, readOnly = false }) => {
   const [scoreModal, setScoreModal] = useState(null); // { groupIdx, match }
   const [s1, setS1] = useState("0");
   const [s2, setS2] = useState("0");
+  const [drawError, setDrawError] = useState(false);
   const [statsMatch, setStatsMatch] = useState(null);
 
   const tName = id => tournament.teams.find(tm => tm.id === id)?.name || "?";
@@ -117,8 +139,10 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
   // ── Submit a group-stage score ───────────────────────────────────────────
   const submitScore = () => {
     const sc1 = parseInt(s1) || 0, sc2 = parseInt(s2) || 0;
+    if (sc1 === sc2) { setDrawError(true); return; }
+    setDrawError(false);
     const { groupIdx, match } = scoreModal;
-    const winner = sc1 > sc2 ? match.team1 : sc1 < sc2 ? match.team2 : null; // null = draw
+    const winner = sc1 > sc2 ? match.team1 : match.team2;
 
     setTournaments(prev => prev.map(tour => {
       if (tour.id !== tournament.id) return tour;
@@ -133,7 +157,7 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
       });
       return { ...tour, groups };
     }));
-    setScoreModal(null); setS1("0"); setS2("0");
+    setScoreModal(null); setS1("0"); setS2("0"); setDrawError(false);
   };
 
   // ── Advance to knockout stage ────────────────────────────────────────────
@@ -275,18 +299,20 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
         );
       })}
 
-      {/* Advance button */}
-      <div style={{ marginTop: 8 }}>
-        <Btn
-          onClick={advanceToKnockout}
-          variant="sun"
-          size="lg"
-          disabled={!allGroupMatchesPlayed}
-          style={{ width: "100%" }}
-        >
-          {allGroupMatchesPlayed ? "⚡ Advance to Knockout Stage" : "⏳ Complete all group matches first"}
-        </Btn>
-      </div>
+      {/* Advance button — hidden when viewing retrospectively */}
+      {!readOnly && (
+        <div style={{ marginTop: 8 }}>
+          <Btn
+            onClick={advanceToKnockout}
+            variant="sun"
+            size="lg"
+            disabled={!allGroupMatchesPlayed}
+            style={{ width: "100%" }}
+          >
+            {allGroupMatchesPlayed ? "⚡ Advance to Knockout Stage" : "⏳ Complete all group matches first"}
+          </Btn>
+        </div>
+      )}
 
       {/* Stats modal */}
       {statsMatch && (
@@ -298,7 +324,7 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
 
       {/* Score entry modal */}
       {scoreModal && (
-        <Modal title="ENTER RESULT" onClose={() => setScoreModal(null)}>
+        <Modal title="ENTER RESULT" onClose={() => { setScoreModal(null); setDrawError(false); }}>
           <div style={{ display: "grid", gap: 16 }}>
             <div style={{ textAlign: "center", fontSize: 14, color: G.textLight }}>
               {tName(scoreModal.match.team1)} vs {tName(scoreModal.match.team2)}
@@ -308,20 +334,29 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive }) 
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: G.textLight }}>
                   {tName(scoreModal.match.team1)}
                 </div>
-                <Input value={s1} onChange={setS1} placeholder="0" />
+                <Input value={s1} onChange={v => { setS1(v); setDrawError(false); }} placeholder="0" />
               </div>
               <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.textLight, paddingTop: 22 }}>—</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: G.textLight }}>
                   {tName(scoreModal.match.team2)}
                 </div>
-                <Input value={s2} onChange={setS2} placeholder="0" />
+                <Input value={s2} onChange={v => { setS2(v); setDrawError(false); }} placeholder="0" />
               </div>
             </div>
-            <div style={{ fontSize: 12, color: G.textLight, textAlign: "center" }}>
-              Draws are allowed in the group stage.
-            </div>
-            <Btn onClick={submitScore} variant="success" size="lg">
+            {drawError && (
+              <div style={{
+                background: G.danger + "18", border: "1px solid " + G.danger,
+                borderRadius: 8, padding: "10px 14px",
+                color: G.danger, fontSize: 13, fontWeight: 600, textAlign: "center",
+              }}>
+                ⚠️ No draws in beach volleyball. Enter a decisive score.
+              </div>
+            )}
+            <Btn
+              onClick={submitScore} variant="success" size="lg"
+              disabled={parseInt(s1) === parseInt(s2)}
+            >
               Confirm result
             </Btn>
           </div>

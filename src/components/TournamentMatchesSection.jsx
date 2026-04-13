@@ -7,13 +7,11 @@ import PointLog from "./PointLog";
 import GroupStageSection from "./GroupStageSection";
 import KnockoutStageSection from "./KnockoutStageSection";
 
-// Returns group counts where every group has >= 3 teams
+// Only allow group counts whose qualifier total (2×n) is a power of 2,
+// so the knockout bracket is always clean (4, 8 or 16 qualifiers).
+// Also requires at least 3 teams per group.
 function getValidGroupOptions(numTeams) {
-  const opts = [];
-  for (let g = 2; g <= numTeams; g++) {
-    if (Math.floor(numTeams / g) >= 3) opts.push(g);
-  }
-  return opts;
+  return [2, 4, 8].filter(g => Math.floor(numTeams / g) >= 3);
 }
 
 function calcFreePlayStandings(teams, matches) {
@@ -50,6 +48,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
   const [s1, setS1] = useState("0");
   const [s2, setS2] = useState("0");
   const [statsMatch, setStatsMatch] = useState(null);
+  const [viewTab, setViewTab] = useState("knockout"); // "knockout" | "groups"
 
   const phase = tournament.phase || "setup";
   const hasGroups = (tournament.groups || []).length > 0;
@@ -332,11 +331,26 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
 
       {winnerTeam && <ChampionCard name={winnerTeam.name} />}
 
+      {/* Tab toggle — only when past group stage */}
+      {hasGroups && (phase === "knockout" || phase === "completed") && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <button onClick={() => setViewTab("knockout")} style={selBtnStyle(viewTab === "knockout")}>
+            ⚡ Knockout
+          </button>
+          <button onClick={() => setViewTab("groups")} style={selBtnStyle(viewTab === "groups")}>
+            📊 Group Stage
+          </button>
+        </div>
+      )}
+
       {phase === "group" && (
         <GroupStageSection tournament={tournament} setTournaments={setTournaments} players={players} onOpenLive={onOpenLive} />
       )}
-      {(phase === "knockout" || phase === "completed") && (
+      {(phase === "knockout" || phase === "completed") && viewTab === "knockout" && (
         <KnockoutStageSection tournament={tournament} setTournaments={setTournaments} players={players} onOpenLive={onOpenLive} />
+      )}
+      {(phase === "knockout" || phase === "completed") && viewTab === "groups" && (
+        <GroupStageSection tournament={tournament} setTournaments={setTournaments} players={players} onOpenLive={onOpenLive} readOnly />
       )}
     </div>
   );

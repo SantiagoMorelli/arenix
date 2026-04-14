@@ -140,18 +140,16 @@ export default function FreePlayTeamsSection({ freePlay, setFreePlays, players }
         </Card>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
-          {teams.map(team => {
-            const stat = standings.find(s => s.id === team.id);
-            const rank = stat ? standings.indexOf(stat) + 1 : null;
+          {standings.map((stat, rank) => {
+            const team = teams.find(t => t.id === stat.id);
+            if (!team) return null;
             return (
               <Card key={team.id} style={{ padding: "14px 16px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {rank && hasGames && (
-                      <span style={{ fontWeight: 700, fontSize: 18 }}>
-                        {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
-                      </span>
-                    )}
+                    <span style={{ fontWeight: 700, fontSize: 18, flexShrink: 0 }}>
+                      {rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : `#${rank + 1}`}
+                    </span>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{team.name}</div>
                       <div style={{ fontSize: 12, color: G.textLight }}>
@@ -159,7 +157,7 @@ export default function FreePlayTeamsSection({ freePlay, setFreePlays, players }
                       </div>
                     </div>
                   </div>
-                  {stat && stat.played > 0 && (
+                  {stat.played > 0 && (
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                       <Badge color={G.success}>{stat.wins}W</Badge>
                       <Badge color={G.danger}>{stat.losses}L</Badge>

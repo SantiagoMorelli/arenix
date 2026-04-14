@@ -8,6 +8,8 @@ import TournamentsSection from "./components/TournamentsSection";
 import TournamentMatchesSection from "./components/TournamentMatchesSection";
 import TournamentTeamsSection from "./components/TournamentTeamsSection";
 import LiveScoreSection from "./components/LiveScoreSection";
+import CreateMenuSection from "./components/CreateMenuSection";
+import FreePlaySection from "./components/FreePlaySection";
 
 const initialPlayers = [
   { id: "p1", name: "Matías Torres",    wins: 12, losses: 3, points: 240, level: "advanced" },
@@ -16,13 +18,6 @@ const initialPlayers = [
   { id: "p4", name: "Valentina López",  wins: 8,  losses: 4, points: 172, level: "intermediate" },
   { id: "p5", name: "Diego Pérez",      wins: 7,  losses: 6, points: 148, level: "beginner" },
   { id: "p6", name: "Sofía García",     wins: 6,  losses: 7, points: 126, level: "beginner" },
-];
-
-// Global nav (no active tournament)
-const GLOBAL_NAV = [
-  { id: "live",        icon: "🏐", label: "LIVE" },
-  { id: "tournaments", icon: "🏆", label: "TOURNAMENTS" },
-  { id: "players",     icon: "👤", label: "PLAYERS" },
 ];
 
 // Contextual nav (inside a tournament)
@@ -143,9 +138,11 @@ function advanceKnockout(knockout, teams) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("tournaments");
+  const [tab, setTab] = useState("create");
   const [players, setPlayers] = useLocalStorage("arenix_players", initialPlayers);
   const [tournaments, setTournaments] = useLocalStorage("arenix_tournaments", []);
+  const [freePlay, setFreePlay] = useLocalStorage("arenix_freeplay", { teams: [], games: [] });
+  const [unlockedSections, setUnlockedSections] = useLocalStorage("arenix_unlocked", []);
 
   const [activeTournamentId, setActiveTournamentId] = useLocalStorage("arenix_active_tournament_id", null);
   const [tourTab, setTourTab] = useState("tour_matches");
@@ -171,8 +168,27 @@ export default function App() {
     setTab("tournaments");
   };
 
+  const handleCreateChoice = (section) => {
+    if (!unlockedSections.includes(section)) {
+      setUnlockedSections(prev => [...prev, section]);
+    }
+    setTab(section);
+  };
+
   const inTournament = !!activeTournament;
   const tourCompleted = activeTournament?.status === "completed";
+
+  // Build global nav dynamically — sections appear after first unlock or when data exists
+  const showTournaments = unlockedSections.includes("tournaments") || tournaments.length > 0;
+  const showFreePlay    = unlockedSections.includes("freeplay") || (freePlay.teams || []).length > 0 || (freePlay.games || []).length > 0;
+  const GLOBAL_NAV = [
+    { id: "live",         icon: "🏐", label: "LIVE" },
+    ...(showTournaments ? [{ id: "tournaments", icon: "🏆", label: "TOURNAMENTS" }] : []),
+    ...(showFreePlay    ? [{ id: "freeplay",    icon: "🎮", label: "FREE PLAY"  }] : []),
+    { id: "create",       icon: "➕", label: "CREATE" },
+    { id: "players",      icon: "👤", label: "PLAYERS" },
+  ];
+
   const currentNav = inTournament
     ? (tourCompleted ? TOUR_NAV.filter(n => n.id !== "tour_live") : TOUR_NAV)
     : GLOBAL_NAV;
@@ -223,11 +239,21 @@ export default function App() {
         {!inTournament && tab === "live" && (
           <LiveScoreSection teams={[]} players={players} informalMode />
         )}
+        {!inTournament && tab === "create" && (
+          <CreateMenuSection onChoose={handleCreateChoice} />
+        )}
         {!inTournament && tab === "tournaments" && (
           <TournamentsSection
             tournaments={tournaments} setTournaments={setTournaments}
             players={players} setPlayers={setPlayers}
             onOpenTournament={openTournament}
+          />
+        )}
+        {!inTournament && tab === "freeplay" && (
+          <FreePlaySection
+            freePlay={freePlay}
+            setFreePlay={setFreePlay}
+            players={players}
           />
         )}
         {!inTournament && tab === "players" && (

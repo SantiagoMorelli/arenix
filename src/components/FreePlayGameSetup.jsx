@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { G, Card, Btn } from "./ui";
+import { G, Card, Btn, Select } from "./ui";
 
 export default function FreePlayGameSetup({ freePlay, onStartGame }) {
   const [team1Id, setTeam1Id] = useState("");
@@ -37,19 +37,12 @@ export default function FreePlayGameSetup({ freePlay, onStartGame }) {
             <div style={{ fontSize: 12, fontWeight: 700, color: G.ocean, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
               Team 1
             </div>
-            <div style={{ display: "grid", gap: 6 }}>
+            <Select value={team1Id} onChange={setTeam1Id}>
+              <option value="">— Select team —</option>
               {teams.map(tm => (
-                <button key={tm.id} onClick={() => setTeam1Id(tm.id)} style={{
-                  padding: "11px 14px", borderRadius: 10, border: "2px solid",
-                  borderColor: team1Id === tm.id ? G.ocean : G.sandDark,
-                  background: team1Id === tm.id ? G.ocean + "11" : G.white,
-                  cursor: "pointer", textAlign: "left", width: "100%",
-                  fontFamily: "'DM Sans', sans-serif",
-                }}>
-                  <span style={{ fontWeight: 700, color: team1Id === tm.id ? G.ocean : G.text }}>{tm.name}</span>
-                </button>
+                <option key={tm.id} value={tm.id}>{tm.name}</option>
               ))}
-            </div>
+            </Select>
           </div>
 
           <div style={{ textAlign: "center", fontFamily: "'Bebas Neue'", fontSize: 32, color: G.sandDark, letterSpacing: 2 }}>
@@ -61,21 +54,12 @@ export default function FreePlayGameSetup({ freePlay, onStartGame }) {
             <div style={{ fontSize: 12, fontWeight: 700, color: G.sun, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
               Team 2
             </div>
-            <div style={{ display: "grid", gap: 6 }}>
-              {teams.map(tm => (
-                <button key={tm.id} onClick={() => setTeam2Id(tm.id)} style={{
-                  padding: "11px 14px", borderRadius: 10, border: "2px solid",
-                  borderColor: team2Id === tm.id ? G.sun : G.sandDark,
-                  background: team2Id === tm.id ? G.sun + "22" : G.white,
-                  opacity: team1Id === tm.id ? 0.35 : 1,
-                  cursor: team1Id === tm.id ? "not-allowed" : "pointer",
-                  textAlign: "left", width: "100%",
-                  fontFamily: "'DM Sans', sans-serif",
-                }}>
-                  <span style={{ fontWeight: 700, color: team2Id === tm.id ? G.sunDark : G.text }}>{tm.name}</span>
-                </button>
+            <Select value={team2Id} onChange={setTeam2Id}>
+              <option value="">— Select team —</option>
+              {teams.filter(tm => tm.id !== team1Id).map(tm => (
+                <option key={tm.id} value={tm.id}>{tm.name}</option>
               ))}
-            </div>
+            </Select>
           </div>
 
           {/* Sets */}

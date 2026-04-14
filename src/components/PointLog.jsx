@@ -3,7 +3,10 @@ import { G, Card } from "./ui";
 
 const PointLog = ({ log, logRef, team1Id, team2Id, teams, players, t }) => {
   const getTeam   = id => teams.find(tm => tm.id === id);
-  const getPlayer = id => players.find(p => p.id === id);
+  const getPlayer = id => {
+    if (id && id.startsWith("free_")) return { id, name: id.slice(5) };
+    return players.find(p => p.id === id);
+  };
   const tName      = id => getTeam(id)?.name || "?";
   const playerName = id => getPlayer(id)?.name || "?";
 
@@ -34,10 +37,19 @@ const PointLog = ({ log, logRef, team1Id, team2Id, teams, players, t }) => {
                 <div style={{ fontSize: 12, fontWeight: 700, color: tc }}>
                   {entry.pointTypeLabel || "Punto"} · {tName(entry.team === 1 ? team1Id : team2Id)}
                 </div>
-                <div style={{ fontSize: 11, color: G.textLight }}>
-                  Sacó: {playerName(entry.serverPlayerId)}
-                  {entry.streak > 1 && <span style={{ color: G.warn, marginLeft: 6 }}>🔥 {entry.streak} seguidos</span>}
-                  {entry.sideChange && <span style={{ color: G.sun, marginLeft: 6 }}>🔄</span>}
+                <div style={{ fontSize: 11, color: G.textLight, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+                  {entry.scoringPlayerId && (
+                    <span style={{ color: tc, fontWeight: 600 }}>{playerName(entry.scoringPlayerId)}</span>
+                  )}
+                  {entry.errorPlayerId && (
+                    <span style={{ color: G.danger, fontWeight: 600 }}>❌ {playerName(entry.errorPlayerId)}</span>
+                  )}
+                  {(entry.scoringPlayerId || entry.errorPlayerId) && (
+                    <span style={{ color: G.sandDark }}>·</span>
+                  )}
+                  <span>Sacó: {playerName(entry.serverPlayerId)}</span>
+                  {entry.streak > 1 && <span style={{ color: G.warn }}>🔥 {entry.streak}</span>}
+                  {entry.sideChange && <span style={{ color: G.sun }}>🔄</span>}
                 </div>
               </div>
               <div style={{

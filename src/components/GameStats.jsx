@@ -12,7 +12,10 @@ const GameStats = ({
   t,
 }) => {
   const getTeam    = id => teams.find(tm => tm.id === id);
-  const getPlayer  = id => players.find(p => p.id === id);
+  const getPlayer  = id => {
+    if (id && id.startsWith("free_")) return { id, name: id.slice(5) };
+    return players.find(p => p.id === id);
+  };
   const tName      = id => getTeam(id)?.name || "?";
   const playerName = id => getPlayer(id)?.name || "?";
 
@@ -36,18 +39,24 @@ const GameStats = ({
     const team = tn === 1 ? getTeam(team1Id) : getTeam(team2Id);
     const tid = tn === 1 ? team1Id : team2Id;
     const playerPts = {};
+    const playerByType = {};
+    const playerErrors = {};
     if (team) teamPlayerIds(tid).forEach(pid => {
       playerPts[pid] = pts.filter(e =>
         e.scoringPlayerId != null
           ? e.scoringPlayerId === pid
           : e.serverPlayerId === pid
       ).length;
-    });
-    const playerErrors = {};
-    teamPlayerIds(tid).forEach(pid => {
+      const pScored = pts.filter(e => e.scoringPlayerId === pid);
+      playerByType[pid] = {
+        ace:   pScored.filter(e => e.pointType === "ace").length,
+        spike: pScored.filter(e => e.pointType === "spike").length,
+        block: pScored.filter(e => e.pointType === "block").length,
+        tip:   pScored.filter(e => e.pointType === "tip").length,
+      };
       playerErrors[pid] = pointLog.filter(e => e.errorPlayerId === pid).length;
     });
-    return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerErrors };
+    return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerByType, playerErrors };
   };
 
   const s1 = statFor(1), s2 = statFor(2);
@@ -148,23 +157,69 @@ const GameStats = ({
         <div style={{ fontFamily: "'Bebas Neue'", fontSize: 20, color: G.ocean, letterSpacing: 1, marginBottom: 12 }}>{t("streaks")}</div>
         {[{tn:1,st:s1,tid:team1Id,col:G.ocean},{tn:2,st:s2,tid:team2Id,col:G.sun}].map(({tn,st,tid,col}) => {
           const team = getTeam(tid);
+          const pids = team ? teamPlayerIds(tid) : [];
           return (
             <div key={tn} style={{ background: G.sand, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: col, marginBottom: 8 }}>{tName(tid)}</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <div style={{ flex: 1, background: G.white, borderRadius: 10, padding: "8px", textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.warn, lineHeight: 1 }}>🔥{st.bestStreak}</div>
-                  <div style={{ fontSize: 11, color: G.textLight }}>{t("maxStreak")}</div>
+              {/* Team header row with streak badge */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: col }}>{tName(tid)}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: G.white, borderRadius: 8, padding: "4px 10px" }}>
+                  <span style={{ fontSize: 16 }}>🔥</span>
+                  <span style={{ fontFamily: "'Bebas Neue'", fontSize: 20, color: G.warn, lineHeight: 1 }}>{st.bestStreak}</span>
+                  <span style={{ fontSize: 10, color: G.textLight }}>{t("maxStreak")}</span>
                 </div>
-                {team && teamPlayerIds(tid).map(pid => (
-                  <div key={pid} style={{ flex: 1, background: G.white, borderRadius: 10, padding: "8px", textAlign: "center" }}>
-                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: col, lineHeight: 1 }}>{st.playerPts[pid] || 0}</div>
-                    <div style={{ fontSize: 11, color: G.textLight }}>{playerName(pid).split(" ")[0]}</div>
-                    {(st.playerErrors[pid] > 0) && (
-                      <div style={{ fontSize: 10, color: G.danger, fontWeight: 700, marginTop: 2 }}>❌ {st.playerErrors[pid]}</div>
-                    )}
-                  </div>
-                ))}
+              </div>
+
+              {/* Player cards */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {pids.length === 0 && (
+                  <div style={{ flex: 1, color: G.textLight, fontSize: 12, textAlign: "center", padding: 8 }}>—</div>
+                )}
+                {pids.map(pid => {
+                  const pts    = st.playerPts[pid] || 0;
+                  const errs   = st.playerErrors[pid] || 0;
+                  const byType = st.playerByType[pid] || {};
+                  const typeBreakdown = [
+                    ["ace","🎯"], ["spike","💥"], ["block","🛡️"], ["tip","🤏"],
+                  ].filter(([type]) => byType[type] > 0);
+                  const hasAttribution = typeBreakdown.length > 0;
+                  return (
+                    <div key={pid} style={{
+                      flex: 1, background: G.white, borderRadius: 12,
+                      padding: "10px 8px", textAlign: "center",
+                    }}>
+                      {/* Name */}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: col, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {playerName(pid).split(" ")[0]}
+                      </div>
+                      {/* Points big number */}
+                      <div style={{ fontFamily: "'Bebas Neue'", fontSize: 36, color: col, lineHeight: 1 }}>{pts}</div>
+                      <div style={{ fontSize: 10, color: G.textLight, marginBottom: 6 }}>pts</div>
+                      {/* Type breakdown pills */}
+                      {hasAttribution && (
+                        <div style={{ display: "flex", gap: 3, justifyContent: "center", flexWrap: "wrap", marginBottom: 6 }}>
+                          {typeBreakdown.map(([type, icon]) => (
+                            <span key={type} style={{
+                              fontSize: 11, background: col + "18",
+                              borderRadius: 5, padding: "2px 5px", color: col, fontWeight: 600,
+                            }}>
+                              {icon}{byType[type]}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Errors */}
+                      {errs > 0 && (
+                        <div style={{
+                          fontSize: 11, color: G.danger, fontWeight: 700,
+                          background: G.danger + "12", borderRadius: 6, padding: "2px 6px", display: "inline-block",
+                        }}>
+                          ❌ {errs}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

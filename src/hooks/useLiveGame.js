@@ -46,6 +46,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
   const [pendingUndo, setPendingUndo] = useState(false);
   const [history, setHistory] = useState([]);
   const [pendingPoint, setPendingPoint] = useState(null);
+  const [pendingPlayerSelect, setPendingPlayerSelect] = useState(null);
   const logRef = useRef(null);
 
   // ── Preload match from fixture ────────────────────────────────────────────
@@ -147,10 +148,17 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     if (!pendingPoint) return;
     const teamNum = pendingPoint.teamNum;
     setPendingPoint(null);
-    resolvePoint(teamNum, ptId);
+    setPendingPlayerSelect({ teamNum, ptId });
   };
 
-  const resolvePoint = (teamNum, ptId) => {
+  const confirmPlayer = (playerId) => {
+    if (!pendingPlayerSelect) return;
+    const { teamNum, ptId } = pendingPlayerSelect;
+    setPendingPlayerSelect(null);
+    resolvePoint(teamNum, ptId, playerId);
+  };
+
+  const resolvePoint = (teamNum, ptId, playerId = null) => {
     const newS1 = teamNum === 1 ? score1 + 1 : score1;
     const newS2 = teamNum === 2 ? score2 + 1 : score2;
     const newPoints = points + 1;
@@ -187,6 +195,8 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
       serverPlayerId: srv.playerId, serverTeam: srv.team,
       nextServerPlayerId: newServer.playerId, nextServerTeam: newServer.team,
       sideBeforePoint: { ...side }, sideChange: isSideChange, streak,
+      scoringPlayerId: ptId !== "error" ? playerId : null,
+      errorPlayerId:   ptId === "error" ? playerId : null,
       msg: pt.icon + " " + pt.label + " • " + tName(teamNum === 1 ? team1Id : team2Id) + " • " + newS1 + ":" + newS2,
     };
 
@@ -246,7 +256,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     setScore1(0); setScore2(0); setServeIndex(0); setPoints(0);
     setSide({ t1: "left", t2: "right" }); setLog([]); setSets([]);
     setWinner(null); setPointsToWin(21); setPendingSideChange(null);
-    setHistory([]); setPendingUndo(false); setPendingPoint(null);
+    setHistory([]); setPendingUndo(false); setPendingPoint(null); setPendingPlayerSelect(null);
     setT1ServeOrder([]); setT2ServeOrder([]);
     if (informalMode) {
       setInformalStep("config");
@@ -350,12 +360,13 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     // Dialogs
     pendingSideChange, pendingUndo,
     pendingPoint, setPendingPoint,
+    pendingPlayerSelect,
     pendingEnd,
     // Derived helpers
     serveRotation, currentServer,
     playerName, tName, POINT_TYPES,
     // Actions
-    addPoint, confirmPointType, confirmSideChange,
+    addPoint, confirmPointType, confirmPlayer, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
     requestEnd, confirmEnd, cancelEnd,
   };

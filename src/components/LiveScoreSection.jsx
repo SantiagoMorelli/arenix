@@ -24,9 +24,11 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     setSide, setPointsToWin, startGame,
     score1, score2, serveIndex, side, points,
     log, logRef, sets, winner, pointsToWin, history,
-    pendingSideChange, pendingUndo, pendingPoint, setPendingPoint, pendingEnd,
+    pendingSideChange, pendingUndo, pendingPoint, setPendingPoint,
+    pendingPlayerSelect,
+    pendingEnd,
     serveRotation, currentServer, playerName, tName, POINT_TYPES,
-    addPoint, confirmPointType, confirmSideChange,
+    addPoint, confirmPointType, confirmPlayer, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
     requestEnd, confirmEnd, cancelEnd,
   } = useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch });
@@ -308,6 +310,66 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
           </div>
         </div>
       )}
+
+      {/* Player selection dialog */}
+      {pendingPlayerSelect && (() => {
+        const { teamNum, ptId } = pendingPlayerSelect;
+        const isError = ptId === "error";
+        const selectTeamNum = isError ? (teamNum === 1 ? 2 : 1) : teamNum;
+        const selectTeamId  = selectTeamNum === 1 ? team1Id : team2Id;
+        const selectOrder   = selectTeamNum === 1 ? t1ServeOrder : t2ServeOrder;
+        const teamColor     = selectTeamNum === 1 ? G.ocean : G.sun;
+        return (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+          }}>
+            <div style={{
+              background: G.white, borderRadius: "24px 24px 0 0",
+              padding: "24px 20px 36px", width: "100%", maxWidth: 480,
+              boxShadow: "0 -12px 40px rgba(0,0,0,0.25)",
+            }}>
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <div style={{
+                  display: "inline-block", borderRadius: 12, padding: "6px 18px",
+                  background: teamColor + (selectTeamNum === 1 ? "18" : "22"),
+                }}>
+                  <div style={{ fontSize: 11, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    {isError ? t("ptError") : t("pointFor")}
+                  </div>
+                  <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 1, color: teamColor }}>
+                    {tName(selectTeamId)}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 18, color: G.text, letterSpacing: 1, marginBottom: 14, textAlign: "center" }}>
+                {isError ? t("whoError") : t("whoScored")}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                {selectOrder.map(pid => (
+                  <button key={pid} onClick={() => confirmPlayer(pid)} style={{
+                    background: G.sand, border: "2px solid " + G.sandDark,
+                    borderRadius: 14, padding: "16px 10px", cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif", textAlign: "center",
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: G.text }}>
+                      {playerName(pid)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => confirmPlayer(null)} style={{
+                width: "100%", background: "none", border: "2px solid " + G.sandDark,
+                borderRadius: 14, padding: "12px 10px", cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif", color: G.textLight, fontSize: 14,
+              }}>
+                {t("skipPlayer")}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <button onClick={requestEnd} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: G.ocean }}>←</button>

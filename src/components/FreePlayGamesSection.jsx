@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { G, Card, Btn, Badge } from "./ui";
 import { TR } from "../lib/i18n";
 import GameStats from "./GameStats";
 
@@ -12,23 +11,31 @@ export default function FreePlayGamesSection({ freePlay, players, onStartGame })
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: G.ocean, letterSpacing: 2 }}>
-          FREE PLAYS
-        </h1>
-        <Btn onClick={() => onStartGame()} variant="sun">+ New Game</Btn>
+      <div className="flex justify-between items-center mb-5">
+        <h1 className="font-display text-[32px] text-accent tracking-[2px]">FREE PLAYS</h1>
+        <button
+          onClick={() => onStartGame()}
+          className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white bg-accent border-0 cursor-pointer"
+        >
+          + New Game
+        </button>
       </div>
 
       {games.length === 0 ? (
-        <Card style={{ textAlign: "center", color: G.textLight, padding: 40 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🎮</div>
+        <div className="bg-surface rounded-xl border border-line p-10 text-center text-dim">
+          <div className="text-[32px] mb-2">🎮</div>
           No games yet. Start one from the LIVE tab!
-          <div style={{ marginTop: 16 }}>
-            <Btn onClick={() => onStartGame()} variant="primary">Go to Live</Btn>
+          <div className="mt-4">
+            <button
+              onClick={() => onStartGame()}
+              className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white bg-accent border-0 cursor-pointer"
+            >
+              Go to Live
+            </button>
           </div>
-        </Card>
+        </div>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {[...games].reverse().map(game => {
             const isExpanded = expandedId === game.id;
             const winnerNum = game.winner === game.team1 ? 1 : 2;
@@ -37,43 +44,29 @@ export default function FreePlayGamesSection({ freePlay, players, onStartGame })
             const hasStats = Array.isArray(game.log) && game.log.length > 0;
 
             return (
-              <Card key={game.id} style={{ padding: 0, overflow: "hidden" }}>
+              <div key={game.id} className="bg-surface rounded-xl border border-line overflow-hidden">
                 <div
                   onClick={() => hasStats && setExpandedId(isExpanded ? null : game.id)}
-                  style={{
-                    display: "flex", alignItems: "center",
-                    padding: "14px 16px",
-                    cursor: hasStats ? "pointer" : "default",
-                  }}
+                  className={`flex items-center px-4 py-3.5 ${hasStats ? "cursor-pointer" : ""}`}
                 >
-                  <span style={{
-                    flex: 1, fontSize: 14, fontWeight: game.winner === game.team1 ? 700 : 400,
-                    color: game.winner === game.team1 ? G.ocean : G.textLight,
-                  }}>
+                  <span className={`flex-1 text-[14px] ${game.winner === game.team1 ? "font-bold text-accent" : "font-normal text-dim"}`}>
                     {tName(game.team1)}
                   </span>
-                  <div style={{
-                    padding: "4px 16px", background: G.sand, borderRadius: 8,
-                    fontFamily: "'Bebas Neue'", fontSize: 22, color: G.text, margin: "0 8px", flexShrink: 0,
-                  }}>
+                  <div className="px-4 py-1 bg-alt rounded-lg font-display text-[22px] text-text mx-2 flex-shrink-0">
                     {game.score1} – {game.score2}
                   </div>
-                  <span style={{
-                    flex: 1, textAlign: "right", fontSize: 14,
-                    fontWeight: game.winner === game.team2 ? 700 : 400,
-                    color: game.winner === game.team2 ? G.ocean : G.textLight,
-                  }}>
+                  <span className={`flex-1 text-right text-[14px] ${game.winner === game.team2 ? "font-bold text-accent" : "font-normal text-dim"}`}>
                     {tName(game.team2)}
                   </span>
                   {hasStats && (
-                    <span style={{ fontSize: 16, marginLeft: 10, color: G.textLight, flexShrink: 0 }}>
+                    <span className="text-[16px] ml-2.5 text-dim flex-shrink-0">
                       {isExpanded ? "▲" : "▼"}
                     </span>
                   )}
                 </div>
 
                 {isExpanded && hasStats && (
-                  <div style={{ borderTop: "1px solid " + G.sandDark, padding: "16px" }}>
+                  <div className="border-t border-line p-4">
                     <GameStats
                       winner={winnerNum}
                       team1Id={game.team1}
@@ -92,14 +85,13 @@ export default function FreePlayGamesSection({ freePlay, players, onStartGame })
                   </div>
                 )}
 
-                <div style={{
-                  padding: "6px 16px 10px", display: "flex",
-                  justifyContent: "space-between", alignItems: "center",
-                }}>
-                  <span style={{ fontSize: 11, color: G.textLight }}>{game.date}</span>
-                  <Badge color={G.success}>🏆 {tName(game.winner)}</Badge>
+                <div className="px-4 pt-1.5 pb-2.5 flex justify-between items-center">
+                  <span className="text-[11px] text-dim">{game.date}</span>
+                  <span className="text-[11px] font-bold text-success bg-success/15 px-2.5 py-[4px] rounded-[8px]">
+                    🏆 {tName(game.winner)}
+                  </span>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>

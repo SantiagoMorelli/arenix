@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { G, globalStyle } from "./components/ui";
+import React, { useState, useEffect } from "react";
 import { LangCtx, TR } from "./lib/i18n";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { SAVE_KEY } from "./hooks/useLiveGame";
@@ -141,6 +140,13 @@ export default function App() {
   const [tournaments, setTournaments] = useLocalStorage("arenix_tournaments", []);
   const [freePlays,   setFreePlays]   = useLocalStorage("arenix_freeplays",   []);
 
+  // Dark mode
+  const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);
+  useEffect(() => {
+    if (isDark) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, [isDark]);
+
   // Tournament context
   const [activeTournamentId, setActiveTournamentId] = useLocalStorage("arenix_active_tournament_id", null);
   const [tourTab, setTourTab] = useState("tour_matches");
@@ -245,54 +251,43 @@ export default function App() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <LangCtx.Provider value={{ t: r }}>
-      <style>{globalStyle}</style>
 
       {/* Header */}
-      <div style={{
-        background: "linear-gradient(135deg," + G.ocean + "," + G.oceanDark + ")",
-        padding: "14px 16px 12px",
-        display: "flex", alignItems: "center", gap: 12,
-      }}>
+      <div className="bg-accent px-4 pt-3.5 pb-3 flex items-center gap-3">
         {(inTournament || inFreePlay) && (
           <button
             onClick={inTournament ? closeTournament : closeFreePlay}
-            style={{
-              background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8,
-              padding: "6px 10px", cursor: "pointer", color: G.white,
-              fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 16,
-            }}
-          >←</button>
+            className="bg-white/15 border-0 rounded-lg px-2.5 py-1.5 cursor-pointer text-white font-bold text-[16px]"
+          >
+            ←
+          </button>
         )}
-        <div style={{ flex: 1 }}>
+        <div className="flex-1">
           {inTournament ? (
             <>
-              <div style={{ fontSize: 10, color: G.sky, letterSpacing: 1, textTransform: "uppercase" }}>TOURNAMENT</div>
-              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: G.white, letterSpacing: 1, lineHeight: 1 }}>
+              <div className="text-[10px] text-white/70 tracking-[1px] uppercase">TOURNAMENT</div>
+              <div className="font-display text-[22px] text-white tracking-[1px] leading-none">
                 {activeTournament.name}
               </div>
             </>
           ) : inFreePlay ? (
             <>
-              <div style={{ fontSize: 10, color: G.sky, letterSpacing: 1, textTransform: "uppercase" }}>FREE PLAY</div>
-              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: G.white, letterSpacing: 1, lineHeight: 1 }}>
+              <div className="text-[10px] text-white/70 tracking-[1px] uppercase">FREE PLAY</div>
+              <div className="font-display text-[22px] text-white tracking-[1px] leading-none">
                 {activeFreePlay.name}
               </div>
             </>
           ) : (
             <>
-              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 24, color: G.white, letterSpacing: 2, lineHeight: 1 }}>
-                ARENIX
-              </div>
-              <div style={{ fontSize: 10, color: G.sky, letterSpacing: 2, textTransform: "uppercase" }}>
-                {r("subtitle")}
-              </div>
+              <div className="font-display text-[24px] text-white tracking-[2px] leading-none">ARENIX</div>
+              <div className="text-[10px] text-white/70 tracking-[2px] uppercase">{r("subtitle")}</div>
             </>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ padding: "20px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
+      <div className="px-4 pt-5 pb-[100px] max-w-[600px] mx-auto">
 
         {/* ── Global tabs ── */}
         {!inTournament && !inFreePlay && tab === "tournaments" && (
@@ -390,27 +385,22 @@ export default function App() {
       </div>
 
       {/* Bottom Nav */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        background: G.white, borderTop: "2px solid " + G.sandDark,
-        display: "flex", justifyContent: "space-around",
-        padding: "8px 0 max(8px, env(safe-area-inset-bottom))",
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
-      }}>
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-surface border-t-2 border-line flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+        style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))", paddingTop: 8 }}
+      >
         {currentNav.map(n => (
-          <button key={n.id} onClick={() => setCurrentTab(n.id)} style={{
-            background: "none", border: "none", cursor: "pointer",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-            padding: "6px 12px", borderRadius: 12, transition: "all 0.15s",
-          }}>
-            <div style={{ fontSize: 22 }}>{n.icon}</div>
-            <div style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 0.8,
-              color: currentTab === n.id ? G.ocean : G.textLight,
-              textTransform: "uppercase",
-            }}>{n.label}</div>
+          <button
+            key={n.id}
+            onClick={() => setCurrentTab(n.id)}
+            className="bg-transparent border-0 cursor-pointer flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
+          >
+            <div className="text-[22px]">{n.icon}</div>
+            <div className={`text-[9px] font-bold tracking-[0.8px] uppercase ${currentTab === n.id ? "text-accent" : "text-dim"}`}>
+              {n.label}
+            </div>
             {currentTab === n.id && (
-              <div style={{ width: 20, height: 3, background: G.ocean, borderRadius: 2 }} />
+              <div className="w-5 h-[3px] bg-accent rounded-[2px]" />
             )}
           </button>
         ))}

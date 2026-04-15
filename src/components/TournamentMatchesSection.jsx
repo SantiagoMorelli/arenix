@@ -331,22 +331,40 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
   return (
     <div>
       <TournamentTitle name={tournament.name} />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        <Badge color={G.ocean}>{tournament.teamSize} players/team</Badge>
-        <Badge color={G.ocean}>{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</Badge>
-        {hasGroups && <Badge color={G.ocean}>{tournament.groups.length} groups</Badge>}
-        <Badge color={phaseColor}>{phaseLabel}</Badge>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.teamSize} players/team</span>
+        <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</span>
+        {hasGroups && <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.groups.length} groups</span>}
+        <span className={`text-[11px] font-bold px-2.5 py-[4px] rounded-[8px] ${
+          phase === "completed" ? "text-success bg-success/15" :
+          phase === "knockout"  ? "text-accent bg-accent/15" :
+          "text-free bg-free/15"
+        }`}>{phaseLabel}</span>
       </div>
 
       {winnerTeam && <ChampionCard name={winnerTeam.name} />}
 
       {/* Tab toggle — only when past group stage */}
       {hasGroups && (phase === "knockout" || phase === "completed") && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          <button onClick={() => setViewTab("knockout")} style={selBtnStyle(viewTab === "knockout")}>
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setViewTab("knockout")}
+            className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+              viewTab === "knockout"
+                ? "border-accent bg-accent/[0.07] font-bold text-text"
+                : "border-line bg-surface font-normal text-text"
+            }`}
+          >
             ⚡ Knockout
           </button>
-          <button onClick={() => setViewTab("groups")} style={selBtnStyle(viewTab === "groups")}>
+          <button
+            onClick={() => setViewTab("groups")}
+            className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+              viewTab === "groups"
+                ? "border-accent bg-accent/[0.07] font-bold text-text"
+                : "border-line bg-surface font-normal text-text"
+            }`}
+          >
             📊 Group Stage
           </button>
         </div>

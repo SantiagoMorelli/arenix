@@ -127,9 +127,9 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
     return (
       <div>
         <TournamentTitle name={tournament.name} />
-        <Card style={{ textAlign: "center", color: G.textLight }}>
+        <div className="bg-surface rounded-xl border border-line p-6 text-center text-dim">
           Add at least 2 teams in the Teams tab to generate the schedule.
-        </Card>
+        </div>
       </div>
     );
   }
@@ -140,49 +140,60 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
     return (
       <div>
         <TournamentTitle name={tournament.name} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          <Badge color={G.ocean}>{tournament.teamSize} players/team</Badge>
-          <Badge color={G.ocean}>{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</Badge>
-          <Badge color={G.ocean}>{tournament.teams.length} teams</Badge>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.teamSize} players/team</span>
+          <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</span>
+          <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.teams.length} teams</span>
         </div>
 
-        <Card style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: "'Bebas Neue'", fontSize: 18, color: G.ocean, letterSpacing: 1, marginBottom: 12 }}>
+        <div className="bg-surface rounded-xl border border-line p-4 mb-4">
+          <div className="font-display text-[18px] text-accent tracking-[1px] mb-3">
             TOURNAMENT FORMAT
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: canGroupStage ? 16 : 0 }}>
+          <div className={`flex gap-2.5 ${canGroupStage ? "mb-4" : ""}`}>
             {canGroupStage && (
-              <button onClick={() => setModeChoice("group")} style={selBtnStyle(effectiveMode === "group")}>
+              <button
+                onClick={() => setModeChoice("group")}
+                className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+                  effectiveMode === "group"
+                    ? "border-accent bg-accent/[0.07] font-bold text-text"
+                    : "border-line bg-surface font-normal text-text"
+                }`}
+              >
                 🏆 Group + Knockout
               </button>
             )}
             <button
               onClick={() => setModeChoice("freeplay")}
-              style={selBtnStyle(effectiveMode === "freeplay")}
+              className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+                effectiveMode === "freeplay"
+                  ? "border-accent bg-accent/[0.07] font-bold text-text"
+                  : "border-line bg-surface font-normal text-text"
+              }`}
             >
               🎮 Free Play
             </button>
           </div>
 
           {!canGroupStage && (
-            <div style={{ fontSize: 12, color: G.textLight, marginTop: 8 }}>
+            <div className="text-[12px] text-dim mt-2">
               Need at least 6 teams (2 groups × 3) for group stage. Playing in free play mode.
             </div>
           )}
 
           {effectiveMode === "freeplay" && (
-            <div style={{ fontSize: 13, color: G.textLight, marginTop: canGroupStage ? 0 : 8 }}>
+            <div className={`text-[13px] text-dim ${canGroupStage ? "" : "mt-2"}`}>
               All teams play each other once. Final standings based on points (W=3, D=1, L=0).
             </div>
           )}
 
           {effectiveMode === "group" && canGroupStage && (
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="text-[12px] font-bold text-dim uppercase tracking-[0.5px] mb-2">
                 Number of groups
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div className="flex flex-wrap gap-2">
                 {validGroupOptions.map(n => {
                   const perGroup = Math.floor(tournament.teams.length / n);
                   const remainder = tournament.teams.length % n;
@@ -190,7 +201,15 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
                     ? `${n} groups · ${perGroup} teams each`
                     : `${n} groups · ${perGroup}–${perGroup + 1} teams`;
                   return (
-                    <button key={n} onClick={() => setNumGroupsChoice(n)} style={selBtnStyle(selectedGroups === n)}>
+                    <button
+                      key={n}
+                      onClick={() => setNumGroupsChoice(n)}
+                      className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+                        selectedGroups === n
+                          ? "border-accent bg-accent/[0.07] font-bold text-text"
+                          : "border-line bg-surface font-normal text-text"
+                      }`}
+                    >
                       {label}
                     </button>
                   );
@@ -198,14 +217,14 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
               </div>
             </div>
           )}
-        </Card>
+        </div>
 
-        <Btn
+        <button
           onClick={effectiveMode === "group" ? generateGroups : generateFreePlay}
-          variant="sun" size="lg" style={{ width: "100%" }}
+          className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer"
         >
           🎯 Generate schedule
-        </Btn>
+        </button>
       </div>
     );
   }
@@ -331,22 +350,40 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
   return (
     <div>
       <TournamentTitle name={tournament.name} />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        <Badge color={G.ocean}>{tournament.teamSize} players/team</Badge>
-        <Badge color={G.ocean}>{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</Badge>
-        {hasGroups && <Badge color={G.ocean}>{tournament.groups.length} groups</Badge>}
-        <Badge color={phaseColor}>{phaseLabel}</Badge>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.teamSize} players/team</span>
+        <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.setsPerMatch === 1 ? "1 set" : tournament.setsPerMatch + " sets"}</span>
+        {hasGroups && <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{tournament.groups.length} groups</span>}
+        <span className={`text-[11px] font-bold px-2.5 py-[4px] rounded-[8px] ${
+          phase === "completed" ? "text-success bg-success/15" :
+          phase === "knockout"  ? "text-accent bg-accent/15" :
+          "text-free bg-free/15"
+        }`}>{phaseLabel}</span>
       </div>
 
       {winnerTeam && <ChampionCard name={winnerTeam.name} />}
 
       {/* Tab toggle — only when past group stage */}
       {hasGroups && (phase === "knockout" || phase === "completed") && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          <button onClick={() => setViewTab("knockout")} style={selBtnStyle(viewTab === "knockout")}>
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setViewTab("knockout")}
+            className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+              viewTab === "knockout"
+                ? "border-accent bg-accent/[0.07] font-bold text-text"
+                : "border-line bg-surface font-normal text-text"
+            }`}
+          >
             ⚡ Knockout
           </button>
-          <button onClick={() => setViewTab("groups")} style={selBtnStyle(viewTab === "groups")}>
+          <button
+            onClick={() => setViewTab("groups")}
+            className={`flex-1 px-3 py-3 rounded-xl border-2 text-[14px] cursor-pointer text-center transition-all ${
+              viewTab === "groups"
+                ? "border-accent bg-accent/[0.07] font-bold text-text"
+                : "border-line bg-surface font-normal text-text"
+            }`}
+          >
             📊 Group Stage
           </button>
         </div>

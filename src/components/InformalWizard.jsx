@@ -1,5 +1,4 @@
 import React from "react";
-import { G, Card, Btn, Input, Select } from "./ui";
 
 const InformalWizard = ({
   players,
@@ -35,60 +34,52 @@ const InformalWizard = ({
     players: infTeam.players.map(s => resolveSlot(s).id),
   });
 
+  const selBtnCls = (active) =>
+    `flex-1 py-3.5 rounded-xl border-2 cursor-pointer text-center text-[15px] transition-all ${
+      active
+        ? "border-accent bg-accent/[0.07] font-bold text-text"
+        : "border-line bg-surface font-normal text-text"
+    }`;
+
   // ── Step: config ────────────────────────────────────────────────────────────
   if (informalStep === "config") return (
     <div>
-      <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 34, color: G.ocean, letterSpacing: 2, marginBottom: 20 }}>
-        🏐 INFORMAL MATCH
-      </h1>
-      <Card>
-        <div style={{ display: "grid", gap: 20 }}>
+      <h1 className="font-display text-[34px] text-accent tracking-[2px] mb-5">🏐 INFORMAL MATCH</h1>
+      <div className="bg-surface rounded-xl border border-line p-4">
+        <div className="flex flex-col gap-5">
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Players per team
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div className="text-[13px] font-bold text-dim uppercase tracking-[0.5px] mb-2">Players per team</div>
+            <div className="flex gap-2.5">
               {[2, 3].map(n => (
-                <button key={n} onClick={() => setInformalTeamSize(n)} style={{
-                  flex: 1, padding: "14px", borderRadius: 12, border: "2px solid",
-                  borderColor: informalTeamSize === n ? G.ocean : G.sandDark,
-                  background: informalTeamSize === n ? G.ocean + "11" : G.white,
-                  fontWeight: informalTeamSize === n ? 700 : 400,
-                  fontSize: 15, cursor: "pointer", color: G.text,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}>
-                  <div style={{ fontSize: 24, marginBottom: 4 }}>👥</div>
+                <button key={n} onClick={() => setInformalTeamSize(n)} className={selBtnCls(informalTeamSize === n)}>
+                  <div className="text-[24px] mb-1">👥</div>
                   {n} players
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Sets per match
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div className="text-[13px] font-bold text-dim uppercase tracking-[0.5px] mb-2">Sets per match</div>
+            <div className="flex gap-2.5">
               {[1, 3, 5].map(n => (
-                <button key={n} onClick={() => setInformalSets(n)} style={{
-                  flex: 1, padding: "14px", borderRadius: 12, border: "2px solid",
-                  borderColor: informalSets === n ? G.ocean : G.sandDark,
-                  background: informalSets === n ? G.ocean + "11" : G.white,
-                  fontWeight: informalSets === n ? 700 : 400,
-                  fontSize: 15, cursor: "pointer", color: G.text,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}>
+                <button key={n} onClick={() => setInformalSets(n)} className={selBtnCls(informalSets === n)}>
                   {n === 1 ? "1 set" : n + " sets"}
                 </button>
               ))}
             </div>
           </div>
-          <Btn onClick={() => {
-            setInformalTeam1({ name: "", players: [] });
-            setInformalTeam2({ name: "", players: [] });
-            setInformalStep("team1");
-          }} variant="sun" size="lg">Next →</Btn>
+          <button
+            onClick={() => {
+              setInformalTeam1({ name: "", players: [] });
+              setInformalTeam2({ name: "", players: [] });
+              setInformalStep("team1");
+            }}
+            className="w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-free border-0 cursor-pointer"
+          >
+            Next →
+          </button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 
@@ -97,7 +88,7 @@ const InformalWizard = ({
     const isTeam1 = informalStep === "team1";
     const infTeam = isTeam1 ? informalTeam1 : informalTeam2;
     const setInfTeam = isTeam1 ? setInformalTeam1 : setInformalTeam2;
-    const teamColor = isTeam1 ? G.ocean : G.sun;
+    const teamColor = isTeam1 ? "var(--color-accent)" : "var(--color-free)";
     const teamLabel = isTeam1 ? "TEAM 1" : "TEAM 2";
 
     const setSlot = (idx, slot) => {
@@ -114,96 +105,113 @@ const InformalWizard = ({
 
     return (
       <div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <button onClick={() => setInformalStep(isTeam1 ? "config" : "team1")} style={{
-            background: "none", border: "none", fontSize: 20, cursor: "pointer", color: G.ocean,
-          }}>←</button>
-          <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 30, color: teamColor, letterSpacing: 2 }}>
+        <div className="flex items-center gap-2.5 mb-5">
+          <button
+            onClick={() => setInformalStep(isTeam1 ? "config" : "team1")}
+            className="bg-transparent border-0 text-[20px] cursor-pointer text-accent"
+          >
+            ←
+          </button>
+          <h1 className="font-display text-[30px] tracking-[2px]" style={{ color: teamColor }}>
             {teamLabel}
           </h1>
-          <div style={{ fontSize: 13, color: G.textLight, marginLeft: "auto" }}>
-            Step {isTeam1 ? "2" : "3"} of 4
-          </div>
+          <div className="text-[13px] text-dim ml-auto">Step {isTeam1 ? "2" : "3"} of 4</div>
         </div>
-        <Card>
-          <div style={{ display: "grid", gap: 16 }}>
-            <Input
+        <div className="bg-surface rounded-xl border border-line p-4">
+          <div className="flex flex-col gap-4">
+            <input
               value={infTeam.name}
-              onChange={v => setInfTeam(prev => ({ ...prev, name: v }))}
+              onChange={e => setInfTeam(prev => ({ ...prev, name: e.target.value }))}
               placeholder={"Team " + (isTeam1 ? "1" : "2") + " name"}
+              className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
             />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="text-[13px] font-bold text-dim uppercase tracking-[0.5px] mb-2.5">
                 Players ({informalTeamSize})
               </div>
-              <div style={{ display: "grid", gap: 10 }}>
+              <div className="flex flex-col gap-2.5">
                 {Array.from({ length: informalTeamSize }).map((_, idx) => {
                   const slot = infTeam.players[idx];
                   return (
-                    <div key={idx} style={{ background: G.sand, borderRadius: 12, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: teamColor, marginBottom: 8 }}>
+                    <div key={idx} className="bg-alt rounded-xl p-3.5">
+                      <div className="text-[12px] font-bold mb-2" style={{ color: teamColor }}>
                         Player {idx + 1}
                       </div>
                       {/* Toggle type */}
-                      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                      <div className="flex gap-2 mb-2.5">
                         {[
                           { type: "global", label: "👤 From list" },
                           { type: "free",   label: "✏️ Free name" },
-                        ].map(opt => (
-                          <button key={opt.type} onClick={() => setSlot(idx, { type: opt.type, playerId: "", name: "" })} style={{
-                            flex: 1, padding: "8px", borderRadius: 8, border: "2px solid",
-                            borderColor: slot?.type === opt.type ? teamColor : G.sandDark,
-                            background: slot?.type === opt.type ? teamColor + "18" : G.white,
-                            fontWeight: slot?.type === opt.type ? 700 : 400,
-                            fontSize: 12, cursor: "pointer", color: slot?.type === opt.type ? teamColor : G.text,
-                            fontFamily: "'DM Sans', sans-serif",
-                          }}>{opt.label}</button>
-                        ))}
+                        ].map(opt => {
+                          const isActive = slot?.type === opt.type;
+                          return (
+                            <button
+                              key={opt.type}
+                              onClick={() => setSlot(idx, { type: opt.type, playerId: "", name: "" })}
+                              className="flex-1 py-2 rounded-lg border-2 cursor-pointer text-[12px] transition-all"
+                              style={{
+                                borderColor: isActive ? teamColor : "var(--color-line)",
+                                background: isActive ? `color-mix(in srgb, ${teamColor} 12%, transparent)` : "var(--color-surface)",
+                                fontWeight: isActive ? 700 : 400,
+                                color: isActive ? teamColor : "var(--color-text)",
+                              }}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
                       </div>
                       {/* Input based on type */}
                       {slot?.type === "global" && (
-                        <Select value={slot.playerId || ""} onChange={v => setSlot(idx, { type: "global", playerId: v })}>
+                        <select
+                          value={slot.playerId || ""}
+                          onChange={e => setSlot(idx, { type: "global", playerId: e.target.value })}
+                          className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors cursor-pointer"
+                        >
                           <option value="">Select player...</option>
                           {players.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
-                        </Select>
+                        </select>
                       )}
                       {slot?.type === "free" && (
-                        <Input
+                        <input
                           value={slot.name || ""}
-                          onChange={v => setSlot(idx, { type: "free", name: v })}
+                          onChange={e => setSlot(idx, { type: "free", name: e.target.value })}
                           placeholder={"Player " + (idx + 1) + " name"}
+                          className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
                         />
                       )}
                       {!slot && (
-                        <div style={{ fontSize: 13, color: G.textLight }}>
-                          Select an option above
-                        </div>
+                        <div className="text-[13px] text-dim">Select an option above</div>
                       )}
                     </div>
                   );
                 })}
               </div>
             </div>
-            <Btn onClick={() => {
-              if (isTeam1) {
-                setInformalStep("team2");
-              } else {
-                // Build ad-hoc teams and set up rotation
-                const tm1 = buildTeamObj(informalTeam1, 1);
-                const tm2 = buildTeamObj(infTeam, 2);
-                setTeam1Id(tm1.id);
-                setTeam2Id(tm2.id);
-                setT1ServeOrder(tm1.players);
-                setT2ServeOrder(tm2.players);
-                setInformalStep("serve");
-              }
-            }} variant="sun" size="lg" disabled={!canContinue}>
+            <button
+              onClick={() => {
+                if (isTeam1) {
+                  setInformalStep("team2");
+                } else {
+                  // Build ad-hoc teams and set up rotation
+                  const tm1 = buildTeamObj(informalTeam1, 1);
+                  const tm2 = buildTeamObj(infTeam, 2);
+                  setTeam1Id(tm1.id);
+                  setTeam2Id(tm2.id);
+                  setT1ServeOrder(tm1.players);
+                  setT2ServeOrder(tm2.players);
+                  setInformalStep("serve");
+                }
+              }}
+              disabled={!canContinue}
+              className="w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-free border-0 cursor-pointer disabled:opacity-50"
+            >
               {isTeam1 ? "Next → Team 2" : "Next → Serve order"}
-            </Btn>
+            </button>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -234,24 +242,24 @@ const InformalWizard = ({
               <div key={pid + idx} style={{
                 display: "flex", alignItems: "center", gap: 10,
                 padding: "10px 12px", borderRadius: 12,
-                background: idx === 0 ? color + "18" : G.sand,
+                background: idx === 0 ? `color-mix(in srgb, ${color} 12%, transparent)` : "var(--color-alt)",
                 border: "2px solid " + (idx === 0 ? color : "transparent"),
               }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
                   background: color, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "'Bebas Neue'", fontSize: 16, color: G.white,
+                  fontFamily: "'Bebas Neue'", fontSize: 16, color: "#fff",
                 }}>{idx + 1}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 14, color: idx === 0 ? color : G.text }}>
+                  <div style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 14, color: idx === 0 ? color : "var(--color-text)" }}>
                     {pl?.name || "?"}
                   </div>
                   {idx === 0 && <div style={{ fontSize: 11, color, marginTop: 1 }}>🏐 Serves first</div>}
                 </div>
                 {idx > 0 && (
                   <button onClick={() => moveUp(idx)} style={{
-                    background: G.white, border: "1.5px solid " + G.sandDark,
-                    borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14, color: G.textLight,
+                    background: "var(--color-surface)", border: "1.5px solid var(--color-line)",
+                    borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14, color: "var(--color-dim)",
                   }}>↑</button>
                 )}
               </div>
@@ -261,61 +269,69 @@ const InformalWizard = ({
       );
     };
 
+    const selSideCls = (active) =>
+      `flex-1 py-3 rounded-[10px] border-2 cursor-pointer text-[14px] transition-all ${
+        active
+          ? "border-accent bg-accent/[0.07] font-bold text-text"
+          : "border-line bg-surface font-normal text-text"
+      }`;
+
     return (
       <div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <button onClick={() => setInformalStep("team2")} style={{
-            background: "none", border: "none", fontSize: 20, cursor: "pointer", color: G.ocean,
-          }}>←</button>
-          <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.ocean, letterSpacing: 2 }}>
-            SERVE & SIDE
-          </h1>
-          <div style={{ fontSize: 13, color: G.textLight, marginLeft: "auto" }}>Step 4 of 4</div>
+        <div className="flex items-center gap-2.5 mb-5">
+          <button
+            onClick={() => setInformalStep("team2")}
+            className="bg-transparent border-0 text-[20px] cursor-pointer text-accent"
+          >
+            ←
+          </button>
+          <h1 className="font-display text-[28px] text-accent tracking-[2px]">SERVE &amp; SIDE</h1>
+          <div className="text-[13px] text-dim ml-auto">Step 4 of 4</div>
         </div>
-        <Card>
-          <div style={{ display: "grid", gap: 20 }}>
+        <div className="bg-surface rounded-xl border border-line p-4">
+          <div className="flex flex-col gap-5">
             {/* Team 1 serve order */}
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.ocean, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="text-[13px] font-bold text-accent uppercase tracking-[0.5px] mb-2">
                 {informalTeam1.name || "Team 1"} — Serve order
               </div>
-              <ServeOrderInformal serveOrder={t1ServeOrder} setServeOrder={setT1ServeOrder} color={G.ocean} />
+              <ServeOrderInformal serveOrder={t1ServeOrder} setServeOrder={setT1ServeOrder} color="var(--color-accent)" />
             </div>
             {/* Team 2 serve order */}
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.sun, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="text-[13px] font-bold text-free uppercase tracking-[0.5px] mb-2">
                 {informalTeam2.name || "Team 2"} — Serve order
               </div>
-              <ServeOrderInformal serveOrder={t2ServeOrder} setServeOrder={setT2ServeOrder} color={G.sun} />
+              <ServeOrderInformal serveOrder={t2ServeOrder} setServeOrder={setT2ServeOrder} color="var(--color-free)" />
             </div>
             {/* Initial side */}
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="text-[13px] font-bold text-dim uppercase tracking-[0.5px] mb-2">
                 Initial side — {informalTeam1.name || "Team 1"}
               </div>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="flex gap-2.5">
                 {["left", "right"].map(s => (
-                  <button key={s} onClick={() => { setT1InitialSide(s); setSide({ t1: s, t2: s === "left" ? "right" : "left" }); }} style={{
-                    flex: 1, padding: "12px", borderRadius: 10, border: "2px solid",
-                    borderColor: t1InitialSide === s ? G.ocean : G.sandDark,
-                    background: t1InitialSide === s ? G.ocean + "11" : G.white,
-                    fontWeight: t1InitialSide === s ? 700 : 400,
-                    fontSize: 14, cursor: "pointer", color: G.text,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}>
+                  <button
+                    key={s}
+                    onClick={() => { setT1InitialSide(s); setSide({ t1: s, t2: s === "left" ? "right" : "left" }); }}
+                    className={selSideCls(t1InitialSide === s)}
+                  >
                     {s === "left" ? t("sideLeft") : t("sideRight")}
                   </button>
                 ))}
               </div>
             </div>
-            <Btn onClick={() => {
-              setPointsToWin(21);
-              setGameStarted(true);
-            }} variant="sun" size="lg">
+            <button
+              onClick={() => {
+                setPointsToWin(21);
+                setGameStarted(true);
+              }}
+              className="w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-free border-0 cursor-pointer"
+            >
               {t("startMatch")}
-            </Btn>
+            </button>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }

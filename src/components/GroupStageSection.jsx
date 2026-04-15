@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { G, Card, Btn, Badge, Input, Modal } from "./ui";
 import { uid } from "../lib/utils";
 import { MatchStatsModal } from "./TournamentMatchesSection";
 
@@ -132,6 +131,24 @@ function buildKnockout(groups) {
   return { rounds };
 }
 
+// ── Modal shell ──────────────────────────────────────────────────────────────
+function ModalShell({ title, onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/45 z-[100] flex items-center justify-center p-5"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-surface rounded-[20px] p-7 w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="font-display text-[26px] text-accent tracking-wide">{title}</h2>
+          <button onClick={onClose} className="bg-transparent border-0 text-[22px] cursor-pointer text-dim leading-none">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, readOnly = false }) => {
   const [scoreModal, setScoreModal] = useState(null); // { groupIdx, match }
@@ -187,134 +204,115 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
         const played    = group.matches.filter(m => m.played);
 
         return (
-          <div key={group.id} style={{ marginBottom: 20 }}>
+          <div key={group.id} className="mb-5">
             {/* Group header */}
-            <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: G.ocean, letterSpacing: 2, marginBottom: 10 }}>
+            <div className="font-display text-[22px] text-accent tracking-[2px] mb-2.5">
               {group.name}
             </div>
 
             {/* Standings table */}
-            <Card style={{ marginBottom: 10, overflowX: "auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontFamily: "'Bebas Neue'", fontSize: 15, color: G.ocean, letterSpacing: 1 }}>
-                  STANDINGS
-                </span>
+            <div className="bg-surface rounded-xl border border-line p-4 mb-2 overflow-x-auto">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="font-display text-[15px] text-accent tracking-[1px]">STANDINGS</span>
                 {gi === 0 && (
-                  <button onClick={() => setShowLegend(true)} style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    color: G.textLight, fontSize: 12, padding: "2px 6px",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}>ℹ️ key</button>
+                  <button onClick={() => setShowLegend(true)} className="bg-transparent border-0 cursor-pointer text-dim text-[12px] px-1.5 py-0.5">
+                    ℹ️ key
+                  </button>
                 )}
               </div>
               {/* Header row */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",
-                gap: 4, alignItems: "center",
-                fontSize: 10, fontWeight: 700, color: G.textLight,
-                textTransform: "uppercase", letterSpacing: 0.5,
-                paddingBottom: 6, borderBottom: "1px solid " + G.sandDark,
-                marginBottom: 4,
-              }}>
+              <div className="grid grid-cols-[24px_1fr_28px_28px_28px_36px_36px_36px_36px] gap-1 text-[10px] font-bold text-dim uppercase tracking-[0.5px] pb-1.5 border-b border-line mb-1">
                 <span>#</span><span>Team</span>
-                <span style={{ textAlign: "center" }}>P</span>
-                <span style={{ textAlign: "center" }}>W</span>
-                <span style={{ textAlign: "center" }}>L</span>
-                <span style={{ textAlign: "center" }}>PF</span>
-                <span style={{ textAlign: "center" }}>PA</span>
-                <span style={{ textAlign: "center" }}>PD</span>
-                <span style={{ textAlign: "center" }}>MP</span>
+                <span className="text-center">P</span>
+                <span className="text-center">W</span>
+                <span className="text-center">L</span>
+                <span className="text-center">PF</span>
+                <span className="text-center">PA</span>
+                <span className="text-center">PD</span>
+                <span className="text-center">MP</span>
               </div>
               {standings.map((row, rank) => {
                 const advances = rank < 2;
                 return (
-                  <div key={row.teamId} style={{
-                    display: "grid",
-                    gridTemplateColumns: "24px 1fr 28px 28px 28px 36px 36px 36px 36px",
-                    gap: 4, alignItems: "center",
-                    padding: "7px 0",
-                    borderBottom: rank < standings.length - 1 ? "1px solid " + G.sandDark : "none",
-                    background: advances ? G.success + "12" : "transparent",
-                    borderRadius: advances ? 6 : 0,
-                  }}>
-                    <span style={{ fontWeight: 700, fontSize: 12, color: advances ? G.success : G.textLight }}>
+                  <div
+                    key={row.teamId}
+                    className={`grid grid-cols-[24px_1fr_28px_28px_28px_36px_36px_36px_36px] gap-1 items-center py-[7px] ${advances ? "bg-success/[0.07] rounded-md" : ""} ${rank < standings.length - 1 ? "border-b border-line" : ""}`}
+                  >
+                    <span className={`font-bold text-[12px] ${advances ? "text-success" : "text-dim"}`}>
                       {rank + 1}
                     </span>
-                    <span style={{ fontWeight: advances ? 700 : 500, fontSize: 13, color: advances ? G.success : G.text }}>
+                    <span className={`text-[13px] ${advances ? "font-bold text-success" : "font-medium text-text"}`}>
                       {tName(row.teamId)}
-                      {advances && <span style={{ fontSize: 10, marginLeft: 4, color: G.success }}>↑</span>}
+                      {advances && <span className="text-[10px] ml-1 text-success">↑</span>}
                     </span>
                     {[row.played, row.wins, row.losses, row.pf, row.pa, row.pd, row.mp].map((val, ci) => (
-                      <span key={ci} style={{
-                        textAlign: "center", fontSize: 13,
-                        fontWeight: ci === 6 ? 700 : 400,
-                        color: ci === 6 ? G.ocean : ci === 5 ? (val > 0 ? G.success : val < 0 ? G.danger : G.text) : G.text,
-                      }}>{val}</span>
+                      <span key={ci} className={`text-center text-[13px] ${
+                        ci === 6 ? "font-bold text-accent" :
+                        ci === 5 ? (val > 0 ? "text-success" : val < 0 ? "text-error" : "text-text") :
+                        "text-text"
+                      }`}>{val}</span>
                     ))}
                   </div>
                 );
               })}
-            </Card>
+            </div>
 
             {/* Pending matches */}
             {unplayed.length > 0 && (
-              <Card style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
-                  Pending
-                </div>
-                <div style={{ display: "grid", gap: 8 }}>
+              <div className="bg-surface rounded-xl border border-line p-4 mb-2">
+                <div className="text-[12px] font-bold text-dim uppercase tracking-[0.5px] mb-2">Pending</div>
+                <div className="flex flex-col gap-2">
                   {unplayed.map(m => (
-                    <div key={m.id} style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "8px 12px", background: G.sand, borderRadius: 10,
-                    }}>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{tName(m.team1)}</span>
-                      <span style={{ padding: "0 8px", color: G.textLight, fontWeight: 700, fontSize: 12 }}>VS</span>
-                      <span style={{ flex: 1, textAlign: "right", fontSize: 13, fontWeight: 600 }}>{tName(m.team2)}</span>
-                      <div style={{ display: "flex", gap: 6, marginLeft: 10 }}>
+                    <div key={m.id} className="flex items-center justify-between px-3 py-2 bg-alt rounded-[10px]">
+                      <span className="flex-1 text-[13px] font-semibold text-text">{tName(m.team1)}</span>
+                      <span className="px-2 text-dim font-bold text-[12px]">VS</span>
+                      <span className="flex-1 text-right text-[13px] font-semibold text-text">{tName(m.team2)}</span>
+                      <div className="flex gap-1.5 ml-2.5">
                         {onOpenLive && (
-                          <Btn onClick={() => onOpenLive(m.id)} size="sm" variant="primary">🏐 Live</Btn>
+                          <button
+                            onClick={() => onOpenLive(m.id)}
+                            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-accent border-0 cursor-pointer"
+                          >
+                            🏐 Live
+                          </button>
                         )}
-                        <Btn onClick={() => { setScoreModal({ groupIdx: gi, match: m }); setS1("0"); setS2("0"); }}
-                          size="sm" variant="sun">Score</Btn>
+                        <button
+                          onClick={() => { setScoreModal({ groupIdx: gi, match: m }); setS1("0"); setS2("0"); }}
+                          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-free border-0 cursor-pointer"
+                        >
+                          Score
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              </Card>
+              </div>
             )}
 
             {/* Played results */}
             {played.length > 0 && (
-              <Card>
-                <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
-                  Results
-                </div>
-                <div style={{ display: "grid", gap: 6 }}>
+              <div className="bg-surface rounded-xl border border-line p-4">
+                <div className="text-[12px] font-bold text-dim uppercase tracking-[0.5px] mb-2">Results</div>
+                <div className="flex flex-col gap-1.5">
                   {played.map(m => (
-                    <div key={m.id} onClick={() => setStatsMatch(m)} style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "6px 12px", background: G.sand, borderRadius: 8, cursor: "pointer",
-                    }}>
-                      <span style={{
-                        flex: 1, fontSize: 13,
-                        fontWeight: m.winner === m.team1 ? 700 : 400,
-                        color: m.winner === m.team1 ? G.ocean : m.winner === null ? G.text : G.textLight,
-                      }}>{tName(m.team1)}</span>
-                      <span style={{
-                        padding: "3px 12px", background: G.white, borderRadius: 6,
-                        fontFamily: "'Bebas Neue'", fontSize: 18, color: G.text, margin: "0 6px",
-                      }}>{m.score1} – {m.score2}</span>
-                      <span style={{
-                        flex: 1, textAlign: "right", fontSize: 13,
-                        fontWeight: m.winner === m.team2 ? 700 : 400,
-                        color: m.winner === m.team2 ? G.ocean : m.winner === null ? G.text : G.textLight,
-                      }}>{tName(m.team2)}</span>
+                    <div
+                      key={m.id}
+                      onClick={() => setStatsMatch(m)}
+                      className="flex items-center justify-between px-3 py-1.5 bg-alt rounded-lg cursor-pointer"
+                    >
+                      <span className={`flex-1 text-[13px] ${m.winner === m.team1 ? "font-bold text-accent" : "font-normal text-dim"}`}>
+                        {tName(m.team1)}
+                      </span>
+                      <span className="px-3 py-[3px] bg-surface rounded-md font-display text-[18px] text-text mx-1.5">
+                        {m.score1} – {m.score2}
+                      </span>
+                      <span className={`flex-1 text-right text-[13px] ${m.winner === m.team2 ? "font-bold text-accent" : "font-normal text-dim"}`}>
+                        {tName(m.team2)}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </Card>
+              </div>
             )}
           </div>
         );
@@ -322,50 +320,35 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
 
       {/* Advance button — hidden when viewing retrospectively */}
       {!readOnly && (
-        <div style={{ marginTop: 8 }}>
-          <Btn
+        <div className="mt-2">
+          <button
             onClick={advanceToKnockout}
-            variant="sun"
-            size="lg"
             disabled={!allGroupMatchesPlayed}
-            style={{ width: "100%" }}
+            className="w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-free border-0 cursor-pointer disabled:opacity-50"
           >
             {allGroupMatchesPlayed ? "⚡ Advance to Knockout Stage" : "⏳ Complete all group matches first"}
-          </Btn>
+          </button>
         </div>
       )}
 
       {/* Legend modal */}
       {showLegend && (
-        <Modal title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
-          <div style={{ display: "grid", gap: 0 }}>
+        <ModalShell title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
+          <div className="grid gap-0">
             {LEGEND.map(({ key, label }, i) => (
-              <div key={key} style={{
-                display: "flex", alignItems: "center", gap: 14,
-                padding: "12px 0",
-                borderBottom: i < LEGEND.length - 1 ? "1px solid " + G.sandDark : "none",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, background: G.ocean,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "'Bebas Neue'", fontSize: 15, color: G.white, letterSpacing: 1, flexShrink: 0,
-                }}>
+              <div key={key} className={`flex items-center gap-3.5 py-3 ${i < LEGEND.length - 1 ? "border-b border-line" : ""}`}>
+                <div className="w-9 h-9 rounded-[10px] bg-accent flex items-center justify-center font-display text-[15px] text-white tracking-[1px] flex-shrink-0">
                   {key}
                 </div>
-                <span style={{ fontSize: 14, color: G.text }}>{label}</span>
+                <span className="text-[14px] text-text">{label}</span>
               </div>
             ))}
           </div>
-          <div style={{
-            marginTop: 16, padding: "12px 14px",
-            background: G.ocean + "12", borderRadius: 10, borderLeft: "3px solid " + G.ocean,
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: G.ocean, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
-              Tiebreaker order
-            </div>
-            <div style={{ fontSize: 13, color: G.text }}>MP → PD → PF → Head-to-head</div>
+          <div className="mt-4 p-3 bg-accent/[0.07] rounded-[10px] border-l-[3px] border-accent">
+            <div className="text-[11px] font-bold text-accent uppercase tracking-[0.8px] mb-1">Tiebreaker order</div>
+            <div className="text-[13px] text-text">MP → PD → PF → Head-to-head</div>
           </div>
-        </Modal>
+        </ModalShell>
       )}
 
       {/* Stats modal */}
@@ -378,43 +361,46 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
 
       {/* Score entry modal */}
       {scoreModal && (
-        <Modal title="ENTER RESULT" onClose={() => { setScoreModal(null); setDrawError(false); }}>
-          <div style={{ display: "grid", gap: 16 }}>
-            <div style={{ textAlign: "center", fontSize: 14, color: G.textLight }}>
+        <ModalShell title="ENTER RESULT" onClose={() => { setScoreModal(null); setDrawError(false); }}>
+          <div className="flex flex-col gap-4">
+            <div className="text-center text-[14px] text-dim">
               {tName(scoreModal.match.team1)} vs {tName(scoreModal.match.team2)}
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: G.textLight }}>
-                  {tName(scoreModal.match.team1)}
-                </div>
-                <Input value={s1} onChange={v => { setS1(v); setDrawError(false); }} placeholder="0" />
+            <div className="flex gap-3 items-center">
+              <div className="flex-1">
+                <div className="text-[12px] font-semibold mb-1 text-dim">{tName(scoreModal.match.team1)}</div>
+                <input
+                  value={s1}
+                  onChange={e => { setS1(e.target.value); setDrawError(false); }}
+                  placeholder="0"
+                  className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
+                />
               </div>
-              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.textLight, paddingTop: 22 }}>—</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: G.textLight }}>
-                  {tName(scoreModal.match.team2)}
-                </div>
-                <Input value={s2} onChange={v => { setS2(v); setDrawError(false); }} placeholder="0" />
+              <div className="font-display text-[28px] text-dim pt-[22px]">—</div>
+              <div className="flex-1">
+                <div className="text-[12px] font-semibold mb-1 text-dim">{tName(scoreModal.match.team2)}</div>
+                <input
+                  value={s2}
+                  onChange={e => { setS2(e.target.value); setDrawError(false); }}
+                  placeholder="0"
+                  className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
+                />
               </div>
             </div>
             {drawError && (
-              <div style={{
-                background: G.danger + "18", border: "1px solid " + G.danger,
-                borderRadius: 8, padding: "10px 14px",
-                color: G.danger, fontSize: 13, fontWeight: 600, textAlign: "center",
-              }}>
+              <div className="bg-error/[0.12] border border-error rounded-lg px-3.5 py-2.5 text-error text-[13px] font-semibold text-center">
                 ⚠️ No draws in beach volleyball. Enter a decisive score.
               </div>
             )}
-            <Btn
-              onClick={submitScore} variant="success" size="lg"
+            <button
+              onClick={submitScore}
               disabled={parseInt(s1) === parseInt(s2)}
+              className="w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-success border-0 cursor-pointer disabled:opacity-50"
             >
               Confirm result
-            </Btn>
+            </button>
           </div>
-        </Modal>
+        </ModalShell>
       )}
     </div>
   );

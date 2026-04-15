@@ -1,4 +1,5 @@
 import { SectionLabel } from '../components/ui-new'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -31,14 +32,16 @@ const LogOutIcon  = () => <Svg><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><
 const TrashIcon   = () => <Svg><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></Svg>
 const ArrowIcon   = () => <Svg size={16}><polyline points="9 18 15 12 9 6" /></Svg>
 
-// ─── Toggle switch (visual only) ─────────────────────────────────────────────
-function Toggle({ on, colorOn = 'bg-accent' }) {
+// ─── Toggle switch ────────────────────────────────────────────────────────────
+function Toggle({ on, onClick, colorOn = 'bg-accent' }) {
   return (
     <div
+      onClick={onClick}
       className={`
         w-[42px] h-6 rounded-full p-0.5
         flex items-center
         transition-all duration-150
+        cursor-pointer
         ${on ? `${colorOn} justify-end` : 'bg-alt justify-start'}
       `}
     >
@@ -62,6 +65,14 @@ function SettingsRow({ icon, iconColor = 'text-dim', label, right, border = true
 
 // ─── Settings page ────────────────────────────────────────────────────────────
 export default function Settings() {
+  const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);
+  const toggleDark = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  };
+
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
 
@@ -84,7 +95,7 @@ export default function Settings() {
               icon={<MoonIcon />}
               iconColor="text-accent"
               label="Dark Mode"
-              right={<Toggle on={true} colorOn="bg-accent" />}
+              right={<Toggle on={isDark} colorOn="bg-accent" onClick={toggleDark} />}
               border={false}
             />
           </div>

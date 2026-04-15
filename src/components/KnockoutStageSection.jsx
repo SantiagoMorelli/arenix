@@ -1,6 +1,23 @@
 import React, { useState } from "react";
-import { G, Card, Btn, Badge, Input, Modal } from "./ui";
 import { MatchStatsModal } from "./TournamentMatchesSection";
+
+// ── Modal shell ──────────────────────────────────────────────────────────────
+function ModalShell({ title, onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/45 z-[100] flex items-center justify-center p-5"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-surface rounded-[20px] p-7 w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="font-display text-[26px] text-accent tracking-wide">{title}</h2>
+          <button onClick={onClose} className="bg-transparent border-0 text-[22px] cursor-pointer text-dim leading-none">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive }) => {
   const [scoreModal, setScoreModal] = useState(null); // { roundIdx, match }
@@ -140,12 +157,12 @@ const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive 
     return { ...tour, knockout: { ...tour.knockout, rounds } };
   }
 
-  // ── Round label style helper ─────────────────────────────────────────────
+  // ── Round color helper ───────────────────────────────────────────────────
   const roundColor = (id) => {
-    if (id === "final")       return G.sun;
-    if (id === "semi")        return G.ocean;
-    if (id === "third_place") return G.warn;
-    return G.oceanLight || G.ocean;
+    if (id === "final")       return "var(--color-free)";
+    if (id === "semi")        return "var(--color-accent)";
+    if (id === "third_place") return "#F39C12";
+    return "var(--color-accent)";
   };
 
   return (
@@ -154,62 +171,55 @@ const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive 
         const playable = isRoundPlayable(ri);
 
         return (
-          <div key={round.id} style={{ marginBottom: 20 }}>
+          <div key={round.id} className="mb-5">
             {/* Round header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{
-                fontFamily: "'Bebas Neue'", fontSize: 20, color: roundColor(round.id), letterSpacing: 2,
-              }}>
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="font-display text-[20px] tracking-[2px]" style={{ color: roundColor(round.id) }}>
                 {round.name.toUpperCase()}
               </div>
               {!playable && (
-                <Badge color={G.textLight} style={{ fontSize: 10 }}>Waiting for previous round</Badge>
+                <span className="text-[10px] font-bold text-dim bg-alt px-2 py-1 rounded-lg">
+                  Waiting for previous round
+                </span>
               )}
             </div>
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className="flex flex-col gap-2.5">
               {round.matches.map(m => {
                 const bothTeamsKnown = m.team1 && m.team2;
                 const canPlay = playable && bothTeamsKnown && !m.played;
 
                 return (
-                  <Card key={m.id}
+                  <div
+                    key={m.id}
                     onClick={() => m.played && setStatsMatch(m)}
+                    className={`bg-surface rounded-xl border border-line p-3 overflow-hidden ${!bothTeamsKnown ? "opacity-55" : ""} ${m.played ? "cursor-pointer" : "cursor-default"}`}
                     style={{
-                      padding: "12px 16px",
-                      opacity: !bothTeamsKnown ? 0.55 : 1,
-                      cursor: m.played ? "pointer" : "default",
-                      borderLeft: m.played ? "4px solid " + G.success : bothTeamsKnown ? "4px solid " + roundColor(round.id) : "4px solid " + G.sandDark,
-                    }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      borderLeft: m.played
+                        ? "4px solid var(--color-success)"
+                        : bothTeamsKnown
+                        ? `4px solid ${roundColor(round.id)}`
+                        : "4px solid var(--color-line)",
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
                       {/* Team 1 */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          fontSize: 14, fontWeight: m.winner === m.team1 ? 700 : 500,
-                          color: m.winner === m.team1 ? G.ocean : m.played ? G.textLight : G.text,
-                        }}>
+                      <div className="flex-1">
+                        <div className={`text-[14px] ${m.winner === m.team1 ? "font-bold text-accent" : m.played ? "font-medium text-dim" : "font-medium text-text"}`}>
                           {tName(m.team1)}
-                          {m.winner === m.team1 && <span style={{ marginLeft: 4, fontSize: 12 }}>🏆</span>}
+                          {m.winner === m.team1 && <span className="ml-1 text-[12px]">🏆</span>}
                         </div>
                       </div>
 
                       {/* Score / VS */}
-                      <div style={{
-                        padding: "4px 14px", background: m.played ? G.sand : G.white,
-                        borderRadius: 8, margin: "0 10px",
-                        fontFamily: "'Bebas Neue'", fontSize: m.played ? 22 : 16,
-                        color: G.text, textAlign: "center", minWidth: 60,
-                      }}>
+                      <div className={`px-3.5 py-1 rounded-lg mx-2.5 font-display text-center min-w-[60px] text-text ${m.played ? "text-[22px] bg-alt" : "text-[16px] bg-surface border border-line"}`}>
                         {m.played ? `${m.score1} – ${m.score2}` : "VS"}
                       </div>
 
                       {/* Team 2 */}
-                      <div style={{ flex: 1, textAlign: "right" }}>
-                        <div style={{
-                          fontSize: 14, fontWeight: m.winner === m.team2 ? 700 : 500,
-                          color: m.winner === m.team2 ? G.ocean : m.played ? G.textLight : G.text,
-                        }}>
-                          {m.winner === m.team2 && <span style={{ marginRight: 4, fontSize: 12 }}>🏆</span>}
+                      <div className="flex-1 text-right">
+                        <div className={`text-[14px] ${m.winner === m.team2 ? "font-bold text-accent" : m.played ? "font-medium text-dim" : "font-medium text-text"}`}>
+                          {m.winner === m.team2 && <span className="mr-1 text-[12px]">🏆</span>}
                           {tName(m.team2)}
                         </div>
                       </div>
@@ -217,17 +227,24 @@ const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive 
 
                     {/* Action buttons */}
                     {canPlay && (
-                      <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
+                      <div className="flex gap-2 mt-2.5 justify-end">
                         {onOpenLive && (
-                          <Btn onClick={() => onOpenLive(m.id)} size="sm" variant="primary">🏐 Live</Btn>
+                          <button
+                            onClick={() => onOpenLive(m.id)}
+                            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-accent border-0 cursor-pointer"
+                          >
+                            🏐 Live
+                          </button>
                         )}
-                        <Btn
+                        <button
                           onClick={() => { setScoreModal({ roundIdx: ri, match: m }); setS1("0"); setS2("0"); setDrawError(false); }}
-                          size="sm" variant="sun"
-                        >Score</Btn>
+                          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-free border-0 cursor-pointer"
+                        >
+                          Score
+                        </button>
                       </div>
                     )}
-                  </Card>
+                  </div>
                 );
               })}
             </div>
@@ -245,45 +262,46 @@ const KnockoutStageSection = ({ tournament, setTournaments, players, onOpenLive 
 
       {/* Score entry modal */}
       {scoreModal && (
-        <Modal title="ENTER RESULT" onClose={() => { setScoreModal(null); setDrawError(false); }}>
-          <div style={{ display: "grid", gap: 16 }}>
-            <div style={{ textAlign: "center", fontSize: 14, color: G.textLight }}>
+        <ModalShell title="ENTER RESULT" onClose={() => { setScoreModal(null); setDrawError(false); }}>
+          <div className="flex flex-col gap-4">
+            <div className="text-center text-[14px] text-dim">
               {tName(scoreModal.match.team1)} vs {tName(scoreModal.match.team2)}
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: G.textLight }}>
-                  {tName(scoreModal.match.team1)}
-                </div>
-                <Input value={s1} onChange={v => { setS1(v); setDrawError(false); }} placeholder="0" />
+            <div className="flex gap-3 items-center">
+              <div className="flex-1">
+                <div className="text-[12px] font-semibold mb-1 text-dim">{tName(scoreModal.match.team1)}</div>
+                <input
+                  value={s1}
+                  onChange={e => { setS1(e.target.value); setDrawError(false); }}
+                  placeholder="0"
+                  className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
+                />
               </div>
-              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 28, color: G.textLight, paddingTop: 22 }}>—</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: G.textLight }}>
-                  {tName(scoreModal.match.team2)}
-                </div>
-                <Input value={s2} onChange={v => { setS2(v); setDrawError(false); }} placeholder="0" />
+              <div className="font-display text-[28px] text-dim pt-[22px]">—</div>
+              <div className="flex-1">
+                <div className="text-[12px] font-semibold mb-1 text-dim">{tName(scoreModal.match.team2)}</div>
+                <input
+                  value={s2}
+                  onChange={e => { setS2(e.target.value); setDrawError(false); }}
+                  placeholder="0"
+                  className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
+                />
               </div>
             </div>
             {drawError && (
-              <div style={{
-                background: G.danger + "18", border: "1px solid " + G.danger,
-                borderRadius: 8, padding: "10px 14px",
-                color: G.danger, fontSize: 13, fontWeight: 600, textAlign: "center",
-              }}>
+              <div className="bg-error/[0.12] border border-error rounded-lg px-3.5 py-2.5 text-error text-[13px] font-semibold text-center">
                 ⚠️ Draws are not allowed in the knockout stage. Please enter a decisive score.
               </div>
             )}
-            <Btn
+            <button
               onClick={submitScore}
-              variant="success"
-              size="lg"
               disabled={parseInt(s1) === parseInt(s2)}
+              className="w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-success border-0 cursor-pointer disabled:opacity-50"
             >
               Confirm result
-            </Btn>
+            </button>
           </div>
-        </Modal>
+        </ModalShell>
       )}
     </div>
   );

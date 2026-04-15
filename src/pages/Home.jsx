@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { BottomNav, IconButton, SectionLabel, AppBadge } from '../components/ui-new'
+import NotificationPanel from '../components/NotificationPanel'
 
-// ─── Inline SVG icons (currentColor so parent text class drives stroke) ───────
+// ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
   <svg
     width={size} height={size} viewBox="0 0 24 24"
@@ -76,53 +79,111 @@ const PlusIcon = ({ size = 18 }) => (
   </Svg>
 )
 
-// ─── Static data (hardcoded for shell) ────────────────────────────────────────
-const LEAGUE = {
-  name: 'Miami Beach League',
-  season: 'Season 2026',
-  players: 24,
-  rank: '#3 Rank',
-  stats: [
-    { value: '3', label: 'Tournaments' },
-    { value: '12', label: 'Matches' },
-    { value: '8W-4L', label: 'Record' },
-  ],
+// ─── Data helpers ─────────────────────────────────────────────────────────────
+
+/** All matches across group stage, knockout, and free-play rounds */
+function getAllMatches(tour) {
+  return [
+    ...(tour.groups   || []).flatMap(g => g.matches || []),
+    ...(tour.knockout?.rounds || []).flatMap(r => r.matches || []),
+    ...(tour.matches  || []),
+  ]
 }
 
-const RECENT = [
-  {
-    id: 'r1',
-    title: 'Spring Cup',
-    sub: 'Tournament · Final round',
-    badge: 'LIVE',
-    badgeVariant: 'success',
-    iconBg: 'bg-accent/15',
-    iconColor: 'text-accent',
-    Icon: TrophyIcon,
-  },
-  {
-    id: 'r2',
-    title: 'Free Play',
-    sub: 'Yesterday · 4 players',
-    badge: 'Done',
-    badgeVariant: 'dim',
-    iconBg: 'bg-free/15',
-    iconColor: 'text-free',
-    Icon: BallIcon,
-  },
-]
+/** Human-readable phase label */
+function phaseLabel(tour) {
+  if (tour.status === 'completed') return 'Completed'
+  const p = tour.phase
+  if (p === 'setup')    return 'Setup'
+  if (p === 'group')    return 'Group Stage'
+  if (p === 'knockout') return 'Knockout'
+  if (p === 'freeplay') return 'Round Robin'
+  return 'Active'
+}
+
+/** Badge variant for a phase label */
+function phaseBadgeVariant(tour) {
+  if (tour.status === 'completed') return 'dim'
+  if (tour.phase === 'group' || tour.phase === 'knockout' || tour.phase === 'freeplay') return 'success'
+  return 'accent'
+}
 
 const NAV_ITEMS = [
-  { id: 'home',    icon: <HomeIcon />, label: 'Home' },
+  { id: 'home',    icon: <HomeIcon />, label: 'Home'    },
   { id: 'profile', icon: <StarIcon />, label: 'Profile' },
 ]
 
-// ─── Home page ─────────────────────────────────────────────────────────────────
+// ─── Home page ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('home')
+  const navigate = useNavigate()
 
+  // Same localStorage keys as App.jsx — reads the live data
+  const [tournaments] = useLocalStorage('arenix_tournaments', [])
+  const [freePlays]   = useLocalStorage('arenix_freeplays',   [])
+
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [activeTab,  setActiveTab]  = useState('home')
+
+  // ── Derive league card data ─────────────────────────────────────────────────
+  // Most recent active tournament first, then any tournament, then null
+  const featuredTour =
+    [...tournaments].reverse().find(t => t.status === 'active') ||
+    [...tournaments].reverse()[0] ||
+    null
+
+  const playerCount = featuredTour
+    ? new Set(featuredTour.teams.flatMap(t => t.players || [])).size
+    : 0
+
+  const playedCount = featuredTour
+    ? getAllMatches(featuredTour).filter(m => m.played).length
+    : 0
+
+  const leagueStats = featuredTour
+    ? [
+        { value: String(tournaments.length),        label: 'Tournaments' },
+        { value: String(playedCount),               label: 'Matches'     },
+        { value: String(featuredTour.teams.length), label: 'Teams'       },
+      ]
+    : null
+
+  // ── Derive recent activity ──────────────────────────────────────────────────
+  // Up to 2 most-recent tournaments + 2 most-recent free plays, capped at 4
+  const recentActivity = [
+    ...[...tournaments].reverse().slice(0, 2).map(t => ({
+      id:          'tour-' + t.id,
+      title:       t.name,
+      sub:         `Tournament · ${t.date}`,
+      badge:       phaseLabel(t),
+      badgeVariant: phaseBadgeVariant(t),
+      iconBg:      'bg-accent/15',
+      iconColor:   'text-accent',
+      Icon:        TrophyIcon,
+    })),
+    ...[...freePlays].reverse().slice(0, 2).map(fp => ({
+      id:          'fp-' + fp.id,
+      title:       fp.name,
+      sub:         `Free Play · ${fp.date}`,
+      badge:       'Done',
+      badgeVariant: 'dim',
+      iconBg:      'bg-free/15',
+      iconColor:   'text-free',
+      Icon:        BallIcon,
+    })),
+  ].slice(0, 4)
+
+  // ── Nav handler ─────────────────────────────────────────────────────────────
+  const handleNavChange = (tab) => {
+    setActiveTab(tab)
+    if (tab === 'profile') navigate('/profile')
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+
+      {/* Notification panel overlay */}
+      <NotificationPanel isOpen={showNotifs} onClose={() => setShowNotifs(false)} />
 
       {/* ── Scrollable content ── */}
       <main className="flex-1 overflow-y-auto">
@@ -135,48 +196,61 @@ export default function Home() {
               <div className="text-[22px] font-bold text-text leading-tight">Santi 🏐</div>
             </div>
             <div className="flex gap-2 text-dim">
-              <IconButton badge={3}>
+              <IconButton badge={3} onClick={() => setShowNotifs(v => !v)}>
                 <BellIcon />
               </IconButton>
-              <IconButton>
+              <IconButton onClick={() => navigate('/settings')}>
                 <GearIcon />
               </IconButton>
             </div>
           </div>
 
-          {/* ── League card ── */}
-          <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40">
-            {/* Card header row */}
-            <div className="flex justify-between items-start mb-3.5">
-              <div>
-                <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
-                  My League
+          {/* ── League / tournament card ── */}
+          {featuredTour ? (
+            <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40">
+              {/* Card header row */}
+              <div className="flex justify-between items-start mb-3.5">
+                <div>
+                  <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
+                    My Tournament
+                  </div>
+                  <div className="text-[17px] font-bold text-text">{featuredTour.name}</div>
+                  <div className="text-[12px] text-dim mt-0.5">
+                    {featuredTour.date} · {playerCount} players
+                  </div>
                 </div>
-                <div className="text-[17px] font-bold text-text">
-                  {LEAGUE.name}
-                </div>
-                <div className="text-[12px] text-dim mt-0.5">
-                  {LEAGUE.season} · {LEAGUE.players} players
+                <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent">
+                  {phaseLabel(featuredTour)}
                 </div>
               </div>
-              <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent">
-                {LEAGUE.rank}
+              {/* Stats row */}
+              <div className="flex gap-2">
+                {leagueStats.map(s => (
+                  <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
+                    <div className="text-[15px] font-bold text-text">{s.value}</div>
+                    <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-
-            {/* Stats row */}
-            <div className="flex gap-2">
-              {LEAGUE.stats.map(s => (
-                <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
-                  <div className="text-[15px] font-bold text-text">{s.value}</div>
-                  <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
-                </div>
-              ))}
+          ) : (
+            /* Empty state — no tournaments yet */
+            <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-line text-center">
+              <div className="text-[13px] text-dim mb-3">No active tournament yet</div>
+              <button
+                onClick={() => navigate('/legacy')}
+                className="text-[12px] font-semibold text-accent bg-accent/15 px-4 py-2 rounded-lg cursor-pointer border-0"
+              >
+                Create a Tournament →
+              </button>
             </div>
-          </div>
+          )}
 
           {/* ── Free Play button ── */}
-          <div className="bg-gradient-to-br from-free/15 to-surface rounded-2xl p-4 mb-[18px] border border-free/30 flex items-center gap-3.5 cursor-pointer active:opacity-80 transition-opacity">
+          <div
+            onClick={() => navigate('/free-play')}
+            className="bg-gradient-to-br from-free/15 to-surface rounded-2xl p-4 mb-[18px] border border-free/30 flex items-center gap-3.5 cursor-pointer active:opacity-80 transition-opacity"
+          >
             <div className="w-12 h-12 rounded-[14px] bg-free/15 flex items-center justify-center text-free flex-shrink-0">
               <PlayIcon />
             </div>
@@ -192,26 +266,29 @@ export default function Home() {
           {/* ── Recent activity ── */}
           <SectionLabel color="dim">Recent</SectionLabel>
 
-          <div className="flex flex-col gap-2">
-            {RECENT.map(item => (
-              <div
-                key={item.id}
-                className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
-              >
-                {/* Icon box */}
-                <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${item.iconBg} ${item.iconColor}`}>
-                  <item.Icon />
+          {recentActivity.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {recentActivity.map(item => (
+                <div
+                  key={item.id}
+                  className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
+                >
+                  <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${item.iconBg} ${item.iconColor}`}>
+                    <item.Icon />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-text truncate">{item.title}</div>
+                    <div className="text-[11px] text-dim truncate">{item.sub}</div>
+                  </div>
+                  <AppBadge text={item.badge} variant={item.badgeVariant} />
                 </div>
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-semibold text-text">{item.title}</div>
-                  <div className="text-[11px] text-dim">{item.sub}</div>
-                </div>
-                {/* Badge */}
-                <AppBadge text={item.badge} variant={item.badgeVariant} />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-[13px] text-dim text-center py-6">
+              No recent activity yet
+            </div>
+          )}
 
         </div>
       </main>
@@ -220,7 +297,7 @@ export default function Home() {
       <BottomNav
         items={NAV_ITEMS}
         active={activeTab}
-        onChange={setActiveTab}
+        onChange={handleNavChange}
       />
 
     </div>

@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* Class-based dark mode — add "dark" class to <html> to activate */
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Color tokens ─────────────────────────────────────────────────────────── */
+
+/* Light mode (default) */
+:root {
+  --c-bg:      #F5F6F8;
+  --c-surface: #FFFFFF;
+  --c-alt:     #EDF0F4;
+  --c-accent:  #E8850C;
+  --c-free:    #0891B2;
+  --c-success: #16A34A;
+  --c-error:   #DC2626;
+  --c-text:    #1A1D23;
+  --c-dim:     #6B7280;
+  --c-line:    #E2E5EB;
+}
+
+/* Dark mode */
+.dark {
+  --c-bg:      #0F1923;
+  --c-surface: #1A2734;
+  --c-alt:     #243447;
+  --c-accent:  #F5A623;
+  --c-free:    #00BCD4;
+  --c-success: #2ECC71;
+  --c-error:   #E74C3C;
+  --c-text:    #E8ECF1;
+  --c-dim:     #7A8EA0;
+  --c-line:    #2A3A4A;
+}
+
+/* ─── Tailwind theme ────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Palette — maps to bg-bg, bg-surface, text-accent, border-line, etc. */
+  --color-bg:      var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-alt:     var(--c-alt);
+  --color-accent:  var(--c-accent);
+  --color-free:    var(--c-free);
+  --color-success: var(--c-success);
+  --color-error:   var(--c-error);
+  --color-text:    var(--c-text);
+  --color-dim:     var(--c-dim);
+  --color-line:    var(--c-line);
+
+  /* Typography */
+  --font-sans:    'DM Sans', sans-serif;
+  --font-display: 'Bebas Neue', cursive;
+}
+
+/* ─── Base styles ───────────────────────────────────────────────────────────── */
+
+body {
+  font-family: var(--font-sans);
+}

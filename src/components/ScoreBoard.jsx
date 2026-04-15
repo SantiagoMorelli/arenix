@@ -1,5 +1,4 @@
 import React from "react";
-import { G } from "./ui";
 
 const ScoreBoard = ({
   teams, players,
@@ -27,47 +26,56 @@ const ScoreBoard = ({
 
   const TeamPanel = ({ col }) => {
     const isServing = srv.team === col.teamNum;
+    const isTeam1   = col.teamNum === 1;
     const slotsForTeam = serveRotation.filter(r => r.team === col.teamNum);
     return (
-      <div style={{ textAlign: "center" }}>
-        <div style={{ color: G.sand, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+      <div className="text-center">
+        <div className="text-[12px] font-bold text-[#E8ECF1] mb-1">
           {tName(col.teamId)}
         </div>
-        <div style={{
-          fontFamily: "'Bebas Neue'", fontSize: 72,
-          color: isServing ? G.sun : G.white, lineHeight: 1, margin: "4px 0",
-        }}>{col.score}</div>
-        <div style={{ minHeight: 36 }}>
+        <div className={`font-display text-[72px] leading-none my-1 ${
+          isServing
+            ? isTeam1 ? "text-accent" : "text-free"
+            : "text-[#7A8EA0]"
+        }`}>
+          {col.score}
+        </div>
+        <div className="min-h-[36px] flex items-center justify-center mt-1.5">
           {isServing ? (
-            <div style={{ background: G.sun + "33", borderRadius: 8, padding: "4px 8px", display: "inline-block" }}>
-              <div style={{ color: G.sun, fontSize: 11, fontWeight: 700 }}>{t("serving")}</div>
-              <div style={{ color: G.sand, fontSize: 12, fontWeight: 700 }}>{playerName(srv.playerId)}</div>
+            <div className={`inline-flex flex-col items-center rounded-[8px] px-3 py-1.5 ${
+              isTeam1 ? "bg-accent/20" : "bg-free/20"
+            }`}>
+              <span className={`text-[9px] font-bold uppercase ${isTeam1 ? "text-accent" : "text-free"}`}>
+                🏐 {t("serving")}
+              </span>
+              <span className="text-[11px] font-bold text-[#E8ECF1]">
+                {playerName(srv.playerId)}
+              </span>
             </div>
           ) : (
-            <div style={{ color: G.sand + "66", fontSize: 11 }}>
+            <div className="text-[11px] text-[#7A8EA0] text-center leading-snug">
               {t("ifScores")}<br />
-              <b style={{ color: G.sand + "99", fontSize: 12 }}>
+              <b className="text-[12px] text-[#7A8EA0]/80">
                 {playerName(nextSrv.team === col.teamNum ? nextSrv.playerId : slotsForTeam[0]?.playerId)}
               </b>
             </div>
           )}
         </div>
-        <div style={{ color: G.sand + "55", fontSize: 11, marginTop: 4 }}>Sets: {col.sets}</div>
+        <div className="text-[10px] text-[#7A8EA0]/50 mt-1.5">Sets: {col.sets}</div>
       </div>
     );
   };
 
   return (
-    <div style={{
-      background: G.dark, borderRadius: 20, padding: "16px 14px", marginBottom: 12,
-      display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 10,
-    }}>
+    <div className="bg-[#0D1B2A] rounded-[20px] px-3.5 py-4 mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2.5">
       <TeamPanel col={leftCol} />
-      <div style={{ textAlign: "center" }}>
-        <div style={{ color: G.sand + "44", fontFamily: "'Bebas Neue'", fontSize: 24 }}>VS</div>
-        <div style={{ color: G.warn, fontSize: 10, marginTop: 6, fontWeight: 600 }}>
-          {points > 0 && points % 7 !== 0 ? `${t("changeIn")} ${7 - (points % 7)} pts` : ""}
-        </div>
+      <div className="text-center px-0.5">
+        <div className="font-display text-[24px] text-[#7A8EA0]/30">VS</div>
+        {points > 0 && points % 7 !== 0 && (
+          <div className="text-[10px] font-semibold text-accent mt-1.5">
+            {t("changeIn")} {7 - (points % 7)} pts
+          </div>
+        )}
       </div>
       <TeamPanel col={rightCol} />
     </div>

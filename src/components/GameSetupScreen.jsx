@@ -1,5 +1,4 @@
 import React from "react";
-import { G, Card, Btn, Select } from "./ui";
 
 const GameSetupScreen = ({
   teams, players, tournamentMatches,
@@ -30,7 +29,7 @@ const GameSetupScreen = ({
   const t1 = getTeam(team1Id);
   const t2 = getTeam(team2Id);
 
-  const ServeOrderPicker = ({ teamId, serveOrder, setServeOrder, color }) => {
+  const ServeOrderPicker = ({ teamId, serveOrder, setServeOrder, isTeam1 }) => {
     const pIds = teamPlayerIds(teamId);
     if (pIds.length === 0) return null;
     if (serveOrder.length === 0) {
@@ -43,38 +42,40 @@ const GameSetupScreen = ({
       [o[idx-1], o[idx]] = [o[idx], o[idx-1]];
       setServeOrder(o);
     };
+    const highlightBg    = isTeam1 ? "bg-accent/15" : "bg-free/15";
+    const numberBg       = isTeam1 ? "bg-accent"    : "bg-free";
+    const firstTextColor = isTeam1 ? "text-accent"  : "text-free";
+
     return (
-      <div style={{ display: "grid", gap: 8 }}>
+      <div className="flex flex-col gap-1.5">
         {serveOrder.map((pid, idx) => {
           const pl = getPlayer(pid);
           return (
-            <div key={pid + idx} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "10px 12px", borderRadius: 12,
-              background: idx === 0 ? color + "18" : G.sand,
-              border: "2px solid " + (idx === 0 ? color : "transparent"),
-            }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                background: color, display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "'Bebas Neue'", fontSize: 16, color: G.white,
-              }}>{idx + 1}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 14, color: idx === 0 ? color : G.text }}>
+            <div
+              key={pid + idx}
+              className={`flex items-center gap-1.5 rounded-lg px-1.5 py-[5px] ${idx === 0 ? highlightBg : "bg-transparent"}`}
+            >
+              <div className={`w-[18px] h-[18px] rounded-full ${numberBg} text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0`}>
+                {idx + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={`text-[11px] font-semibold truncate ${idx === 0 ? firstTextColor : "text-text"}`}>
                   {pl?.name || "?"}
                 </div>
-                {idx === 0 && <div style={{ fontSize: 11, color, marginTop: 1 }}>🏐 Saca primero</div>}
+                {idx === 0 && (
+                  <div className={`text-[10px] mt-px ${firstTextColor}`}>🏐 Saca primero</div>
+                )}
               </div>
               {idx > 0 && (
-                <button onClick={() => moveUp(idx)} style={{
-                  background: G.white, border: "1.5px solid " + G.sandDark,
-                  borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14, color: G.textLight,
-                }}>↑</button>
+                <button
+                  onClick={() => moveUp(idx)}
+                  className="text-[12px] text-dim cursor-pointer bg-transparent border-0 p-0 leading-none"
+                >↑</button>
               )}
             </div>
           );
         })}
-        <div style={{ fontSize: 11, color: G.textLight, marginTop: 2 }}>Usá ↑ para cambiar el orden</div>
+        <div className="text-[10px] text-dim mt-0.5">Usá ↑ para cambiar el orden</div>
       </div>
     );
   };
@@ -84,174 +85,235 @@ const GameSetupScreen = ({
     t2ServeOrder.length === teamPlayerIds(team2Id).length;
 
   return (
-    <div>
-      <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 34, color: G.ocean, letterSpacing: 2, marginBottom: 20 }}>
+    <div className="flex flex-col gap-4">
+      <h1 className="font-display text-[34px] text-accent tracking-[2px] mb-0">
         {t("liveTitle")}
       </h1>
-      <Card>
-        <div style={{ display: "grid", gap: 20 }}>
-          {/* Match picker for tournament mode */}
-          {tournamentMatches && tournamentMatches.length > 0 ? (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Partidos pendientes del torneo
-              </div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {tournamentMatches.filter(m => !m.played).map(m => {
-                  const tm1 = teams.find(tm => tm.id === m.team1);
-                  const tm2 = teams.find(tm => tm.id === m.team2);
-                  const selected = team1Id === m.team1 && team2Id === m.team2;
-                  return (
-                    <div key={m.id} onClick={() => {
+
+      <div className="bg-surface rounded-xl border border-line p-4 flex flex-col gap-5">
+
+        {/* ── Match picker for tournament mode ── */}
+        {tournamentMatches && tournamentMatches.length > 0 ? (
+          <div>
+            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2.5">
+              Partidos pendientes del torneo
+            </div>
+            <div className="flex flex-col gap-2">
+              {tournamentMatches.filter(m => !m.played).map(m => {
+                const tm1 = teams.find(tm => tm.id === m.team1);
+                const tm2 = teams.find(tm => tm.id === m.team2);
+                const selected = team1Id === m.team1 && team2Id === m.team2;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => {
                       setTeam1Id(m.team1); setTeam2Id(m.team2);
                       setActiveTourMatchId(m.id);
                       setT1ServeOrder(teamPlayerIds(m.team1));
                       setT2ServeOrder(teamPlayerIds(m.team2));
-                    }} style={{
-                      padding: "12px 14px", borderRadius: 12, cursor: "pointer",
-                      border: "2px solid " + (selected ? G.ocean : G.sandDark),
-                      background: selected ? G.ocean + "11" : G.sand, transition: "all 0.15s",
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: selected ? 6 : 0 }}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: selected ? G.ocean : G.text }}>{tm1?.name || "?"}</span>
-                        <span style={{ color: G.textLight, fontWeight: 700, fontSize: 12 }}>VS</span>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: selected ? G.sun : G.text }}>{tm2?.name || "?"}</span>
+                    }}
+                    className={`p-3 rounded-xl cursor-pointer border-2 transition-all ${
+                      selected ? "border-accent bg-accent/10" : "border-line bg-alt"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className={`font-bold text-[14px] ${selected ? "text-accent" : "text-text"}`}>
+                        {tm1?.name || "?"}
+                      </span>
+                      <span className="text-dim font-bold text-[12px]">VS</span>
+                      <span className={`font-bold text-[14px] ${selected ? "text-free" : "text-text"}`}>
+                        {tm2?.name || "?"}
+                      </span>
+                    </div>
+                    {selected && (
+                      <div className="flex justify-between text-[11px] text-dim mt-1.5">
+                        <span>{(tm1?.players || []).map(pid => getPlayer(pid)?.name || "?").join(", ")}</span>
+                        <span>{(tm2?.players || []).map(pid => getPlayer(pid)?.name || "?").join(", ")}</span>
                       </div>
-                      {selected && (
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: G.textLight }}>
-                          <span>{(tm1?.players || []).map(pid => getPlayer(pid)?.name || "?").join(", ")}</span>
-                          <span>{(tm2?.players || []).map(pid => getPlayer(pid)?.name || "?").join(", ")}</span>
-                        </div>
+                    )}
+                  </div>
+                );
+              })}
+              {tournamentMatches.filter(m => !m.played).length === 0 && (
+                <div className="text-center text-dim py-4 text-[14px]">
+                  No hay partidos pendientes en el fixture
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ── Free-form team selects ── */
+          <div className="flex flex-col gap-2.5">
+            <div>
+              <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-1.5">Team 1</div>
+              <select
+                value={team1Id}
+                onChange={e => { setTeam1Id(e.target.value); setT1ServeOrder(teamPlayerIds(e.target.value)); }}
+                className="w-full bg-alt border border-line rounded-xl px-3 py-2.5 text-[14px] text-text cursor-pointer appearance-none"
+              >
+                <option value="">{t("team1ph")}</option>
+                {teams.filter(tm => tm.id !== team2Id).map(tm => (
+                  <option key={tm.id} value={tm.id}>{tm.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="text-center text-[16px] font-extrabold text-dim tracking-[3px] py-0.5">VS</div>
+
+            <div>
+              <div className="text-[10px] font-bold text-free uppercase tracking-wide mb-1.5">Team 2</div>
+              <select
+                value={team2Id}
+                onChange={e => { setTeam2Id(e.target.value); setT2ServeOrder(teamPlayerIds(e.target.value)); }}
+                className="w-full bg-alt border border-line rounded-xl px-3 py-2.5 text-[14px] text-text cursor-pointer appearance-none"
+              >
+                <option value="">{t("team2ph")}</option>
+                {teams.filter(tm => tm.id !== team1Id).map(tm => (
+                  <option key={tm.id} value={tm.id}>{tm.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* ── Serve orders — side by side ── */}
+        {(t1 || t2) && (
+          <div className="flex gap-2">
+            {t1 && (
+              <div className="flex-1 bg-alt rounded-xl p-2.5 border border-line">
+                <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-1.5">
+                  {t1.name}
+                </div>
+                <ServeOrderPicker
+                  teamId={team1Id}
+                  serveOrder={t1ServeOrder}
+                  setServeOrder={setT1ServeOrder}
+                  isTeam1={true}
+                />
+              </div>
+            )}
+            {t2 && (
+              <div className="flex-1 bg-alt rounded-xl p-2.5 border border-line">
+                <div className="text-[10px] font-bold text-free uppercase tracking-wide mb-1.5">
+                  {t2.name}
+                </div>
+                <ServeOrderPicker
+                  teamId={team2Id}
+                  serveOrder={t2ServeOrder}
+                  setServeOrder={setT2ServeOrder}
+                  isTeam1={false}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── First serve picker ── */}
+        {t1 && t2 && (
+          <div>
+            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-1.5">
+              ¿Quién saca primero?
+            </div>
+            <div className="flex gap-1.5">
+              {[{ num: 1, team: t1, isTeam1: true }, { num: 2, team: t2, isTeam1: false }].map(({ num, team, isTeam1 }) => (
+                <button
+                  key={num}
+                  onClick={() => setFirstServingTeam(num)}
+                  className={`flex-1 py-[9px] rounded-[10px] text-[11px] font-semibold cursor-pointer border transition-all ${
+                    firstServingTeam === num
+                      ? isTeam1
+                        ? "bg-accent/20 text-accent border-accent"
+                        : "bg-free/20 text-free border-free"
+                      : "bg-transparent text-dim border-line"
+                  }`}
+                >
+                  🏐 {team.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Initial side picker ── */}
+        {t1 && t2 && (
+          <div>
+            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-1.5">
+              {t("initialSideOf")} {t1.name}
+            </div>
+            <div className="flex gap-1.5">
+              {["left", "right"].map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setT1InitialSide(s); setSide({ t1: s, t2: s === "left" ? "right" : "left" }); }}
+                  className={`flex-1 py-[9px] rounded-[10px] text-[11px] font-semibold cursor-pointer border transition-all ${
+                    t1InitialSide === s
+                      ? "bg-accent/20 text-accent border-accent"
+                      : "bg-transparent text-dim border-line"
+                  }`}
+                >
+                  {s === "left" ? t("sideLeft") : t("sideRight")}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Serve rotation preview ── */}
+        {canStart && (() => {
+          // Reorder preview so the chosen first-serving team appears first
+          const teamA = serveRotation.filter(s => s.team === firstServingTeam);
+          const teamB = serveRotation.filter(s => s.team !== firstServingTeam);
+          const maxLen = Math.max(teamA.length, teamB.length);
+          const preview = [];
+          for (let i = 0; i < maxLen; i++) {
+            if (i < teamA.length) preview.push(teamA[i]);
+            if (i < teamB.length) preview.push(teamB[i]);
+          }
+          return (
+            <div className="bg-alt rounded-xl px-3 py-2 border border-line">
+              <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-1.5">
+                {t("serveOrderTitle")}
+              </div>
+              <div className="flex gap-1 items-center flex-wrap">
+                {preview.map((slot, i) => {
+                  const isTeam1Slot = slot.team === 1;
+                  return (
+                    <div key={i} className="flex items-center gap-[3px]">
+                      <div className={`flex items-center gap-1 rounded-md px-2 py-[3px] ${
+                        i === 0
+                          ? "bg-accent/15 border border-accent/40"
+                          : isTeam1Slot ? "bg-accent/10" : "bg-free/10"
+                      }`}>
+                        <span className={`text-[9px] font-bold ${isTeam1Slot ? "text-accent" : "text-free"}`}>
+                          {i + 1}
+                        </span>
+                        <span className="text-[10px] font-semibold text-text">
+                          {playerName(slot.playerId)}
+                        </span>
+                      </div>
+                      {i < preview.length - 1 && (
+                        <span className="text-[10px] text-dim">→</span>
                       )}
                     </div>
                   );
                 })}
-                {tournamentMatches.filter(m => !m.played).length === 0 && (
-                  <div style={{ textAlign: "center", color: G.textLight, padding: 16, fontSize: 14 }}>
-                    No hay partidos pendientes en el fixture
-                  </div>
-                )}
+                <span className="text-[9px] text-dim italic ml-0.5">↻</span>
               </div>
+              <div className="text-[10px] text-dim mt-1.5">{t("serveOrderRepeat")}</div>
             </div>
-          ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              <Select value={team1Id} onChange={v => { setTeam1Id(v); setT1ServeOrder(teamPlayerIds(v)); }}>
-                <option value="">{t("team1ph")}</option>
-                {teams.filter(tm => tm.id !== team2Id).map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
-              </Select>
-              <Select value={team2Id} onChange={v => { setTeam2Id(v); setT2ServeOrder(teamPlayerIds(v)); }}>
-                <option value="">{t("team2ph")}</option>
-                {teams.filter(tm => tm.id !== team1Id).map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
-              </Select>
-            </div>
-          )}
+          );
+        })()}
 
-          {/* Serve order */}
-          {t1 && (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.ocean, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {t1.name} — {t("serveOrderTitle")}
-              </div>
-              <ServeOrderPicker teamId={team1Id} serveOrder={t1ServeOrder} setServeOrder={setT1ServeOrder} color={G.ocean} />
-            </div>
-          )}
-          {t2 && (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.sun, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {t2.name} — {t("serveOrderTitle")}
-              </div>
-              <ServeOrderPicker teamId={team2Id} serveOrder={t2ServeOrder} setServeOrder={setT2ServeOrder} color={G.sun} />
-            </div>
-          )}
+        {/* ── Start Match CTA ── */}
+        <button
+          onClick={startGame}
+          disabled={!canStart}
+          className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-success text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-0 transition-opacity"
+        >
+          {t("startMatch")}
+        </button>
 
-          {/* Which team serves first */}
-          {t1 && t2 && (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                ¿Quién saca primero?
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                {[{ num: 1, team: t1, color: G.ocean }, { num: 2, team: t2, color: G.sun }].map(({ num, team, color }) => (
-                  <button key={num} onClick={() => setFirstServingTeam(num)} style={{
-                    flex: 1, padding: "10px", borderRadius: 10, border: "2px solid",
-                    borderColor: firstServingTeam === num ? color : G.sandDark,
-                    background: firstServingTeam === num ? color + "11" : G.white,
-                    fontWeight: firstServingTeam === num ? 700 : 400,
-                    fontSize: 14, cursor: "pointer", color: firstServingTeam === num ? color : G.text,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}>
-                    🏐 {team.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Initial side */}
-          {t1 && t2 && (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {t("initialSideOf")} {t1.name}
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                {["left", "right"].map(s => (
-                  <button key={s} onClick={() => { setT1InitialSide(s); setSide({ t1: s, t2: s === "left" ? "right" : "left" }); }} style={{
-                    flex: 1, padding: "10px", borderRadius: 10, border: "2px solid",
-                    borderColor: t1InitialSide === s ? G.ocean : G.sandDark,
-                    background: t1InitialSide === s ? G.ocean + "11" : G.white,
-                    fontWeight: t1InitialSide === s ? 700 : 400,
-                    fontSize: 14, cursor: "pointer", color: G.text,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}>
-                    {s === "left" ? t("sideLeft") : t("sideRight")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Serve preview */}
-          {canStart && (() => {
-            // Reorder preview so the chosen first-serving team appears first
-            const teamA = serveRotation.filter(s => s.team === firstServingTeam);
-            const teamB = serveRotation.filter(s => s.team !== firstServingTeam);
-            const maxLen = Math.max(teamA.length, teamB.length);
-            const preview = [];
-            for (let i = 0; i < maxLen; i++) {
-              if (i < teamA.length) preview.push(teamA[i]);
-              if (i < teamB.length) preview.push(teamB[i]);
-            }
-            return (
-              <div style={{ background: G.sand, borderRadius: 12, padding: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
-                  {t("serveOrderTitle")}
-                </div>
-                {preview.map((slot, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0",
-                    borderBottom: i < preview.length - 1 ? "1px solid " + G.sandDark : "none" }}>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-                      background: slot.team === 1 ? G.ocean : G.sun,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 11, color: G.white, fontWeight: 700,
-                    }}>{i + 1}</div>
-                    <span style={{ fontSize: 14, color: G.text }}>
-                      <b>{playerName(slot.playerId)}</b>
-                      <span style={{ color: G.textLight }}> — {tName(slot.team === 1 ? team1Id : team2Id)}</span>
-                    </span>
-                    {i === 0 && <span style={{ marginLeft: "auto", fontSize: 11, color: slot.team === 1 ? G.ocean : G.sun, fontWeight: 700 }}>{t("serveOrderFirst")}</span>}
-                  </div>
-                ))}
-                <div style={{ fontSize: 11, color: G.textLight, marginTop: 8 }}>{t("serveOrderRepeat")}</div>
-              </div>
-            );
-          })()}
-
-          <Btn onClick={startGame} variant="sun" size="lg" disabled={!canStart}>
-            {t("startMatch")}
-          </Btn>
-        </div>
-      </Card>
+      </div>
     </div>
   );
 };

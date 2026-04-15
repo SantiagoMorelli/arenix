@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { G, Card, Btn, Badge, Input, Modal } from "./ui";
 import { uid } from "../lib/utils";
 
 function calcStandings(teams, games) {
@@ -26,69 +25,79 @@ const FP_LEGEND = [
   { key: "PTS", label: "Points  ·  Win = 1  ·  Loss = 0" },
 ];
 
+function ModalShell({ title, onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/45 z-[100] flex items-center justify-center p-5"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-surface rounded-[20px] p-7 w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="font-display text-[26px] text-accent tracking-wide">{title}</h2>
+          <button onClick={onClose} className="bg-transparent border-0 text-[22px] cursor-pointer text-dim leading-none">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function StandingsTable({ rows }) {
   const [showLegend, setShowLegend] = useState(false);
   const cols = ["#", "Team", "P", "W", "L", "PD", "PTS"];
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-        <button onClick={() => setShowLegend(true)} style={{
-          background: "none", border: "none", cursor: "pointer",
-          color: G.textLight, fontSize: 12, padding: "2px 6px",
-          fontFamily: "'DM Sans', sans-serif",
-        }}>ℹ️ key</button>
+      <div className="flex justify-end mb-1.5">
+        <button
+          onClick={() => setShowLegend(true)}
+          className="bg-transparent border-0 cursor-pointer text-dim text-[12px] px-1.5 py-0.5"
+        >
+          ℹ️ key
+        </button>
       </div>
       {showLegend && (
-        <Modal title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
-          <div style={{ display: "grid", gap: 0 }}>
+        <ModalShell title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
+          <div className="grid gap-0">
             {FP_LEGEND.map(({ key, label }, i) => (
-              <div key={key} style={{
-                display: "flex", alignItems: "center", gap: 14, padding: "12px 0",
-                borderBottom: i < FP_LEGEND.length - 1 ? "1px solid " + G.sandDark : "none",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, background: G.ocean,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "'Bebas Neue'", fontSize: 13, color: G.white, letterSpacing: 1, flexShrink: 0,
-                }}>{key}</div>
-                <span style={{ fontSize: 14, color: G.text }}>{label}</span>
+              <div key={key} className={`flex items-center gap-3.5 py-3 ${i < FP_LEGEND.length - 1 ? "border-b border-line" : ""}`}>
+                <div className="w-9 h-9 rounded-[10px] bg-accent flex items-center justify-center font-display text-[13px] text-white tracking-wide flex-shrink-0">
+                  {key}
+                </div>
+                <span className="text-[14px] text-text">{label}</span>
               </div>
             ))}
           </div>
-          <div style={{
-            marginTop: 16, padding: "12px 14px",
-            background: G.ocean + "12", borderRadius: 10, borderLeft: "3px solid " + G.ocean,
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: G.ocean, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
-              Tiebreaker order
-            </div>
-            <div style={{ fontSize: 13, color: G.text }}>PTS → PD → PF</div>
+          <div className="mt-4 p-3 bg-accent/[0.07] rounded-[10px] border-l-[3px] border-accent">
+            <div className="text-[11px] font-bold text-accent uppercase tracking-[0.8px] mb-1">Tiebreaker order</div>
+            <div className="text-[13px] text-text">PTS → PD → PF</div>
           </div>
-        </Modal>
+        </ModalShell>
       )}
-      <div style={{
-        display: "grid", gridTemplateColumns: "28px 1fr 28px 28px 28px 36px 40px",
-        gap: 4, fontSize: 10, fontWeight: 700, color: G.textLight, textTransform: "uppercase",
-        letterSpacing: 0.5, paddingBottom: 6, borderBottom: "1px solid " + G.sandDark, marginBottom: 4,
-      }}>
-        {cols.map(c => <span key={c} style={{ textAlign: c === "Team" ? "left" : "center" }}>{c}</span>)}
+      <div className="grid grid-cols-[28px_1fr_28px_28px_28px_36px_40px] gap-1 text-[10px] font-bold text-dim uppercase tracking-[0.5px] pb-1.5 border-b border-line mb-1">
+        {cols.map(c => (
+          <span key={c} className={c === "Team" ? "text-left" : "text-center"}>{c}</span>
+        ))}
       </div>
       {rows.map((row, rank) => (
-        <div key={row.id} style={{
-          display: "grid", gridTemplateColumns: "28px 1fr 28px 28px 28px 36px 40px",
-          gap: 4, alignItems: "center", padding: "7px 0",
-          borderBottom: rank < rows.length - 1 ? "1px solid " + G.sandDark : "none",
-        }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: rank === 0 ? G.sun : G.textLight }}>
+        <div
+          key={row.id}
+          className={`grid grid-cols-[28px_1fr_28px_28px_28px_36px_40px] gap-1 items-center py-[7px] ${rank < rows.length - 1 ? "border-b border-line" : ""}`}
+        >
+          <span className={`font-bold text-[15px] ${rank === 0 ? "text-free" : "text-dim"}`}>
             {rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : rank + 1}
           </span>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>{row.name}</span>
+          <span className="font-semibold text-[13px]">{row.name}</span>
           {[row.played, row.wins, row.losses, row.pd, row.pts].map((val, ci) => (
-            <span key={ci} style={{
-              textAlign: "center", fontSize: 13,
-              fontWeight: ci === 4 ? 700 : 400,
-              color: ci === 4 ? G.ocean : ci === 3 ? (val > 0 ? G.success : val < 0 ? G.danger : G.text) : G.text,
-            }}>{val}</span>
+            <span
+              key={ci}
+              className={`text-center text-[13px] ${
+                ci === 4 ? "font-bold text-accent" :
+                ci === 3 ? (val > 0 ? "text-success" : val < 0 ? "text-error" : "text-text") :
+                "text-text"
+              }`}
+            >
+              {val}
+            </span>
           ))}
         </div>
       ))}
@@ -120,103 +129,117 @@ export default function FreePlayTeamsSection({ freePlay, setFreePlays, players }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: G.ocean, letterSpacing: 2 }}>
+      <div className="flex justify-between items-center mb-5">
+        <h1 className="font-display text-[32px] text-accent tracking-[2px]">
           {hasGames ? "STANDINGS" : "TEAMS"}
         </h1>
-        <Btn onClick={() => setShowNewTeam(true)} variant="sun">+ New Team</Btn>
+        <button
+          onClick={() => setShowNewTeam(true)}
+          className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white bg-accent border-0 cursor-pointer"
+        >
+          + New Team
+        </button>
       </div>
 
       {hasGames && standings.length > 0 && (
-        <Card style={{ marginBottom: 16, overflowX: "auto" }}>
+        <div className="bg-surface rounded-xl border border-line p-4 mb-4 overflow-x-auto">
           <StandingsTable rows={standings} />
-        </Card>
+        </div>
       )}
 
       {teams.length === 0 ? (
-        <Card style={{ textAlign: "center", color: G.textLight, padding: 40 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🤝</div>
+        <div className="bg-surface rounded-xl border border-line p-10 text-center text-dim">
+          <div className="text-[32px] mb-2">🤝</div>
           No teams yet. Create the first one!
-        </Card>
+        </div>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {standings.map((stat, rank) => {
             const team = teams.find(t => t.id === stat.id);
             if (!team) return null;
             return (
-              <Card key={team.id} style={{ padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontWeight: 700, fontSize: 18, flexShrink: 0 }}>
+              <div key={team.id} className="bg-surface rounded-xl border border-line px-4 py-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-bold text-[18px] flex-shrink-0">
                       {rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : `#${rank + 1}`}
                     </span>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{team.name}</div>
-                      <div style={{ fontSize: 12, color: G.textLight }}>
+                      <div className="font-bold text-[15px] text-text">{team.name}</div>
+                      <div className="text-[12px] text-dim">
                         {(team.players || []).map(pid => players.find(p => p.id === pid)?.name || pid).join(" · ") || "No players assigned"}
                       </div>
                     </div>
                   </div>
                   {stat.played > 0 && (
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <Badge color={G.success}>{stat.wins}W</Badge>
-                      <Badge color={G.danger}>{stat.losses}L</Badge>
-                      <Badge color={G.ocean}>{stat.pts}pts</Badge>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <span className="text-[11px] font-bold text-success bg-success/15 px-2.5 py-[4px] rounded-[8px]">{stat.wins}W</span>
+                      <span className="text-[11px] font-bold text-error bg-error/15 px-2.5 py-[4px] rounded-[8px]">{stat.losses}L</span>
+                      <span className="text-[11px] font-bold text-accent bg-accent/15 px-2.5 py-[4px] rounded-[8px]">{stat.pts}pts</span>
                     </div>
                   )}
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
       )}
 
       {showNewTeam && (
-        <Modal title="NEW TEAM" onClose={() => { setShowNewTeam(false); setNewTeamName(""); setPickedPlayerIds([]); }}>
-          <div style={{ display: "grid", gap: 16 }}>
+        <ModalShell title="NEW TEAM" onClose={() => { setShowNewTeam(false); setNewTeamName(""); setPickedPlayerIds([]); }}>
+          <div className="flex flex-col gap-4">
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Team Name
-              </div>
-              <Input value={newTeamName} onChange={setNewTeamName} placeholder="e.g. Team Alpha" />
+              <div className="text-[12px] font-bold text-dim uppercase tracking-wide mb-1.5">Team Name</div>
+              <input
+                value={newTeamName}
+                onChange={e => setNewTeamName(e.target.value)}
+                placeholder="e.g. Team Alpha"
+                className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
+              />
             </div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="text-[12px] font-bold text-dim uppercase tracking-wide mb-2">
                 Players (same player can be on multiple teams)
               </div>
               {players.length === 0 ? (
-                <div style={{ color: G.textLight, fontSize: 13 }}>No global players yet. Add from Players tab.</div>
+                <div className="text-dim text-[13px]">No global players yet. Add from Players tab.</div>
               ) : (
-                <div style={{ display: "grid", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+                <div className="flex flex-col gap-1.5 max-h-[260px] overflow-y-auto">
                   {players.map(p => {
                     const picked = pickedPlayerIds.includes(p.id);
                     return (
-                      <button key={p.id} onClick={() => togglePlayer(p.id)} style={{
-                        padding: "10px 14px", borderRadius: 10, border: "2px solid",
-                        borderColor: picked ? G.ocean : G.sandDark,
-                        background: picked ? G.ocean + "11" : G.white,
-                        cursor: "pointer", textAlign: "left", width: "100%",
-                        fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 8,
-                      }}>
-                        <span style={{ fontSize: 16 }}>{picked ? "✅" : "⬜"}</span>
-                        <span style={{ fontWeight: picked ? 700 : 400, color: picked ? G.ocean : G.text }}>{p.name}</span>
-                        <span style={{ fontSize: 11, color: G.textLight, marginLeft: "auto" }}>{p.level}</span>
+                      <button
+                        key={p.id}
+                        onClick={() => togglePlayer(p.id)}
+                        className={`px-3.5 py-2.5 rounded-[10px] border-2 cursor-pointer text-left w-full flex items-center gap-2 transition-all ${
+                          picked
+                            ? "border-accent bg-accent/[0.07]"
+                            : "border-line bg-surface"
+                        }`}
+                      >
+                        <span className="text-[16px]">{picked ? "✅" : "⬜"}</span>
+                        <span className={`${picked ? "font-bold text-accent" : "font-normal text-text"}`}>{p.name}</span>
+                        <span className="text-[11px] text-dim ml-auto">{p.level}</span>
                       </button>
                     );
                   })}
                 </div>
               )}
               {pickedPlayerIds.length > 0 && (
-                <div style={{ fontSize: 12, color: G.ocean, marginTop: 6, fontWeight: 600 }}>
+                <div className="text-[12px] text-accent mt-1.5 font-semibold">
                   {pickedPlayerIds.length} player{pickedPlayerIds.length !== 1 ? "s" : ""} selected
                 </div>
               )}
             </div>
-            <Btn onClick={createTeam} variant="primary" size="lg" disabled={!newTeamName.trim()}>
+            <button
+              onClick={createTeam}
+              disabled={!newTeamName.trim()}
+              className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+            >
               Create Team
-            </Btn>
+            </button>
           </div>
-        </Modal>
+        </ModalShell>
       )}
     </div>
   );

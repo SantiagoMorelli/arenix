@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { G, Card, Btn, Input, Modal } from "./ui";
 import { uid, LEVELS, levelOf } from "../lib/utils";
 
 // ── Knockout depth: how far a team went in the bracket ───────────────────────
@@ -88,6 +87,28 @@ function calcAllTeamStats(tournament) {
   // Attach final rank index (1-based) after sort
   return teams.map((tm, i) => ({ ...tm, rank: i + 1 }));
 }
+
+function ModalShell({ title, onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/45 z-[100] flex items-center justify-center p-5"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-surface rounded-[20px] p-7 w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="font-display text-[26px] text-accent tracking-wide">{title}</h2>
+          <button onClick={onClose} className="bg-transparent border-0 text-[22px] cursor-pointer text-dim leading-none">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const selBtnCls = (active) =>
+  `flex-1 px-2.5 py-3.5 rounded-xl border-2 cursor-pointer text-center transition-all ${
+    active ? "border-accent bg-accent/[0.07]" : "border-line bg-surface"
+  }`;
 
 const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
   const [showModal, setShowModal] = useState(false);
@@ -187,111 +208,126 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
   const sortedTeams = calcAllTeamStats(tournament);
   const anyPlayed = sortedTeams.some(tm => tm.wins + tm.losses > 0);
 
+  const RANK_COLORS = { 1: "#F5C842", 2: "#C0C0C0", 3: "#CD7F32" };
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="flex justify-between items-center mb-5">
         <div>
-          <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: G.ocean, letterSpacing: 2, lineHeight: 1 }}>
+          <h1 className="font-display text-[32px] text-accent tracking-[2px] leading-none">
             {anyPlayed ? "📊 STANDINGS" : "🤝 TEAMS"}
           </h1>
           {anyPlayed && (
-            <div style={{ fontSize: 11, color: G.textLight, letterSpacing: 0.3, marginTop: 2 }}>
+            <div className="text-[11px] text-dim tracking-[0.3px] mt-0.5">
               PTS = W + position bonus · 1st+12 · 2nd+8 · 3rd+5 · 4th+3
             </div>
           )}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Btn onClick={() => setShowInvite(true)} variant="secondary" size="sm">+ Players</Btn>
-          <Btn onClick={() => { setShowAutoModal(true); setProposedTeams(null); }} variant="secondary" size="sm"
-            disabled={availablePlayers.length < teamSize}>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowInvite(true)}
+            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-text bg-surface border border-line cursor-pointer"
+          >
+            + Players
+          </button>
+          <button
+            onClick={() => { setShowAutoModal(true); setProposedTeams(null); }}
+            disabled={availablePlayers.length < teamSize}
+            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-text bg-surface border border-line cursor-pointer disabled:opacity-50"
+          >
             ⚡ Auto
-          </Btn>
-          <Btn onClick={() => setShowModal(true)} variant="sun" size="sm"
-            disabled={invitedPlayers.length < teamSize}>
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={invitedPlayers.length < teamSize}
+            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-accent border-0 cursor-pointer disabled:opacity-50"
+          >
             + Team
-          </Btn>
+          </button>
         </div>
       </div>
 
       {/* Invited players chips */}
       {invitedPlayers.length > 0 && (
-        <Card style={{ marginBottom: 14, padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+        <div className="bg-surface rounded-xl border border-line px-4 py-3.5 mb-3.5">
+          <div className="text-[12px] font-bold text-dim uppercase tracking-[0.5px] mb-2.5">
             Invited players ({invitedPlayers.length})
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="flex flex-wrap gap-2">
             {invitedPlayers.map(p => {
               const inTeam = tournament.teams.some(tm => tm.players.includes(p.id));
               return (
-                <div key={p.id} style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  background: inTeam ? G.ocean + "18" : G.sand,
-                  borderRadius: 20, padding: "5px 12px",
-                  fontSize: 13, fontWeight: inTeam ? 700 : 400,
-                  color: inTeam ? G.ocean : G.text,
-                }}>
-                  <span style={{ fontSize: 12 }}>{levelOf(p.level).icon}</span>
+                <div
+                  key={p.id}
+                  className={`flex items-center gap-1.5 rounded-[20px] px-3 py-[5px] text-[13px] ${
+                    inTeam ? "bg-accent/[0.09] font-bold text-accent" : "bg-alt font-normal text-text"
+                  }`}
+                >
+                  <span className="text-[12px]">{levelOf(p.level).icon}</span>
                   {p.name}
                   {!inTeam && (
-                    <button onClick={() => removeInvite(p.id)} style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      color: G.textLight, fontSize: 12, lineHeight: 1, padding: 0,
-                    }}>✕</button>
+                    <button
+                      onClick={() => removeInvite(p.id)}
+                      className="bg-transparent border-0 cursor-pointer text-dim text-[12px] leading-none p-0"
+                    >
+                      ✕
+                    </button>
                   )}
                 </div>
               );
             })}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Teams list — sorted by live performance */}
-      <div style={{ display: "grid", gap: 12 }}>
+      <div className="flex flex-col gap-3">
         {sortedTeams.length === 0 && (
-          <Card style={{ textAlign: "center", color: G.textLight, padding: 32 }}>
+          <div className="bg-surface rounded-xl border border-line p-8 text-center text-dim">
             {invitedPlayers.length < teamSize
               ? `First invite at least ${teamSize} players`
               : "No teams yet. Create the first one!"}
-          </Card>
+          </div>
         )}
         {sortedTeams.map(tm => {
-          const rankColors = { 1: "#F5C842", 2: "#C0C0C0", 3: "#CD7F32" };
-          const rankBg    = rankColors[tm.rank] || G.sandDark;
-          const rankColor = rankColors[tm.rank] ? G.white : G.textLight;
+          const rankBg    = RANK_COLORS[tm.rank] || "var(--color-line)";
+          const rankColor = RANK_COLORS[tm.rank] ? "#fff" : "var(--color-dim)";
           const posLabels = { 1: "🥇 Champion", 2: "🥈 Runner-up", 3: "🥉 3rd place", 4: "4th place" };
           const isWinner  = tournament.winner === tm.id;
           return (
-            <Card key={tm.id} style={{
-              display: "flex", alignItems: "center", gap: 14,
-              borderLeft: tm.rank === 1 && anyPlayed
-                ? "4px solid " + (isWinner ? G.sun : G.success)
-                : "none",
-            }}>
-              {/* Rank badge — uses computed tm.rank from sorted position */}
-              <div style={{
-                width: 40, height: 40, borderRadius: "50%",
-                background: rankBg, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "'Bebas Neue'", fontSize: 20, color: rankColor,
-              }}>{tm.rank}</div>
+            <div
+              key={tm.id}
+              className={`bg-surface rounded-xl border border-line p-4 flex items-center gap-3.5 ${
+                tm.rank === 1 && anyPlayed
+                  ? isWinner ? "border-l-[4px] border-l-free" : "border-l-[4px] border-l-success"
+                  : ""
+              }`}
+            >
+              {/* Rank badge */}
+              <div
+                className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-display text-[20px]"
+                style={{ background: rankBg, color: rankColor }}
+              >
+                {tm.rank}
+              </div>
 
               {/* Name + players + stats */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontWeight: 700, fontSize: 16, color: G.text }}>{tm.name}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-[16px] text-text">{tm.name}</span>
                 </div>
-                <div style={{ fontSize: 12, color: G.textLight, marginTop: 1 }}>
+                <div className="text-[12px] text-dim mt-0.5">
                   {tm.players.map(pid => players.find(p => p.id === pid)?.name || "?").join(" · ")}
                 </div>
                 {anyPlayed && (
-                  <div style={{ display: "flex", gap: 10, marginTop: 5, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: G.success }}>{tm.wins}W</span>
-                    <span style={{ fontSize: 12, color: G.danger }}>{tm.losses}L</span>
-                    <span style={{ fontSize: 12, color: tm.pd > 0 ? G.success : tm.pd < 0 ? G.danger : G.textLight }}>
+                  <div className="flex gap-2.5 mt-1.5 flex-wrap">
+                    <span className="text-[12px] font-semibold text-success">{tm.wins}W</span>
+                    <span className="text-[12px] text-error">{tm.losses}L</span>
+                    <span className={`text-[12px] ${tm.pd > 0 ? "text-success" : tm.pd < 0 ? "text-error" : "text-dim"}`}>
                       PD {tm.pd > 0 ? "+" : ""}{tm.pd}
                     </span>
                     {tm.kp && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: G.sun }}>
+                      <span className="text-[11px] font-bold text-free">
                         {posLabels[tm.kp]}
                       </span>
                     )}
@@ -299,93 +335,77 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
                 )}
               </div>
 
-              {/* PTS = W×3 + position bonus */}
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 30, color: G.ocean, lineHeight: 1 }}>
-                  {tm.pts}
-                </div>
-                <div style={{ fontSize: 10, color: G.textLight, textTransform: "uppercase", letterSpacing: 0.5 }}>PTS</div>
+              {/* PTS */}
+              <div className="text-right flex-shrink-0">
+                <div className="font-display text-[30px] text-accent leading-none">{tm.pts}</div>
+                <div className="text-[10px] text-dim uppercase tracking-[0.5px]">PTS</div>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
 
       {/* Auto team generation modal */}
       {showAutoModal && (
-        <Modal title="AUTO TEAMS" onClose={() => { setShowAutoModal(false); setProposedTeams(null); }}>
-          <div style={{ display: "grid", gap: 16 }}>
-
+        <ModalShell title="AUTO TEAMS" onClose={() => { setShowAutoModal(false); setProposedTeams(null); }}>
+          <div className="flex flex-col gap-4">
             {!proposedTeams ? (
               <>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    Method
-                  </div>
-                  <div style={{ display: "flex", gap: 10 }}>
+                  <div className="text-[13px] font-bold text-dim uppercase tracking-[0.5px] mb-2">Method</div>
+                  <div className="flex gap-2.5">
                     {[
                       { id: "random",   icon: "🎲", label: "Random",   desc: "Random distribution" },
                       { id: "balanced", icon: "⚖️", label: "By level", desc: "Balanced teams" },
                     ].map(m => (
-                      <button key={m.id} onClick={() => setAutoMode(m.id)} style={{
-                        flex: 1, padding: "14px 10px", borderRadius: 12, border: "2px solid",
-                        borderColor: autoMode === m.id ? G.ocean : G.sandDark,
-                        background: autoMode === m.id ? G.ocean + "11" : G.white,
-                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-                        textAlign: "center", transition: "all 0.15s",
-                      }}>
-                        <div style={{ fontSize: 26, marginBottom: 4 }}>{m.icon}</div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: autoMode === m.id ? G.ocean : G.text }}>{m.label}</div>
-                        <div style={{ fontSize: 11, color: G.textLight, marginTop: 2 }}>{m.desc}</div>
+                      <button key={m.id} onClick={() => setAutoMode(m.id)} className={selBtnCls(autoMode === m.id)}>
+                        <div className="text-[26px] mb-1">{m.icon}</div>
+                        <div className={`font-bold text-[14px] ${autoMode === m.id ? "text-accent" : "text-text"}`}>{m.label}</div>
+                        <div className="text-[11px] text-dim mt-0.5">{m.desc}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ background: G.sand, borderRadius: 12, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8 }}>
+                <div className="bg-alt rounded-xl px-3.5 py-3">
+                  <div className="text-[13px] font-bold text-dim mb-2">
                     Available players ({availablePlayers.length})
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <div className="flex flex-wrap gap-1.5">
                     {availablePlayers.map(p => (
-                      <span key={p.id} style={{
-                        background: G.white, borderRadius: 20, padding: "4px 10px",
-                        fontSize: 12, display: "flex", alignItems: "center", gap: 4,
-                      }}>
+                      <span key={p.id} className="bg-surface rounded-[20px] px-2.5 py-1 text-[12px] flex items-center gap-1">
                         <span>{levelOf(p.level).icon}</span>{p.name}
                       </span>
                     ))}
                   </div>
-                  <div style={{ fontSize: 11, color: G.textLight, marginTop: 8 }}>
+                  <div className="text-[11px] text-dim mt-2">
                     {Math.floor(availablePlayers.length / teamSize)} teams of {teamSize} will be formed
                     {availablePlayers.length % teamSize > 0 && ` (${availablePlayers.length % teamSize} players left over)`}
                   </div>
                 </div>
 
-                <Btn onClick={proposeTeams} variant="sun" size="lg"
-                  disabled={availablePlayers.length < teamSize}>
+                <button
+                  onClick={proposeTeams}
+                  disabled={availablePlayers.length < teamSize}
+                  className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+                >
                   {autoMode === "random" ? "🎲 Random" : "⚖️ By level"}
-                </Btn>
+                </button>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 14, color: G.textLight, textAlign: "center" }}>
+                <div className="text-[14px] text-dim text-center">
                   Team proposal — confirm or regenerate
                 </div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  {proposedTeams.map((tm, i) => (
-                    <div key={tm.id} style={{ background: G.sand, borderRadius: 12, padding: "12px 14px" }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: G.ocean, marginBottom: 6 }}>
-                        {tm.name}
-                      </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="flex flex-col gap-2.5">
+                  {proposedTeams.map((tm) => (
+                    <div key={tm.id} className="bg-alt rounded-xl px-3.5 py-3">
+                      <div className="font-bold text-[14px] text-accent mb-1.5">{tm.name}</div>
+                      <div className="flex gap-2 flex-wrap">
                         {tm.players.map(pid => {
                           const pl = players.find(p => p.id === pid);
                           return pl ? (
-                            <span key={pid} style={{
-                              background: G.white, borderRadius: 20, padding: "4px 10px",
-                              fontSize: 13, display: "flex", alignItems: "center", gap: 4,
-                            }}>
+                            <span key={pid} className="bg-surface rounded-[20px] px-2.5 py-1 text-[13px] flex items-center gap-1">
                               <span>{levelOf(pl.level).icon}</span>{pl.name}
                             </span>
                           ) : null;
@@ -394,74 +414,98 @@ const TournamentTeamsSection = ({ tournament, setTournaments, players }) => {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <Btn onClick={proposeTeams} variant="secondary">🔄 Regenerate</Btn>
-                  <Btn onClick={confirmProposed} variant="sun">✓ Confirm</Btn>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    onClick={proposeTeams}
+                    className="min-h-[44px] rounded-xl text-[14px] font-semibold text-text bg-surface border border-line cursor-pointer"
+                  >
+                    🔄 Regenerate
+                  </button>
+                  <button
+                    onClick={confirmProposed}
+                    className="min-h-[44px] rounded-xl text-[14px] font-bold text-white bg-accent border-0 cursor-pointer"
+                  >
+                    ✓ Confirm
+                  </button>
                 </div>
               </>
             )}
           </div>
-        </Modal>
+        </ModalShell>
       )}
 
       {/* Invite modal */}
       {showInvite && (
-        <Modal title="INVITE PLAYERS" onClose={() => setShowInvite(false)}>
-          <div style={{ display: "grid", gap: 10 }}>
+        <ModalShell title="INVITE PLAYERS" onClose={() => setShowInvite(false)}>
+          <div className="flex flex-col gap-2.5">
             {uninvited.length === 0 && (
-              <div style={{ textAlign: "center", color: G.textLight, padding: 20 }}>
+              <div className="text-center text-dim py-5">
                 All players are already invited
               </div>
             )}
             {uninvited.map(p => (
-              <div key={p.id} onClick={() => invitePlayer(p.id)} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 14px", borderRadius: 12, background: G.sand, cursor: "pointer",
-              }}>
-                <div style={{ fontWeight: 600 }}>{p.name}</div>
-                <div style={{ color: G.ocean, fontWeight: 700, fontSize: 20 }}>+</div>
+              <div
+                key={p.id}
+                onClick={() => invitePlayer(p.id)}
+                className="flex items-center justify-between px-3.5 py-3 rounded-xl bg-alt cursor-pointer active:opacity-80 transition-opacity"
+              >
+                <div className="font-semibold text-text">{p.name}</div>
+                <div className="text-accent font-bold text-[20px]">+</div>
               </div>
             ))}
           </div>
-        </Modal>
+        </ModalShell>
       )}
 
       {/* Create team modal */}
       {showModal && (
-        <Modal title="NEW TEAM" onClose={() => { setShowModal(false); setTeamName(""); setSelectedPlayers([]); }}>
-          <div style={{ display: "grid", gap: 14 }}>
-            <Input value={teamName} onChange={setTeamName} placeholder="Team name" />
+        <ModalShell title="NEW TEAM" onClose={() => { setShowModal(false); setTeamName(""); setSelectedPlayers([]); }}>
+          <div className="flex flex-col gap-3.5">
+            <input
+              value={teamName}
+              onChange={e => setTeamName(e.target.value)}
+              placeholder="Team name"
+              className="w-full border-2 border-line rounded-xl px-3.5 py-2.5 text-[15px] text-text bg-surface outline-none focus:border-accent transition-colors"
+            />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: G.textLight, marginBottom: 8 }}>
+              <div className="text-[13px] font-bold text-dim mb-2">
                 Select {teamSize} players ({selectedPlayers.length}/{teamSize})
               </div>
-              <div style={{ display: "grid", gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {invitedPlayers.map(p => {
                   const sel = selectedPlayers.includes(p.id);
                   const inOtherTeam = tournament.teams.some(tm => tm.players.includes(p.id));
                   return (
-                    <div key={p.id} onClick={() => !inOtherTeam && togglePlayer(p.id)} style={{
-                      padding: "10px 14px", borderRadius: 10, cursor: inOtherTeam ? "not-allowed" : "pointer",
-                      border: "2px solid " + (sel ? G.ocean : G.sandDark),
-                      background: inOtherTeam ? G.sandDark + "44" : sel ? G.ocean + "11" : G.white,
-                      fontWeight: sel ? 700 : 400, opacity: inOtherTeam ? 0.5 : 1,
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                    }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 14 }}>{levelOf(p.level).icon}</span>{p.name}
+                    <div
+                      key={p.id}
+                      onClick={() => !inOtherTeam && togglePlayer(p.id)}
+                      className={`px-3.5 py-2.5 rounded-[10px] border-2 flex justify-between items-center transition-all ${
+                        inOtherTeam
+                          ? "border-line bg-line/25 opacity-50 cursor-not-allowed"
+                          : sel
+                          ? "border-accent bg-accent/[0.07] cursor-pointer font-bold"
+                          : "border-line bg-surface cursor-pointer font-normal"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[14px]">{levelOf(p.level).icon}</span>
+                        <span className="text-text">{p.name}</span>
                       </span>
-                      {inOtherTeam && <span style={{ fontSize: 11, color: G.textLight }}>already in team</span>}
+                      {inOtherTeam && <span className="text-[11px] text-dim">already in team</span>}
                     </div>
                   );
                 })}
               </div>
             </div>
-            <Btn onClick={addTeam} variant="sun" size="lg"
-              disabled={!teamName.trim() || selectedPlayers.length !== teamSize}>
+            <button
+              onClick={addTeam}
+              disabled={!teamName.trim() || selectedPlayers.length !== teamSize}
+              className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+            >
               Create team
-            </Btn>
+            </button>
           </div>
-        </Modal>
+        </ModalShell>
       )}
     </div>
   );

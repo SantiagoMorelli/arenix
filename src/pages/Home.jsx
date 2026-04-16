@@ -126,27 +126,16 @@ export default function Home() {
   const [activeTab,  setActiveTab]  = useState('home')
 
   // ── Derive league card data ─────────────────────────────────────────────────
-  // Most recent active tournament first, then any tournament, then null
-  const featuredTour =
-    [...tournaments].reverse().find(t => t.status === 'active') ||
-    [...tournaments].reverse()[0] ||
-    null
+  const league        = leagues[0] || null
+  const leaguePlayers = league?.players     || []
+  const totalMatches  = tournaments.flatMap(t => getAllMatches(t)).filter(m => m.played).length
+  const totalTeams    = tournaments.reduce((n, t) => n + (t.teams?.length || 0), 0)
 
-  const playerCount = featuredTour
-    ? new Set(featuredTour.teams.flatMap(t => t.players || [])).size
-    : 0
-
-  const playedCount = featuredTour
-    ? getAllMatches(featuredTour).filter(m => m.played).length
-    : 0
-
-  const leagueStats = featuredTour
-    ? [
-        { value: String(tournaments.length),        label: 'Tournaments' },
-        { value: String(playedCount),               label: 'Matches'     },
-        { value: String(featuredTour.teams.length), label: 'Teams'       },
-      ]
-    : null
+  const leagueStats = [
+    { value: String(tournaments.length), label: 'Tournaments' },
+    { value: String(totalMatches),       label: 'Matches'     },
+    { value: String(totalTeams),         label: 'Teams'       },
+  ]
 
   // ── Derive recent activity ──────────────────────────────────────────────────
   // Up to 2 most-recent tournaments + 2 most-recent free plays, capped at 4
@@ -206,46 +195,35 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── League / tournament card ── */}
-          {featuredTour ? (
-            <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40">
-              {/* Card header row */}
-              <div className="flex justify-between items-start mb-3.5">
-                <div>
-                  <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
-                    My Tournament
-                  </div>
-                  <div className="text-[17px] font-bold text-text">{featuredTour.name}</div>
-                  <div className="text-[12px] text-dim mt-0.5">
-                    {featuredTour.date} · {playerCount} players
-                  </div>
+          {/* ── League card ── */}
+          <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40">
+            {/* Card header row */}
+            <div className="flex justify-between items-start mb-3.5">
+              <div>
+                <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
+                  My League
                 </div>
-                <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent">
-                  {phaseLabel(featuredTour)}
+                <div className="text-[17px] font-bold text-text">
+                  {league?.name || 'My League'}
+                </div>
+                <div className="text-[12px] text-dim mt-0.5">
+                  Season {league?.season} · {leaguePlayers.length} players
                 </div>
               </div>
-              {/* Stats row */}
-              <div className="flex gap-2">
-                {leagueStats.map(s => (
-                  <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
-                    <div className="text-[15px] font-bold text-text">{s.value}</div>
-                    <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
-                  </div>
-                ))}
+              <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent shrink-0">
+                {tournaments.length} Tourn.
               </div>
             </div>
-          ) : (
-            /* Empty state — no tournaments yet */
-            <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-line text-center">
-              <div className="text-[13px] text-dim mb-3">No active tournament yet</div>
-              <button
-                onClick={() => navigate('/legacy')}
-                className="text-[12px] font-semibold text-accent bg-accent/15 px-4 py-2 rounded-lg cursor-pointer border-0"
-              >
-                Create a Tournament →
-              </button>
+            {/* Stats row */}
+            <div className="flex gap-2">
+              {leagueStats.map(s => (
+                <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
+                  <div className="text-[15px] font-bold text-text">{s.value}</div>
+                  <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
 
           {/* ── Free Play button ── */}
           <div

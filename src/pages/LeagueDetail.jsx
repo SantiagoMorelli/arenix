@@ -200,7 +200,7 @@ export default function LeagueDetail() {
                     return (
                       <div
                         key={t.id}
-                        onClick={() => navigate('/legacy')}
+                        onClick={() => navigate(`/league/${id}/tournament/${t.id}`)}
                         className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
                       >
                         <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">

@@ -196,7 +196,10 @@ export default function Home() {
           </div>
 
           {/* ── League card ── */}
-          <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40">
+          <div
+            onClick={() => navigate(`/league/${league?.id || 'league_default'}`)}
+            className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40 cursor-pointer active:opacity-80 transition-opacity"
+          >
             {/* Card header row */}
             <div className="flex justify-between items-start mb-3.5">
               <div>

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -58,37 +60,44 @@ const PlusIcon = ({ size = 14 }) => (
   </Svg>
 )
 
-// ─── Hardcoded data ───────────────────────────────────────────────────────────
-const LEAGUE = {
-  name: 'Miami Beach League',
-  season: 'Season 2026',
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getTournamentStatus(t) {
+  if (t.status === 'completed') return { label: 'Completed', variant: 'dim' }
+  if (['group', 'knockout', 'freeplay'].includes(t.phase)) return { label: 'In Progress', variant: 'success' }
+  if (t.phase === 'setup') return { label: 'Setup', variant: 'accent' }
+  return { label: 'Active', variant: 'success' }
 }
 
-// currentUser index = 1 (Santi)
-const RANKINGS = [
-  { name: 'Carlos M.', points: 1520 },
-  { name: 'Santi',     points: 1485 },
-  { name: 'Diego R.',  points: 1460 },
-  { name: 'Ana P.',    points: 1440 },
-  { name: 'Luis K.',   points: 1420 },
-]
-const CURRENT_USER_INDEX = 1
-
-const TOURNAMENTS = [
-  { name: 'Spring Cup',   status: 'In Progress', players: 8,  statusVariant: 'success' },
-  { name: 'Winter Clash', status: 'Completed',   players: 12, statusVariant: 'dim'     },
-]
+function getTournamentPlayerCount(t) {
+  return new Set((t.teams || []).flatMap(team => team.players || [])).size
+}
 
 const NAV_ITEMS = [
-  { id: 'rankings',     icon: <ChartIcon />,  label: 'Rankings'     },
-  { id: 'players',      icon: <UsersIcon />,  label: 'Players'      },
-  { id: 'tournaments',  icon: <TrophyIcon />, label: 'Tournaments'  },
-  { id: 'settings',     icon: <GearIcon />,   label: 'Settings'     },
+  { id: 'rankings',    icon: <ChartIcon />,  label: 'Rankings'    },
+  { id: 'players',     icon: <UsersIcon />,  label: 'Players'     },
+  { id: 'tournaments', icon: <TrophyIcon />, label: 'Tournaments' },
+  { id: 'settings',    icon: <GearIcon />,   label: 'Settings'    },
 ]
 
 // ─── LeagueDetail page ────────────────────────────────────────────────────────
 export default function LeagueDetail() {
+  const navigate   = useNavigate()
+  const { id }     = useParams()
   const [activeTab, setActiveTab] = useState('rankings')
+
+  const [leagues] = useLocalStorage('arenix_leagues', [])
+
+  // Prefer the league matching the URL param; fall back to first league
+  const league = leagues.find(l => l.id === id) || leagues[0] || null
+
+  // Players sorted by points descending for the ranking list
+  const rankedPlayers = [...(league?.players || [])].sort(
+    (a, b) => (b.points || 0) - (a.points || 0)
+  )
+
+  // Most-recently-created tournaments first
+  const tournaments = [...(league?.tournaments || [])].reverse()
 
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
@@ -97,95 +106,140 @@ export default function LeagueDetail() {
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 pb-6">
 
-          {/* ── Back arrow header ── */}
+          {/* ── Header ── */}
           <div className="flex items-center gap-2.5 pt-2.5 pb-4">
-            <button className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text">
+            <button
+              onClick={() => navigate('/')}
+              className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text"
+            >
               <BackIcon />
             </button>
             <div>
-              <div className="text-[18px] font-bold text-text leading-tight">{LEAGUE.name}</div>
-              <div className="text-[11px] text-dim">{LEAGUE.season}</div>
+              <div className="text-[18px] font-bold text-text leading-tight">
+                {league?.name || 'My League'}
+              </div>
+              <div className="text-[11px] text-dim">Season {league?.season}</div>
             </div>
           </div>
 
-          {/* ── Top Rankings ── */}
-          <SectionLabel color="accent">Top Rankings</SectionLabel>
+          {/* ════════════════════════════════════════════════
+              Rankings tab  — players ranked by points
+              Players tab   — same ranked list
+          ════════════════════════════════════════════════ */}
+          {(activeTab === 'rankings' || activeTab === 'players') && (
+            <>
+              <SectionLabel color="accent">
+                {activeTab === 'rankings' ? 'Top Rankings' : 'Players'}
+              </SectionLabel>
 
-          {/* Rankings card — single bordered container with dividers */}
-          <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-[18px]">
-            {RANKINGS.map((player, i) => {
-              const isCurrentUser = i === CURRENT_USER_INDEX
-              const isTopThree    = i < 3
+              {rankedPlayers.length > 0 ? (
+                <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-[18px]">
+                  {rankedPlayers.map((player, i) => (
+                    <div
+                      key={player.id}
+                      className={`
+                        flex items-center px-3.5 py-2.5
+                        ${i < rankedPlayers.length - 1 ? 'border-b border-line' : ''}
+                      `}
+                    >
+                      {/* Rank number — top-3 in accent */}
+                      <span
+                        className={`w-[22px] text-[13px] font-bold flex-shrink-0 ${i < 3 ? 'text-accent' : 'text-dim'}`}
+                      >
+                        {i + 1}
+                      </span>
 
-              return (
-                <div
-                  key={player.name}
-                  className={`
-                    flex items-center px-3.5 py-2.5
-                    ${i < RANKINGS.length - 1 ? 'border-b border-line' : ''}
-                    ${isCurrentUser ? 'bg-accent/15' : ''}
-                  `}
+                      {/* Avatar initial */}
+                      <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text mr-2.5 flex-shrink-0">
+                        {player.name[0]}
+                      </div>
+
+                      {/* Name */}
+                      <span className="flex-1 text-[13px] font-medium text-text truncate">
+                        {player.name}
+                      </span>
+
+                      {/* Points */}
+                      <span className="text-[12px] font-semibold text-dim ml-2">
+                        {player.points ?? 0}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[13px] text-dim text-center py-6 mb-4">
+                  No players yet
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════
+              Rankings tab  — tournaments section (below rankings)
+              Tournaments tab — tournaments section only
+          ════════════════════════════════════════════════ */}
+          {(activeTab === 'rankings' || activeTab === 'tournaments') && (
+            <>
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="text-[12px] font-bold text-accent tracking-wide uppercase">
+                  Tournaments
+                </span>
+                <button
+                  onClick={() => navigate('/legacy')}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
                 >
-                  {/* Rank number */}
-                  <span className={`w-[22px] text-[13px] font-bold flex-shrink-0 ${isTopThree ? 'text-accent' : 'text-dim'}`}>
-                    {i + 1}
-                  </span>
-
-                  {/* Avatar initial */}
-                  <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text mr-2.5 flex-shrink-0">
-                    {player.name[0]}
-                  </div>
-
-                  {/* Name */}
-                  <span className={`flex-1 text-[13px] text-text ${isCurrentUser ? 'font-bold' : 'font-medium'}`}>
-                    {player.name}
-                  </span>
-
-                  {/* Points */}
-                  <span className="text-[12px] font-semibold text-dim">{player.points}</span>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* ── Tournaments header row ── */}
-          <div className="flex justify-between items-center mb-2.5">
-            <span className="text-[12px] font-bold text-accent tracking-wide uppercase">
-              Tournaments
-            </span>
-            <button className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0">
-              <PlusIcon /> New
-            </button>
-          </div>
-
-          {/* Tournament cards */}
-          <div className="flex flex-col gap-2">
-            {TOURNAMENTS.map((t, i) => (
-              <div
-                key={i}
-                className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
-              >
-                {/* Trophy icon box */}
-                <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">
-                  <TrophyIcon size={18} />
-                </div>
-
-                {/* Name + players */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-semibold text-text">{t.name}</div>
-                  <div className="text-[11px] text-dim">{t.players} players</div>
-                </div>
-
-                {/* Status badge */}
-                <AppBadge text={t.status} variant={t.statusVariant} />
+                  <PlusIcon /> New
+                </button>
               </div>
-            ))}
-          </div>
+
+              {tournaments.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {tournaments.map((t) => {
+                    const { label, variant } = getTournamentStatus(t)
+                    const pCount             = getTournamentPlayerCount(t)
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => navigate('/legacy')}
+                        className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
+                      >
+                        <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">
+                          <TrophyIcon size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold text-text truncate">{t.name}</div>
+                          <div className="text-[11px] text-dim">{pCount} players</div>
+                        </div>
+                        <AppBadge text={label} variant={variant} />
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-[13px] text-dim text-center py-6">
+                  No tournaments yet —{' '}
+                  <button
+                    onClick={() => navigate('/legacy')}
+                    className="text-accent font-semibold bg-transparent border-0 cursor-pointer p-0"
+                  >
+                    create one
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Settings placeholder ── */}
+          {activeTab === 'settings' && (
+            <div className="text-[13px] text-dim text-center py-10">
+              League settings coming soon
+            </div>
+          )}
 
         </div>
       </main>
 
-      {/* ── Bottom navigation (4 tabs) ── */}
+      {/* ── Bottom navigation ── */}
       <BottomNav
         items={NAV_ITEMS}
         active={activeTab}

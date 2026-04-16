@@ -117,9 +117,10 @@ const NAV_ITEMS = [
 export default function Home() {
   const navigate = useNavigate()
 
-  // Same localStorage keys as App.jsx — reads the live data
-  const [tournaments] = useLocalStorage('arenix_tournaments', [])
-  const [freePlays]   = useLocalStorage('arenix_freeplays',   [])
+  // Read from the unified leagues structure (migration runs before first render)
+  const [leagues]   = useLocalStorage('arenix_leagues',   [])
+  const [freePlays] = useLocalStorage('arenix_freeplays', [])
+  const tournaments = leagues[0]?.tournaments || []
 
   const [showNotifs, setShowNotifs] = useState(false)
   const [activeTab,  setActiveTab]  = useState('home')

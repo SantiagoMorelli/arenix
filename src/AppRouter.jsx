@@ -23,7 +23,8 @@ import LeagueLayout from './layouts/LeagueLayout'
 import Home         from './pages/Home'
 import Profile      from './pages/Profile'
 import Settings     from './pages/Settings'
-import LeagueDetail from './pages/LeagueDetail'
+import LeagueDetail    from './pages/LeagueDetail'
+import TournamentDetail from './pages/TournamentDetail'
 
 import LegacyApp    from './App'
 
@@ -57,7 +58,7 @@ export default function AppRouter() {
         <Route index element={<LeagueDetail />} />
         <Route
           path="tournament/:tid"
-          element={<Placeholder title="Tournament" />}
+          element={<TournamentDetail />}
         />
         <Route
           path="tournament/:tid/match/:mid"

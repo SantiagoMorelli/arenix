@@ -135,10 +135,42 @@ function advanceKnockout(knockout, teams) {
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [tab, setTab]         = useState("tournaments");
-  const [players, setPlayers] = useLocalStorage("arenix_players", initialPlayers);
-  const [tournaments, setTournaments] = useLocalStorage("arenix_tournaments", []);
-  const [freePlays,   setFreePlays]   = useLocalStorage("arenix_freeplays",   []);
+  const [tab, setTab] = useState("tournaments");
+
+  // ── Leagues (new unified structure) ────────────────────────────────────────
+  // Migration from arenix_players + arenix_tournaments runs synchronously in
+  // src/lib/migration.js before this component ever mounts, so arenix_leagues
+  // will always contain at least one entry by the time this hook reads it.
+  const [leagues, setLeagues] = useLocalStorage("arenix_leagues", []);
+  const [freePlays, setFreePlays] = useLocalStorage("arenix_freeplays", []);
+
+  // Derive players + tournaments from the active (first) league
+  const activeLeague  = leagues[0] || null;
+  const players       = activeLeague?.players     || [];
+  const tournaments   = activeLeague?.tournaments || [];
+
+  // Wrapper setters — keep all downstream components' interfaces intact
+  const setPlayers = (updater) => {
+    setLeagues(prev => {
+      if (!prev.length) return prev;
+      const first = prev[0];
+      return [
+        { ...first, players: typeof updater === "function" ? updater(first.players || []) : updater },
+        ...prev.slice(1),
+      ];
+    });
+  };
+
+  const setTournaments = (updater) => {
+    setLeagues(prev => {
+      if (!prev.length) return prev;
+      const first = prev[0];
+      return [
+        { ...first, tournaments: typeof updater === "function" ? updater(first.tournaments || []) : updater },
+        ...prev.slice(1),
+      ];
+    });
+  };
 
   // Dark mode
   const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);

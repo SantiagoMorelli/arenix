@@ -1,36 +1,41 @@
 /**
  * AppRouter — top-level route declarations.
  *
- * All new pages live here.  The legacy state-based app is preserved at /legacy
- * so existing functionality remains fully accessible during the migration.
+ * Public routes:  /login, /signup
+ * Protected routes: everything else (wrapped in <ProtectedRoute>)
  *
  * Target hierarchy (from CLAUDE.md):
  *
  *   /                              → Home
  *   /profile                       → Profile
  *   /settings                      → Settings
- *   /free-play                     → Free Play  (placeholder → full page later)
+ *   /free-play                     → Free Play
  *   /league/:id                    → LeagueDetail
- *   /league/:id/tournament/:tid    → Tournament  (placeholder)
- *   /league/:id/tournament/:tid/match/:mid → Live Match (placeholder)
+ *   /league/:id/tournament/new     → TournamentSetupWizard
+ *   /league/:id/tournament/:tid    → TournamentDetail
+ *   /league/:id/tournament/:tid/match/:mid → Live Match
+ *   /join/:code                    → JoinLeague
  *   /legacy                        → Original App (full state-based app)
  */
 import { Routes, Route } from 'react-router-dom'
 
-import MainLayout   from './layouts/MainLayout'
-import LeagueLayout from './layouts/LeagueLayout'
+import ProtectedRoute from './components/ProtectedRoute'
+import MainLayout     from './layouts/MainLayout'
+import LeagueLayout   from './layouts/LeagueLayout'
 
-import Home         from './pages/Home'
-import Profile      from './pages/Profile'
-import Settings     from './pages/Settings'
-import LeagueDetail    from './pages/LeagueDetail'
-import TournamentDetail from './pages/TournamentDetail'
+import Login               from './pages/Login'
+import Signup              from './pages/Signup'
+import Home                from './pages/Home'
+import Profile             from './pages/Profile'
+import Settings            from './pages/Settings'
+import LeagueDetail        from './pages/LeagueDetail'
+import TournamentDetail    from './pages/TournamentDetail'
 import TournamentSetupWizard from './pages/TournamentSetupWizard'
-import LiveMatch from './pages/LiveMatch'
+import LiveMatch           from './pages/LiveMatch'
+import JoinLeague          from './pages/JoinLeague'
 
-import LegacyApp    from './App'
+import LegacyApp from './App'
 
-// ─── Simple placeholder for routes not yet built ──────────────────────────────
 function Placeholder({ title }) {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-2">
@@ -40,36 +45,33 @@ function Placeholder({ title }) {
   )
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
 export default function AppRouter() {
   return (
     <Routes>
 
-      {/* ── Screens with Home / Profile bottom nav ── */}
+      {/* ── Public (no auth required) ── */}
+      <Route path="/login"  element={<Login />}  />
+      <Route path="/signup" element={<Signup />} />
+
+      {/* ── Protected: screens with Home / Profile bottom nav ── */}
       <Route element={<MainLayout />}>
-        <Route path="/"        element={<Home />}    />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/"        element={<ProtectedRoute><Home /></ProtectedRoute>}    />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Route>
 
-      {/* ── Pushed screens (no bottom nav) ── */}
-      <Route path="/settings"  element={<Settings />} />
-      <Route path="/free-play" element={<Placeholder title="Free Play" />} />
+      {/* ── Protected: pushed screens (no bottom nav) ── */}
+      <Route path="/settings"  element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/free-play" element={<ProtectedRoute><Placeholder title="Free Play" /></ProtectedRoute>} />
 
-      {/* ── League hierarchy ── */}
-      <Route path="/league/:id" element={<LeagueLayout />}>
+      {/* ── Protected: join league via invite code ── */}
+      <Route path="/join/:code" element={<ProtectedRoute><JoinLeague /></ProtectedRoute>} />
+
+      {/* ── Protected: league hierarchy ── */}
+      <Route path="/league/:id" element={<ProtectedRoute><LeagueLayout /></ProtectedRoute>}>
         <Route index element={<LeagueDetail />} />
-        <Route
-          path="tournament/new"
-          element={<TournamentSetupWizard />}
-        />
-        <Route
-          path="tournament/:tid"
-          element={<TournamentDetail />}
-        />
-        <Route
-          path="tournament/:tid/match/:mid"
-          element={<LiveMatch />}
-        />
+        <Route path="tournament/new"        element={<TournamentSetupWizard />} />
+        <Route path="tournament/:tid"       element={<TournamentDetail />} />
+        <Route path="tournament/:tid/match/:mid" element={<LiveMatch />} />
       </Route>
 
       {/* ── Legacy state-based app (all original functionality preserved) ── */}

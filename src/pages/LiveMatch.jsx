@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useLeague } from '../hooks/useLeague'
+import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
-import { saveMatchResult } from '../lib/utils'
+import { saveMatchResult as supabaseSaveMatchResult } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
@@ -168,8 +169,8 @@ export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
 
-  const [leagues, setLeagues] = useLocalStorage('arenix_leagues', [])
-  const league = leagues.find(l => l.id === id) || leagues[0] || null
+  const { league, refetch } = useLeague(id)
+  const { canScore }        = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
 
   // Get all matches flat to pass to the hook
@@ -198,37 +199,36 @@ export default function LiveMatch() {
   // }, [live])
 
   // Handle Match Ending logic (now manual via GameStats)
-  const handleSaveResult = (matchId, s1_sets, s2_sets, winnerTeamId, log, sets) => {
-    // If it's a 1-set match, we need to save the actual points scored, not "1-0" sets.
+  const handleSaveResult = async (matchId, s1_sets, s2_sets, winnerTeamId, log, sets) => {
     const isOneSet = tournament.setsPerMatch === 1
-    
-    const finalScore1 = isOneSet 
-      ? (live.sets[0]?.s1 ?? live.score1) 
-      : s1_sets
-      
-    const finalScore2 = isOneSet 
-      ? (live.sets[0]?.s2 ?? live.score2) 
-      : s2_sets
 
-    const updatedTour = saveMatchResult(
-      tournament, matchId, 
-      finalScore1, finalScore2, 
-      winnerTeamId,
-      log, sets
-    )
+    const finalScore1 = isOneSet ? (live.sets[0]?.s1 ?? live.score1) : s1_sets
+    const finalScore2 = isOneSet ? (live.sets[0]?.s2 ?? live.score2) : s2_sets
 
-    setLeagues(prev => prev.map(l => 
-      l.id !== league.id ? l : {
-        ...l, tournaments: l.tournaments.map(t => t.id !== tid ? t : updatedTour)
-      }
-    ))
-
-    try { 
-      localStorage.removeItem(SAVE_KEY) 
-    } catch {
-      // Ignored
+    try {
+      await supabaseSaveMatchResult(matchId, finalScore1, finalScore2, winnerTeamId, log, sets)
+    } catch (err) {
+      console.error('Failed to save match result:', err)
     }
+
+    try { localStorage.removeItem(SAVE_KEY) } catch { /* ignored */ }
     navigate(`/league/${id}/tournament/${tid}`)
+  }
+
+  // Redirect viewers away from the live match screen
+  if (canScore === false) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-2">
+        <div className="text-[18px] font-bold">Access Denied</div>
+        <div className="text-[13px] text-dim">Only scorers and players can record match scores.</div>
+        <button
+          onClick={() => navigate(`/league/${id}/tournament/${tid}`)}
+          className="mt-4 text-[13px] text-accent font-semibold bg-transparent border-0 cursor-pointer"
+        >
+          ← Back to tournament
+        </button>
+      </div>
+    )
   }
 
   if (!tournament) {

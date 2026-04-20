@@ -1,5 +1,7 @@
+import { useNavigate } from 'react-router-dom'
 import { SectionLabel } from '../components/ui-new'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useAuth } from '../contexts/AuthContext'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -65,6 +67,8 @@ function SettingsRow({ icon, iconColor = 'text-dim', label, right, border = true
 
 // ─── Settings page ────────────────────────────────────────────────────────────
 export default function Settings() {
+  const navigate = useNavigate()
+  const { signOut, profile } = useAuth()
   const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);
   const toggleDark = () => {
     const next = !isDark;
@@ -78,7 +82,10 @@ export default function Settings() {
 
       {/* ── Back arrow header ── */}
       <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0 text-text">
-        <button className="cursor-pointer bg-transparent border-0 p-1 -ml-1">
+        <button
+          onClick={() => navigate(-1)}
+          className="cursor-pointer bg-transparent border-0 p-1 -ml-1"
+        >
           <BackIcon />
         </button>
         <span className="text-[18px] font-bold">Settings</span>
@@ -135,7 +142,7 @@ export default function Settings() {
             <SettingsRow
               icon={<MailIcon />}
               label="Email"
-              right={<span className="text-[11px] text-dim">santi@mail.com</span>}
+              right={<span className="text-[11px] text-dim truncate max-w-[140px]">{profile?.full_name || '—'}</span>}
             />
             <SettingsRow
               icon={<LockIcon />}
@@ -151,7 +158,14 @@ export default function Settings() {
               icon={<LogOutIcon />}
               iconColor="text-error"
               label="Log Out"
-              right={<span className="text-error"><ArrowIcon /></span>}
+              right={
+                <button
+                  onClick={async () => { await signOut(); navigate('/login', { replace: true }) }}
+                  className="text-error text-[12px] font-bold bg-transparent border-0 cursor-pointer"
+                >
+                  Sign out
+                </button>
+              }
             />
             <SettingsRow
               icon={<TrashIcon />}

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useLocalStorage } from '../hooks/useLocalStorage'
-
-import { saveMatchResult, uid } from '../lib/utils'
+import { useLeague } from '../hooks/useLeague'
+import { useLeagueRole } from '../hooks/useLeagueRole'
+import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase } from '../services/tournamentService'
+import { uid } from '../lib/utils'
 import GameStats from '../components/GameStats'
 
 // ─── Inline icons ─────────────────────────────────────────────────────────────
@@ -312,7 +313,7 @@ function KnockoutResults({ tournament, onMatchClick }) {
 // TAB: STANDINGS
 // — Groups first, then knockout (user's requested modification)
 // ═══════════════════════════════════════════════════════════════════════════════
-function StandingsTab({ tournament, onGenerateKnockout, onMatchClick }) {
+function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage }) {
   const { phase, groups, teams, matches } = tournament
   const hasGroups = (groups || []).length > 0
 
@@ -355,8 +356,8 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick }) {
         <KnockoutResults tournament={tournament} onMatchClick={onMatchClick} />
       )}
 
-      {/* Advance button */}
-      {phase === 'group' && (
+      {/* Advance button — only for admins */}
+      {phase === 'group' && canManage && (
         <div className="mt-2 mb-6">
           <button
             onClick={onGenerateKnockout}
@@ -376,7 +377,7 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: MATCHES
 // ═══════════════════════════════════════════════════════════════════════════════
-function MatchesTab({ tournament, onStartMatch, onMatchClick }) {
+function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
   const all       = getAllMatches(tournament)
   const pending   = all.filter(m => !m.played && m.team1 && m.team2)
   const completed = all.filter(m => m.played)
@@ -407,12 +408,14 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick }) {
                   <div className="text-[13px] font-bold text-text">{tName(m.team2)}</div>
                 </div>
               </div>
-              <button
-                onClick={() => onStartMatch(m)}
-                className="w-full py-2.5 rounded-lg text-[12px] font-bold text-white bg-accent border-0 cursor-pointer"
-              >
-                Start Match
-              </button>
+              {canScore && (
+                <button
+                  onClick={() => onStartMatch(m)}
+                  className="w-full py-2.5 rounded-lg text-[12px] font-bold text-white bg-accent border-0 cursor-pointer"
+                >
+                  Start Match
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -504,8 +507,8 @@ export default function TournamentDetail() {
   const { id, tid }  = useParams()
   const [activeTab, setActiveTab] = useState('standings')
 
-  const [leagues, setLeagues] = useLocalStorage('arenix_leagues', [])
-  const league        = leagues.find(l => l.id === id) || leagues[0] || null
+  const { league, loading, refetch } = useLeague(id)
+  const { canScore, canManage }      = useLeagueRole(id)
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
 
@@ -517,6 +520,14 @@ export default function TournamentDetail() {
 
   // ── Match Stats Overlay State ──
   const [selectedStatsMatch, setSelectedStatsMatch] = useState(null)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-bg text-text">
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   if (!tournament) {
     return (
@@ -549,44 +560,33 @@ export default function TournamentDetail() {
     navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
   }
 
-  const handleSaveManualScore = () => {
+  const handleSaveManualScore = async () => {
     const s1 = parseInt(manualScore1, 10)
     const s2 = parseInt(manualScore2, 10)
-    
-    if (isNaN(s1) || isNaN(s2) || s1 === s2) return // Require valid, non-tied scores
-    
+
+    if (isNaN(s1) || isNaN(s2) || s1 === s2) return
+
     const winnerId = s1 > s2 ? selectedMatch.team1 : selectedMatch.team2
-    
-    const updatedTour = saveMatchResult(tournament, selectedMatch.id, s1, s2, winnerId)
 
-    // Update league in local storage
-    setLeagues(prev => prev.map(l => {
-      if (l.id !== league.id) return l
-      return {
-        ...l,
-        tournaments: l.tournaments.map(t => t.id !== tid ? t : updatedTour)
-      }
-    }))
-
-    handleCloseModal()
+    try {
+      await supabaseSaveMatchResult(selectedMatch.id, s1, s2, winnerId)
+      handleCloseModal()
+      refetch()
+    } catch (err) {
+      console.error('Failed to save match result:', err)
+    }
   }
 
-  const handleGenerateKnockout = () => {
+  const handleGenerateKnockout = async () => {
     const knockout = buildKnockout(tournament.groups)
-    
-    const updatedTour = {
-      ...tournament,
-      knockout,
-      phase: 'knockout'
-    }
 
-    setLeagues(prev => prev.map(l => {
-      if (l.id !== league.id) return l
-      return {
-        ...l,
-        tournaments: l.tournaments.map(t => t.id !== tid ? t : updatedTour)
-      }
-    }))
+    try {
+      await saveKnockoutRounds(tid, knockout.rounds)
+      await updateTournamentPhase(tid, 'knockout')
+      refetch()
+    } catch (err) {
+      console.error('Failed to generate knockout:', err)
+    }
   }
 
   const handleMatchClick = (match) => {
@@ -717,10 +717,11 @@ export default function TournamentDetail() {
       {/* ── Tab content ── */}
       <main className="flex-1 overflow-y-auto pb-6 relative">
         {activeTab === 'standings' && (
-          <StandingsTab 
-            tournament={tournament} 
-            onGenerateKnockout={handleGenerateKnockout} 
+          <StandingsTab
+            tournament={tournament}
+            onGenerateKnockout={handleGenerateKnockout}
             onMatchClick={handleMatchClick}
+            canManage={canManage}
           />
         )}
         {activeTab === 'matches' && (
@@ -728,6 +729,7 @@ export default function TournamentDetail() {
             tournament={tournament}
             onStartMatch={handleStartMatchClick}
             onMatchClick={handleMatchClick}
+            canScore={canScore}
           />
         )}
         {activeTab === 'teams' && (

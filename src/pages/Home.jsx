@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useAuth } from '../contexts/AuthContext'
+import { getMyLeagues } from '../services/leagueService'
 import { BottomNav, IconButton, SectionLabel, AppBadge } from '../components/ui-new'
 import NotificationPanel from '../components/NotificationPanel'
 
@@ -53,14 +54,6 @@ const TrophyIcon = ({ size = 18 }) => (
   </Svg>
 )
 
-const BallIcon = ({ size = 18 }) => (
-  <Svg size={size}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 2a14.5 14.5 0 000 20" />
-    <path d="M2 12a14.5 14.5 0 0120 0" />
-  </Svg>
-)
-
 const PlayIcon = ({ size = 22 }) => (
   <svg
     width={size} height={size} viewBox="0 0 24 24"
@@ -75,13 +68,12 @@ const PlayIcon = ({ size = 22 }) => (
 const PlusIcon = ({ size = 18 }) => (
   <Svg size={size}>
     <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
+    <line x1="5"  y1="12" x2="19" y2="12" />
   </Svg>
 )
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
-/** All matches across group stage, knockout, and free-play rounds */
 function getAllMatches(tour) {
   return [
     ...(tour.groups   || []).flatMap(g => g.matches || []),
@@ -90,7 +82,6 @@ function getAllMatches(tour) {
   ]
 }
 
-/** Human-readable phase label */
 function phaseLabel(tour) {
   if (tour.status === 'completed') return 'Completed'
   const p = tour.phase
@@ -101,7 +92,6 @@ function phaseLabel(tour) {
   return 'Active'
 }
 
-/** Badge variant for a phase label */
 function phaseBadgeVariant(tour) {
   if (tour.status === 'completed') return 'dim'
   if (tour.phase === 'group' || tour.phase === 'knockout' || tour.phase === 'freeplay') return 'success'
@@ -116,16 +106,21 @@ const NAV_ITEMS = [
 // ─── Home page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
 
-  // Read from the unified leagues structure (migration runs before first render)
-  const [leagues]   = useLocalStorage('arenix_leagues',   [])
-  const [freePlays] = useLocalStorage('arenix_freeplays', [])
-  const tournaments = leagues[0]?.tournaments || []
-
+  const [leagues, setLeagues] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showNotifs, setShowNotifs] = useState(false)
 
-  // ── Derive league card data ─────────────────────────────────────────────────
+  useEffect(() => {
+    getMyLeagues()
+      .then(setLeagues)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
   const league        = leagues[0] || null
+  const tournaments   = league?.tournaments || []
   const leaguePlayers = league?.players     || []
   const totalMatches  = tournaments.flatMap(t => getAllMatches(t)).filter(m => m.played).length
   const totalTeams    = tournaments.reduce((n, t) => n + (t.teams?.length || 0), 0)
@@ -136,38 +131,34 @@ export default function Home() {
     { value: String(totalTeams),         label: 'Teams'       },
   ]
 
-  // ── Derive recent activity ──────────────────────────────────────────────────
-  // Up to 2 most-recent tournaments + 2 most-recent free plays, capped at 4
   const recentActivity = [
     ...[...tournaments].reverse().slice(0, 2).map(t => ({
-      id:          'tour-' + t.id,
-      title:       t.name,
-      sub:         `Tournament · ${t.date}`,
-      badge:       phaseLabel(t),
+      id:           'tour-' + t.id,
+      title:        t.name,
+      sub:          `Tournament · ${t.date}`,
+      badge:        phaseLabel(t),
       badgeVariant: phaseBadgeVariant(t),
-      iconBg:      'bg-accent/15',
-      iconColor:   'text-accent',
-      Icon:        TrophyIcon,
-    })),
-    ...[...freePlays].reverse().slice(0, 2).map(fp => ({
-      id:          'fp-' + fp.id,
-      title:       fp.name,
-      sub:         `Free Play · ${fp.date}`,
-      badge:       'Done',
-      badgeVariant: 'dim',
-      iconBg:      'bg-free/15',
-      iconColor:   'text-free',
-      Icon:        BallIcon,
+      iconBg:       'bg-accent/15',
+      iconColor:    'text-accent',
+      Icon:         TrophyIcon,
     })),
   ].slice(0, 4)
 
-  // ── Nav handler ─────────────────────────────────────────────────────────────
   const handleNavChange = (tab) => {
     if (tab === 'home') navigate('/')
     else if (tab === 'profile') navigate('/profile')
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  const displayName = profile?.full_name?.split(' ')[0] || 'Player'
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-screen bg-bg text-text items-center justify-center">
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
 
@@ -182,7 +173,7 @@ export default function Home() {
           <div className="flex justify-between items-center py-3 mb-1">
             <div>
               <div className="text-[13px] text-dim font-medium">Welcome back</div>
-              <div className="text-[22px] font-bold text-text leading-tight">Santi 🏐</div>
+              <div className="text-[22px] font-bold text-text leading-tight">{displayName} 🏐</div>
             </div>
             <div className="flex gap-2 text-dim">
               <IconButton badge={3} onClick={() => setShowNotifs(v => !v)}>
@@ -195,37 +186,40 @@ export default function Home() {
           </div>
 
           {/* ── League card ── */}
-          <div
-            onClick={() => navigate(`/league/${league?.id || 'league_default'}`)}
-            className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40 cursor-pointer active:opacity-80 transition-opacity"
-          >
-            {/* Card header row */}
-            <div className="flex justify-between items-start mb-3.5">
-              <div>
-                <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
-                  My League
+          {league ? (
+            <div
+              onClick={() => navigate(`/league/${league.id}`)}
+              className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40 cursor-pointer active:opacity-80 transition-opacity"
+            >
+              <div className="flex justify-between items-start mb-3.5">
+                <div>
+                  <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
+                    My League
+                  </div>
+                  <div className="text-[17px] font-bold text-text">{league.name}</div>
+                  <div className="text-[12px] text-dim mt-0.5">
+                    Season {league.season} · {leaguePlayers.length} players
+                  </div>
                 </div>
-                <div className="text-[17px] font-bold text-text">
-                  {league?.name || 'My League'}
-                </div>
-                <div className="text-[12px] text-dim mt-0.5">
-                  Season {league?.season} · {leaguePlayers.length} players
+                <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent shrink-0">
+                  {tournaments.length} Tourn.
                 </div>
               </div>
-              <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent shrink-0">
-                {tournaments.length} Tourn.
+              <div className="flex gap-2">
+                {leagueStats.map(s => (
+                  <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
+                    <div className="text-[15px] font-bold text-text">{s.value}</div>
+                    <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            {/* Stats row */}
-            <div className="flex gap-2">
-              {leagueStats.map(s => (
-                <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
-                  <div className="text-[15px] font-bold text-text">{s.value}</div>
-                  <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
-                </div>
-              ))}
+          ) : (
+            <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-dashed border-accent/40 text-center">
+              <div className="text-[13px] text-dim mb-2">No leagues yet</div>
+              <div className="text-[11px] text-dim">Join a league via invite link or create one from your profile.</div>
             </div>
-          </div>
+          )}
 
           {/* ── Free Play button ── */}
           <div

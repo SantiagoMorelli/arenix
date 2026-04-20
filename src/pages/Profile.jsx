@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BottomNav, SectionLabel } from '../components/ui-new'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -206,8 +207,13 @@ function MatchesTab() {
 
 // ─── Profile page ─────────────────────────────────────────────────────────────
 export default function Profile() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('stats')
-  const [activeNav, setActiveNav] = useState('profile')
+
+  const handleNavChange = (tab) => {
+    if (tab === 'home') navigate('/')
+    else if (tab === 'profile') navigate('/profile')
+  }
 
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
@@ -254,8 +260,8 @@ export default function Profile() {
       {/* ── Bottom navigation ── */}
       <BottomNav
         items={NAV_ITEMS}
-        active={activeNav}
-        onChange={setActiveNav}
+        active="profile"
+        onChange={handleNavChange}
       />
 
     </div>

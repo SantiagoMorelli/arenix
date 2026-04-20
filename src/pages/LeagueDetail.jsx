@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
+import LeaguePlayersTab from '../components/LeaguePlayersTab'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -86,10 +87,17 @@ export default function LeagueDetail() {
   const { id }     = useParams()
   const [activeTab, setActiveTab] = useState('rankings')
 
-  const [leagues] = useLocalStorage('arenix_leagues', [])
+  const [leagues, setLeagues] = useLocalStorage('arenix_leagues', [])
 
   // Prefer the league matching the URL param; fall back to first league
   const league = leagues.find(l => l.id === id) || leagues[0] || null
+  const leagueId = league?.id || id || 'league_default'
+
+  const updateLeague = (updates) => {
+    setLeagues(prev => prev.map(l => 
+      l.id === leagueId ? { ...l, ...updates } : l
+    ))
+  }
 
   // Players sorted by points descending for the ranking list
   const rankedPlayers = [...(league?.players || [])].sort(
@@ -124,17 +132,14 @@ export default function LeagueDetail() {
 
           {/* ════════════════════════════════════════════════
               Rankings tab  — players ranked by points
-              Players tab   — same ranked list
           ════════════════════════════════════════════════ */}
-          {(activeTab === 'rankings' || activeTab === 'players') && (
+          {(activeTab === 'rankings') && (
             <>
-              <SectionLabel color="accent">
-                {activeTab === 'rankings' ? 'Top Rankings' : 'Players'}
-              </SectionLabel>
+              <SectionLabel color="accent">Top Rankings</SectionLabel>
 
               {rankedPlayers.length > 0 ? (
                 <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-[18px]">
-                  {rankedPlayers.map((player, i) => (
+                  {rankedPlayers.slice(0, 5).map((player, i) => (
                     <div
                       key={player.id}
                       className={`
@@ -175,6 +180,13 @@ export default function LeagueDetail() {
           )}
 
           {/* ════════════════════════════════════════════════
+              Players tab   — Interactive Roster
+          ════════════════════════════════════════════════ */}
+          {activeTab === 'players' && (
+             <LeaguePlayersTab league={league} updateLeague={updateLeague} />
+          )}
+
+          {/* ════════════════════════════════════════════════
               Rankings tab  — tournaments section (below rankings)
               Tournaments tab — tournaments section only
           ════════════════════════════════════════════════ */}
@@ -185,7 +197,7 @@ export default function LeagueDetail() {
                   Tournaments
                 </span>
                 <button
-                  onClick={() => navigate('/legacy')}
+                  onClick={() => navigate(`/league/${leagueId}/tournament/new`)}
                   className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
                 >
                   <PlusIcon /> New
@@ -194,7 +206,7 @@ export default function LeagueDetail() {
 
               {tournaments.length > 0 ? (
                 <div className="flex flex-col gap-2">
-                  {tournaments.map((t) => {
+                  {tournaments.slice(0, 5).map((t) => {
                     const { label, variant } = getTournamentStatus(t)
                     const pCount             = getTournamentPlayerCount(t)
                     return (
@@ -219,7 +231,7 @@ export default function LeagueDetail() {
                 <div className="text-[13px] text-dim text-center py-6">
                   No tournaments yet —{' '}
                   <button
-                    onClick={() => navigate('/legacy')}
+                    onClick={() => navigate(`/league/${leagueId}/tournament/new`)}
                     className="text-accent font-semibold bg-transparent border-0 cursor-pointer p-0"
                   >
                     create one

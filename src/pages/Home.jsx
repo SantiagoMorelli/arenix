@@ -123,7 +123,6 @@ export default function Home() {
   const tournaments = leagues[0]?.tournaments || []
 
   const [showNotifs, setShowNotifs] = useState(false)
-  const [activeTab,  setActiveTab]  = useState('home')
 
   // ── Derive league card data ─────────────────────────────────────────────────
   const league        = leagues[0] || null
@@ -164,8 +163,8 @@ export default function Home() {
 
   // ── Nav handler ─────────────────────────────────────────────────────────────
   const handleNavChange = (tab) => {
-    setActiveTab(tab)
-    if (tab === 'profile') navigate('/profile')
+    if (tab === 'home') navigate('/')
+    else if (tab === 'profile') navigate('/profile')
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -278,7 +277,7 @@ export default function Home() {
       {/* ── Bottom navigation ── */}
       <BottomNav
         items={NAV_ITEMS}
-        active={activeTab}
+        active="home"
         onChange={handleNavChange}
       />
 

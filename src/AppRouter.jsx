@@ -25,6 +25,8 @@ import Profile      from './pages/Profile'
 import Settings     from './pages/Settings'
 import LeagueDetail    from './pages/LeagueDetail'
 import TournamentDetail from './pages/TournamentDetail'
+import TournamentSetupWizard from './pages/TournamentSetupWizard'
+import LiveMatch from './pages/LiveMatch'
 
 import LegacyApp    from './App'
 
@@ -57,12 +59,16 @@ export default function AppRouter() {
       <Route path="/league/:id" element={<LeagueLayout />}>
         <Route index element={<LeagueDetail />} />
         <Route
+          path="tournament/new"
+          element={<TournamentSetupWizard />}
+        />
+        <Route
           path="tournament/:tid"
           element={<TournamentDetail />}
         />
         <Route
           path="tournament/:tid/match/:mid"
-          element={<Placeholder title="Live Match" />}
+          element={<LiveMatch />}
         />
       </Route>
 

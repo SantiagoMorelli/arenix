@@ -191,7 +191,6 @@ export default function EditProfile() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="user"
               className="hidden"
               onChange={handlePhotoChange}
             />

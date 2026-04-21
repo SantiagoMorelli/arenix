@@ -183,6 +183,22 @@ export async function advanceKnockoutAfterMatch(playedMatchId, winnerId, knockou
 }
 
 /**
+ * Marks a tournament as completed and sets the winner.
+ */
+export async function completeTournament(tournamentId, winnerTeamId) {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ 
+      phase: 'completed',
+      status: 'completed',
+      winner_team_id: winnerTeamId
+    })
+    .eq('id', tournamentId)
+
+  if (error) throw error
+}
+
+/**
  * Save full knockout structure (rounds + matches) to Supabase.
  * Called after "Generate Knockout" is triggered.
  */

@@ -408,6 +408,10 @@ DROP POLICY IF EXISTS "member_roles: admin can manage" ON public.league_member_r
 CREATE POLICY "member_roles: admin can manage" ON public.league_member_roles
   FOR ALL USING (public.my_league_has_role(league_id, 'admin'));
 
+DROP POLICY IF EXISTS "member_roles: user can self-delete" ON public.league_member_roles;
+CREATE POLICY "member_roles: user can self-delete" ON public.league_member_roles
+  FOR DELETE USING (user_id = auth.uid());
+
 -- ── league_member_permissions ──
 DROP POLICY IF EXISTS "member_perms: members can view" ON public.league_member_permissions;
 CREATE POLICY "member_perms: members can view" ON public.league_member_permissions
@@ -420,6 +424,10 @@ CREATE POLICY "member_perms: user can self-insert" ON public.league_member_permi
 DROP POLICY IF EXISTS "member_perms: admin can manage" ON public.league_member_permissions;
 CREATE POLICY "member_perms: admin can manage" ON public.league_member_permissions
   FOR ALL USING (public.my_league_has_role(league_id, 'admin'));
+
+DROP POLICY IF EXISTS "member_perms: user can self-delete" ON public.league_member_permissions;
+CREATE POLICY "member_perms: user can self-delete" ON public.league_member_permissions
+  FOR DELETE USING (user_id = auth.uid());
 
 -- ── players ──
 DROP POLICY IF EXISTS "players: members can view" ON public.players;
@@ -437,6 +445,10 @@ CREATE POLICY "players: admin can update" ON public.players
 DROP POLICY IF EXISTS "players: admin can delete" ON public.players;
 CREATE POLICY "players: admin can delete" ON public.players
   FOR DELETE USING (public.my_league_has_role(league_id, 'admin'));
+
+DROP POLICY IF EXISTS "players: user can self-unlink" ON public.players;
+CREATE POLICY "players: user can self-unlink" ON public.players
+  FOR UPDATE USING (user_id = auth.uid());
 
 -- ── tournaments ──
 DROP POLICY IF EXISTS "tournaments: members can view" ON public.tournaments;

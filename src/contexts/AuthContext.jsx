@@ -9,6 +9,15 @@ export function AuthProvider({ children }) {
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(true)
 
+  async function fetchProfile(userId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    if (data) setProfile(data)
+  }
+
   useEffect(() => {
     // Grab existing session
     supabase.auth.getSession().then(({ data }) => {
@@ -27,21 +36,19 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function fetchProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    if (data) setProfile(data)
-  }
-
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut, isSuperAdmin: profile?.is_super_admin ?? false }}>
+    <AuthContext.Provider value={{
+      session,
+      profile,
+      loading,
+      signOut,
+      isSuperAdmin: profile?.is_super_admin ?? false,
+      canCreateLeague: profile?.can_create_league ?? false
+    }}>
       {children}
     </AuthContext.Provider>
   )

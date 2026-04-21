@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SectionLabel } from '../components/ui-new'
 import { useLocalStorage } from '../hooks/useLocalStorage'
@@ -68,8 +69,38 @@ function SettingsRow({ icon, iconColor = 'text-dim', label, right, border = true
 // ─── Settings page ────────────────────────────────────────────────────────────
 export default function Settings() {
   const navigate = useNavigate()
-  const { signOut, profile } = useAuth()
+  const { signOut, profile, isSuperAdmin } = useAuth()
   const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);
+  const [allUsers, setAllUsers] = useState([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+
+  // Fetch users if superadmin
+  useEffect(() => {
+    if (isSuperAdmin) {
+      setLoadingUsers(true)
+      import('../lib/supabase').then(({ supabase }) => {
+        supabase.from('profiles').select('*').order('full_name').then(({ data }) => {
+          if (data) setAllUsers(data)
+          setLoadingUsers(false)
+        })
+      })
+    }
+  }, [isSuperAdmin])
+
+  const toggleCreateLeague = async (userId, currentVal) => {
+    const nextVal = !currentVal
+    // Optimistic update
+    setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, can_create_league: nextVal } : u))
+    
+    const { supabase } = await import('../lib/supabase')
+    const { error } = await supabase.from('profiles').update({ can_create_league: nextVal }).eq('id', userId)
+    if (error) {
+      console.error('Failed to update permission:', error)
+      // Revert on error
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, can_create_league: currentVal } : u))
+    }
+  }
+
   const toggleDark = () => {
     const next = !isDark;
     setIsDark(next);
@@ -160,7 +191,10 @@ export default function Settings() {
               label="Log Out"
               right={
                 <button
-                  onClick={async () => { await signOut(); navigate('/login', { replace: true }) }}
+                  onClick={async () => {
+                    navigate('/', { replace: true })
+                    await signOut()
+                  }}
                   className="text-error text-[12px] font-bold bg-transparent border-0 cursor-pointer"
                 >
                   Sign out
@@ -175,6 +209,41 @@ export default function Settings() {
               border={false}
             />
           </div>
+
+          {/* ── Admin Area ── */}
+          {isSuperAdmin && (
+            <>
+              <SectionLabel color="error">Admin: User Permissions</SectionLabel>
+              <div className="bg-surface rounded-xl border border-line mb-3 overflow-hidden">
+                {loadingUsers ? (
+                  <div className="text-[13px] text-dim py-3 text-center">Loading users...</div>
+                ) : allUsers.length > 0 ? (
+                  allUsers.map((u, i) => (
+                    <div key={u.id} className={`px-3.5 py-1 ${i < allUsers.length - 1 ? 'border-b border-line' : ''}`}>
+                      <SettingsRow
+                        icon={<UserIcon />}
+                        label={
+                          <div className="flex flex-col">
+                            <span className="text-[13px] text-text font-medium">{u.full_name || 'Unknown'}</span>
+                            <span className="text-[10px] text-dim">{u.email || u.id.slice(0, 8)}</span>
+                          </div>
+                        }
+                        right={
+                          <Toggle
+                            on={u.can_create_league}
+                            onClick={() => toggleCreateLeague(u.id, u.can_create_league)}
+                          />
+                        }
+                        border={false}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-[13px] text-dim py-3 text-center">No users found</div>
+                )}
+              </div>
+            </>
+          )}
 
         </div>
       </main>

@@ -4,7 +4,7 @@ import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
-import { deleteLeague } from '../services/leagueService'
+import { deleteLeague, leaveLeague } from '../services/leagueService'
 import { buildInviteLink, regenerateInviteCode } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 
@@ -55,18 +55,30 @@ const NAV_ITEMS = [
 ]
 
 // ── Players Tab ───────────────────────────────────────────────────────────────
-function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
+function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId }) {
   const [newName, setNewName]   = useState('')
   const [newLevel, setNewLevel] = useState('beginner')
   const [adding, setAdding]     = useState(false)
-  const [showForm, setShowForm] = useState(false)
+  const [formMode, setFormMode] = useState(null) // 'join' or 'add'
+  const [linkingPlayerId, setLinkingPlayerId] = useState(null)
+  const [selectedUserId, setSelectedUserId]   = useState('')
+
+  const myPlayer = (league?.players || []).find(p => p.userId === currentUserId)
+
+  // Find members who are not yet linked to any player
+  const unlinkedMembers = (league?.members || []).filter(m => 
+    !league.players?.some(p => p.userId === m.userId)
+  )
 
   async function handleAdd() {
     if (!newName.trim()) return
     setAdding(true)
     try {
-      await onAdd({ name: newName.trim(), level: newLevel })
-      setNewName(''); setNewLevel('beginner'); setShowForm(false)
+      const payload = { name: newName.trim(), level: newLevel }
+      if (formMode === 'join') payload.userId = currentUserId
+      
+      await onAdd(payload)
+      setNewName(''); setNewLevel('beginner'); setFormMode(null)
     } finally {
       setAdding(false)
     }
@@ -74,18 +86,29 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
 
   return (
     <div>
-      {isAdmin && (
-        <div className="flex justify-end mb-2.5">
-          <button
-            onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
-          >
-            <PlusIcon /> Add Player
-          </button>
+      <div className="flex justify-between items-center mb-2.5">
+        <span className="text-[12px] font-bold text-accent tracking-wide uppercase">Roster</span>
+        <div className="flex gap-2">
+          {!myPlayer && (
+            <button
+              onClick={() => setFormMode(formMode === 'join' ? null : 'join')}
+              className="flex items-center gap-1 text-[11px] font-semibold text-free cursor-pointer bg-transparent border-0"
+            >
+              <PlusIcon /> Join
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setFormMode(formMode === 'add' ? null : 'add')}
+              className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
+            >
+              <PlusIcon /> Add Player
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
-      {showForm && isAdmin && (
+      {formMode && (
         <div className="bg-surface border border-line rounded-xl p-3.5 mb-3">
           <input
             value={newName}
@@ -104,7 +127,7 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
           </select>
           <div className="flex gap-2">
             <button
-              onClick={() => setShowForm(false)}
+              onClick={() => setFormMode(null)}
               className="flex-1 py-2 rounded-lg bg-alt border border-line text-[12px] font-semibold text-dim"
             >
               Cancel
@@ -114,7 +137,7 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
               disabled={adding || !newName.trim()}
               className="flex-1 py-2 rounded-lg bg-accent border-0 text-[12px] font-bold text-white disabled:opacity-50"
             >
-              {adding ? 'Adding…' : 'Add'}
+              {adding ? 'Saving…' : 'Save'}
             </button>
           </div>
         </div>
@@ -124,23 +147,120 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
         {(league?.players || []).length === 0 ? (
           <div className="text-center text-[13px] text-dim py-6">No players yet</div>
         ) : (
-          (league.players || []).map((p, i, arr) => (
-            <div key={p.id} className={`flex items-center px-3.5 py-2.5 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
-              <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text mr-2.5 flex-shrink-0">
-                {p.name[0]}
+          (league.players || []).map((p, i, arr) => {
+            const isMe = p.userId === currentUserId
+            const isUnclaimed = !p.userId
+            const isLinkingThis = linkingPlayerId === p.id
+            
+            return (
+              <div key={p.id} className={`flex items-center px-3.5 py-2.5 flex-wrap gap-y-2 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-semibold mr-2.5 flex-shrink-0 ${isMe ? 'bg-accent/20 text-accent' : 'bg-alt text-text'}`}>
+                  {p.name[0]}
+                </div>
+                <div className="flex-1 min-w-[120px] flex items-center gap-2">
+                  <span className={`text-[13px] font-medium truncate ${isMe ? 'text-accent' : 'text-text'}`}>
+                    {p.name}
+                  </span>
+                  {isMe && (
+                    <span className="text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded">
+                      YOU
+                    </span>
+                  )}
+                  {p.userId && !isMe && (
+                    <span className="text-[9px] font-bold bg-success/20 text-success px-1.5 py-0.5 rounded" title="Account linked">
+                      ✓
+                    </span>
+                  )}
+                </div>
+                
+                <span className="text-[10px] text-dim capitalize mr-3 min-w-[50px] text-right">{p.level}</span>
+                
+                {/* Regular users claiming themselves (Optional: keeping this for regular users if you want them to be able to claim, but usually admins handle this)
+                    Let's only show this if I am an admin OR if I don't have a player yet. */}
+                {!myPlayer && isUnclaimed && !isAdmin && (
+                  <button
+                    onClick={() => onUpdate(p.id, { userId: currentUserId })}
+                    className="text-free text-[10px] font-bold bg-free/15 px-2 py-1 rounded cursor-pointer mr-2 border-0"
+                  >
+                    Claim
+                  </button>
+                )}
+
+                {/* Admin controls */}
+                <div className="flex items-center gap-2 ml-auto">
+                  {isAdmin && isUnclaimed && !isLinkingThis && (
+                    <button
+                      onClick={() => {
+                        setLinkingPlayerId(p.id)
+                        setSelectedUserId('')
+                      }}
+                      className="text-free text-[10px] font-bold bg-free/15 px-2 py-1 rounded cursor-pointer border-0"
+                    >
+                      Link
+                    </button>
+                  )}
+                  
+                  {isAdmin && p.userId && (
+                     <button
+                      onClick={() => onUpdate(p.id, { userId: null })}
+                      className="text-dim text-[10px] font-bold bg-transparent border-0 cursor-pointer"
+                    >
+                      Unlink
+                    </button>
+                  )}
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => onDelete(p.id)}
+                      className="text-error text-[10px] font-bold bg-transparent border-0 cursor-pointer ml-1"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                {/* Linking UI dropdown for Admins */}
+                {isLinkingThis && (
+                  <div className="w-full flex items-center gap-2 mt-1 bg-bg p-2 rounded-lg border border-line">
+                    <select
+                      value={selectedUserId}
+                      onChange={e => setSelectedUserId(e.target.value)}
+                      className="flex-1 bg-surface border border-line rounded px-2 py-1 text-[11px] text-text outline-none focus:border-accent"
+                    >
+                      <option value="">Select member...</option>
+                      {unlinkedMembers.map(m => (
+                        <option key={m.userId} value={m.userId}>
+                          {m.fullName || 'Unknown'} ({m.role})
+                        </option>
+                      ))}
+                      {unlinkedMembers.length === 0 && (
+                        <option disabled>No unlinked members</option>
+                      )}
+                    </select>
+                    <button
+                      onClick={() => setLinkingPlayerId(null)}
+                      className="text-dim text-[11px] font-semibold bg-transparent border-0 cursor-pointer px-2"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (selectedUserId) {
+                          onUpdate(p.id, { userId: selectedUserId })
+                          setLinkingPlayerId(null)
+                        }
+                      }}
+                      disabled={!selectedUserId}
+                      className="text-white text-[11px] font-bold bg-accent px-3 py-1 rounded cursor-pointer border-0 disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                  </div>
+                )}
+
               </div>
-              <span className="flex-1 text-[13px] font-medium text-text truncate">{p.name}</span>
-              <span className="text-[10px] text-dim capitalize mr-3">{p.level}</span>
-              {isAdmin && (
-                <button
-                  onClick={() => onDelete(p.id)}
-                  className="text-error text-[10px] font-bold bg-transparent border-0 cursor-pointer"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>
@@ -148,11 +268,13 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
 }
 
 // ── Settings Tab ──────────────────────────────────────────────────────────────
-function SettingsTab({ league, isAdmin, isSuperAdmin, refetch }) {
+function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) {
   const navigate               = useNavigate()
   const [copying, setCopying]  = useState(false)
   const [regen,   setRegen]    = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [leaving, setLeaving]   = useState(false)
+  const isOwner = league?.ownerId === currentUserId;
   const inviteLink = buildInviteLink(league?.inviteCode || '')
 
   async function handleCopy() {
@@ -183,38 +305,48 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch }) {
     }
   }
 
-  if (!isAdmin && !isSuperAdmin) {
-    return (
-      <div className="text-[13px] text-dim text-center py-10">
-        Only admins can view league settings.
-      </div>
-    )
+  async function handleLeave() {
+    if (!window.confirm(`Leave "${league.name}"? You will be unlinked from your player profile.`)) return
+    setLeaving(true)
+    try {
+      await leaveLeague(league.id)
+      navigate('/')
+    } catch (err) {
+      alert(err.message || 'Failed to leave league.')
+      setLeaving(false)
+    }
   }
+
+
 
   return (
     <div>
-      <SectionLabel color="accent">Invite Players</SectionLabel>
-      <div className="bg-surface border border-line rounded-xl p-4 mb-4">
-        <div className="text-[11px] text-dim mb-2">Share this link to invite players:</div>
-        <div className="flex items-center gap-2 bg-bg border border-line rounded-lg px-3 py-2 mb-3">
-          <span className="flex-1 text-[11px] text-text truncate">{inviteLink}</span>
-          <button
-            onClick={handleCopy}
-            className="text-accent flex items-center gap-1 text-[11px] font-bold bg-transparent border-0 cursor-pointer flex-shrink-0"
-          >
-            <CopyIcon /> {copying ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-        {isAdmin && (
-          <button
-            onClick={handleRegen}
-            disabled={regen}
-            className="text-[11px] text-dim font-semibold bg-transparent border-0 cursor-pointer disabled:opacity-50"
-          >
-            {regen ? 'Regenerating…' : '↻ Regenerate code'}
-          </button>
-        )}
-      </div>
+      {(isAdmin || isSuperAdmin) && (
+        <>
+          <SectionLabel color="accent">Invite Players</SectionLabel>
+          <div className="bg-surface border border-line rounded-xl p-4 mb-4">
+            <div className="text-[11px] text-dim mb-2">Share this link to invite players:</div>
+            <div className="flex items-center gap-2 bg-bg border border-line rounded-lg px-3 py-2 mb-3">
+              <span className="flex-1 text-[11px] text-text truncate">{inviteLink}</span>
+              <button
+                onClick={handleCopy}
+                className="text-accent flex items-center gap-1 text-[11px] font-bold bg-transparent border-0 cursor-pointer flex-shrink-0"
+              >
+                <CopyIcon /> {copying ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            {isAdmin && (
+              <button
+                onClick={handleRegen}
+                disabled={regen}
+                className="text-[11px] text-dim font-semibold bg-transparent border-0 cursor-pointer disabled:opacity-50"
+              >
+                {regen ? 'Regenerating…' : '↻ Regenerate code'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       <SectionLabel color="dim">Members</SectionLabel>
       <div className="bg-surface border border-line rounded-xl overflow-hidden">
@@ -238,17 +370,35 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch }) {
 
       <SectionLabel color="dim">Danger Zone</SectionLabel>
       <div className="bg-surface border border-error/30 rounded-xl p-4 mb-4">
-        <div className="text-[13px] font-semibold text-text mb-1">Delete League</div>
-        <div className="text-[11px] text-dim mb-3">
-          Permanently deletes the league, all tournaments, and all match history.
-        </div>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="w-full py-3 rounded-xl bg-error/10 border border-error/30 text-error font-bold text-[13px] disabled:opacity-50"
-        >
-          {deleting ? 'Deleting…' : 'Delete League'}
-        </button>
+        {isOwner ? (
+          <>
+            <div className="text-[13px] font-semibold text-text mb-1">Delete League</div>
+            <div className="text-[11px] text-dim mb-3">
+              Permanently deletes the league, all tournaments, and all match history.
+            </div>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="w-full py-3 rounded-xl bg-error/10 border border-error/30 text-error font-bold text-[13px] disabled:opacity-50"
+            >
+              {deleting ? 'Deleting…' : 'Delete League'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-[13px] font-semibold text-text mb-1">Leave League</div>
+            <div className="text-[11px] text-dim mb-3">
+              You will lose access to this league and its tournaments. Your match history will remain.
+            </div>
+            <button
+              onClick={handleLeave}
+              disabled={leaving}
+              className="w-full py-3 rounded-xl bg-error/10 border border-error/30 text-error font-bold text-[13px] disabled:opacity-50"
+            >
+              {leaving ? 'Leaving…' : 'Leave League'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -262,17 +412,35 @@ export default function LeagueDetail() {
 
   const { league, loading, error, refetch } = useLeague(id)
   const { isAdmin, isSuperAdmin }            = useLeagueRole(id)
+  const { profile }                          = useAuth()
 
   // ── Player mutations ──────────────────────────────────────────────────────
   async function handleAddPlayer(data) {
-    await addPlayer(id, data)
-    refetch()
+    try {
+      await addPlayer(id, data)
+      refetch()
+    } catch (err) {
+      alert(err.message || 'Failed to add player.')
+    }
+  }
+
+  async function handleUpdatePlayer(playerId, updates) {
+    try {
+      await updatePlayer(playerId, updates)
+      refetch()
+    } catch (err) {
+      alert(err.message || 'Failed to update player.')
+    }
   }
 
   async function handleDeletePlayer(playerId) {
     if (!window.confirm('Remove this player from the league?')) return
-    await deletePlayer(playerId)
-    refetch()
+    try {
+      await deletePlayer(playerId)
+      refetch()
+    } catch (err) {
+      alert(err.message || 'Failed to delete player.')
+    }
   }
 
   if (loading) {
@@ -353,6 +521,8 @@ export default function LeagueDetail() {
               isAdmin={isAdmin}
               onAdd={handleAddPlayer}
               onDelete={handleDeletePlayer}
+              onUpdate={handleUpdatePlayer}
+              currentUserId={profile?.id}
             />
           )}
 
@@ -412,7 +582,7 @@ export default function LeagueDetail() {
 
           {/* ════ Settings tab ════ */}
           {activeTab === 'settings' && (
-            <SettingsTab league={league} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} refetch={refetch} />
+            <SettingsTab league={league} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} refetch={refetch} currentUserId={profile?.id} />
           )}
 
         </div>

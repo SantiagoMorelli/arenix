@@ -32,6 +32,7 @@ export async function updatePlayer(playerId, updates) {
   if (updates.wins  !== undefined) dbUpdates.wins  = updates.wins
   if (updates.losses !== undefined) dbUpdates.losses = updates.losses
   if (updates.points !== undefined) dbUpdates.points = updates.points
+  if (updates.userId !== undefined) dbUpdates.user_id = updates.userId
 
   const { data, error } = await supabase
     .from('players')

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getMyLeagues, createLeague } from '../services/leagueService'
+import { getMyLeagues, getLeagueById, createLeague } from '../services/leagueService'
+import { getFreePlays } from '../services/freePlayService'
 import { BottomNav, IconButton, SectionLabel, AppBadge } from '../components/ui-new'
 import NotificationPanel from '../components/NotificationPanel'
 
@@ -106,9 +107,11 @@ const NAV_ITEMS = [
 // ─── Home page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate()
-  const { profile, isSuperAdmin } = useAuth()
+  const { profile, isSuperAdmin, canCreateLeague } = useAuth()
+  const canCreate = isSuperAdmin || canCreateLeague
 
   const [leagues,    setLeagues]    = useState([])
+  const [recentFreePlay, setRecentFreePlay] = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [showNotifs, setShowNotifs] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
@@ -116,10 +119,29 @@ export default function Home() {
   const [creating,   setCreating]   = useState(false)
 
   useEffect(() => {
-    getMyLeagues()
-      .then(setLeagues)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    async function fetchData() {
+      try {
+        const shallowLeagues = await getMyLeagues()
+        if (shallowLeagues.length > 0) {
+          const activeLeagueId = shallowLeagues[0].id
+          const [fullLeague, freePlays] = await Promise.all([
+            getLeagueById(activeLeagueId),
+            getFreePlays(activeLeagueId)
+          ])
+          setLeagues([fullLeague, ...shallowLeagues.slice(1)])
+          if (freePlays.length > 0) {
+            setRecentFreePlay(freePlays[0])
+          }
+        } else {
+          setLeagues([])
+        }
+      } catch (err) {
+        console.error('Failed to load home data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
   }, [])
 
   const league        = leagues[0] || null
@@ -134,18 +156,36 @@ export default function Home() {
     { value: String(totalTeams),         label: 'Teams'       },
   ]
 
-  const recentActivity = [
-    ...[...tournaments].reverse().slice(0, 2).map(t => ({
-      id:           'tour-' + t.id,
-      title:        t.name,
-      sub:          `Tournament · ${t.date}`,
-      badge:        phaseLabel(t),
-      badgeVariant: phaseBadgeVariant(t),
+  const recentActivity = []
+  
+  if (tournaments.length > 0) {
+    const lastTour = tournaments[tournaments.length - 1]
+    recentActivity.push({
+      id:           'tour-' + lastTour.id,
+      title:        lastTour.name,
+      sub:          `Tournament · ${lastTour.date}`,
+      badge:        phaseLabel(lastTour),
+      badgeVariant: phaseBadgeVariant(lastTour),
       iconBg:       'bg-accent/15',
       iconColor:    'text-accent',
       Icon:         TrophyIcon,
-    })),
-  ].slice(0, 4)
+      onClick:      () => navigate(`/league/${league.id}/tournament/${lastTour.id}`)
+    })
+  }
+
+  if (recentFreePlay) {
+    recentActivity.push({
+      id:           'fp-' + recentFreePlay.id,
+      title:        recentFreePlay.name || 'Free Play Session',
+      sub:          `Free Play · ${new Date(recentFreePlay.created_at).toLocaleDateString('en-US')}`,
+      badge:        'Active',
+      badgeVariant: 'success',
+      iconBg:       'bg-free/15',
+      iconColor:    'text-free',
+      Icon:         PlayIcon,
+      onClick:      () => navigate('/free-play')
+    })
+  }
 
   async function handleCreateLeague(e) {
     e.preventDefault()
@@ -197,9 +237,11 @@ export default function Home() {
               <IconButton badge={3} onClick={() => setShowNotifs(v => !v)}>
                 <BellIcon />
               </IconButton>
-              <IconButton onClick={() => setShowCreate(true)}>
-                <PlusIcon />
-              </IconButton>
+              {canCreate && (
+                <IconButton onClick={() => setShowCreate(true)}>
+                  <PlusIcon />
+                </IconButton>
+              )}
               <IconButton onClick={() => navigate('/settings')}>
                 <GearIcon />
               </IconButton>
@@ -237,14 +279,16 @@ export default function Home() {
             </div>
           ) : (
             <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-dashed border-accent/40 text-center">
-              <div className="text-[13px] text-dim mb-2">No leagues yet</div>
-              <div className="text-[11px] text-dim mb-4">Join a league via invite link or create a new one.</div>
-              <button
-                onClick={() => setShowCreate(true)}
-                className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[13px]"
-              >
-                + Create League
-              </button>
+              <div className="text-[16px] font-bold text-text mb-1">No leagues yet</div>
+              <div className="text-[13px] text-dim mb-4">Join a league via invite link{canCreate ? ' or create a new one' : ''}.</div>
+              {canCreate && (
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[13px]"
+                >
+                  + Create League
+                </button>
+              )}
             </div>
           )}
 
@@ -273,6 +317,7 @@ export default function Home() {
               {recentActivity.map(item => (
                 <div
                   key={item.id}
+                  onClick={item.onClick}
                   className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
                 >
                   <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${item.iconBg} ${item.iconColor}`}>

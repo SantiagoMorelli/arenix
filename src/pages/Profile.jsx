@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BottomNav, SectionLabel } from '../components/ui-new'
+import { useAuth } from '../contexts/AuthContext'
+import { getMyLeagues, getLeagueById } from '../services/leagueService'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -33,35 +35,29 @@ const GearIcon = ({ size = 20 }) => (
   </Svg>
 )
 
-// ─── Hardcoded data ───────────────────────────────────────────────────────────
-const TOP_STATS = [
-  { value: '47',  label: 'Matches',  colorClass: 'text-accent'  },
-  { value: '28W', label: 'Wins',     colorClass: 'text-success' },
-  { value: '60%', label: 'Win Rate', colorClass: 'text-free'    },
-]
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getAllMatches(tour) {
+  return [
+    ...(tour.groups   || []).flatMap(g => g.matches || []),
+    ...(tour.knockout?.rounds || []).flatMap(r => r.matches || []),
+    ...(tour.matches  || []),
+  ]
+}
 
-const DETAIL_STATS = [
-  { value: '142', label: 'Total Points', emoji: '💥' },
-  { value: '38',  label: 'Aces',         emoji: '🎯' },
-  { value: '12',  label: 'Best Streak',  emoji: '🔥' },
-  { value: '#3',  label: 'League Rank',  emoji: '🏆' },
-]
+function getTeamName(teamId, tournament, leaguePlayers) {
+  const team = tournament.teams?.find(t => t.id === teamId)
+  if (!team) return 'Unknown'
+  return team.name || team.players?.map(pId => {
+    const p = leaguePlayers?.find(p => p.id === pId)
+    return p?.name?.split(' ')[0] || '?'
+  }).join(' & ') || 'Team'
+}
 
-const LEAGUES = [
-  { name: 'Miami Beach League', season: '2026', players: 24, rank: '#3', role: 'Player',
-    wins: '8W', losses: '4L', tournaments: '3' },
-  { name: 'South Beach Open',   season: '2025', players: 16, rank: '#1', role: 'Admin',
-    wins: '12W', losses: '2L', tournaments: '5' },
-]
-
-const MATCHES = [
-  { date: 'Apr 12', tourn: 'Spring Cup',  t1: 'Alpha',         t2: 'Bravo',       s1: 21, s2: 18, won: true,  type: 'Tournament' },
-  { date: 'Apr 10', tourn: 'Free Play',   t1: 'Santi & Marco', t2: 'Julia & Alex', s1: 15, s2: 21, won: false, type: 'Free Play'  },
-  { date: 'Apr 8',  tourn: 'Spring Cup',  t1: 'Alpha',         t2: 'Charlie',     s1: 21, s2: 12, won: true,  type: 'Tournament' },
-  { date: 'Apr 5',  tourn: 'Free Play',   t1: 'Santi & Ana',   t2: 'Diego & Luis', s1: 21, s2: 19, won: true,  type: 'Free Play'  },
-  { date: 'Apr 2',  tourn: 'Winter Clash',t1: 'Bravo',         t2: 'Delta',       s1: 18, s2: 21, won: false, type: 'Tournament' },
-]
-
+function isPlayerInTeam(playerId, teamId, tournament) {
+  const team = tournament.teams?.find(t => t.id === teamId)
+  if (!team || !team.players) return false
+  return team.players.includes(playerId)
+}
 const TABS = [
   { id: 'stats',   label: 'Stats'   },
   { id: 'leagues', label: 'Leagues' },
@@ -98,12 +94,11 @@ function PillTabs({ tabs, active, onChange }) {
 }
 
 // ─── Tab: Stats ───────────────────────────────────────────────────────────────
-function StatsTab() {
+function StatsTab({ details }) {
   return (
     <div className="flex flex-col gap-2">
-      {/* Detailed stats 2-col grid */}
       <div className="grid grid-cols-2 gap-2">
-        {DETAIL_STATS.map(s => (
+        {details.map(s => (
           <div key={s.label} className="bg-surface rounded-xl p-2.5 flex items-center gap-2.5 border border-line">
             <span className="text-[18px] leading-none">{s.emoji}</span>
             <div>
@@ -118,14 +113,19 @@ function StatsTab() {
 }
 
 // ─── Tab: Leagues ─────────────────────────────────────────────────────────────
-function LeaguesTab() {
+function LeaguesTab({ leagues }) {
   return (
     <div className="flex flex-col gap-2">
       <SectionLabel color="accent">My Leagues</SectionLabel>
 
-      {LEAGUES.map((lg, i) => (
+      {leagues.length === 0 && (
+        <div className="text-center text-[13px] text-dim py-8 border border-dashed border-line rounded-xl">
+          You are not in any leagues yet.
+        </div>
+      )}
+
+      {leagues.map((lg, i) => (
         <div key={i} className="bg-surface rounded-xl px-3.5 py-3 border border-line cursor-pointer active:opacity-80 transition-opacity">
-          {/* Name row */}
           <div className="flex justify-between items-start mb-2">
             <div className="flex-1 min-w-0 mr-2">
               <div className="text-[14px] font-bold text-text">{lg.name}</div>
@@ -135,14 +135,13 @@ function LeaguesTab() {
               <span className="text-[9px] font-bold text-accent bg-accent/15 px-2 py-[3px] rounded-md">
                 {lg.rank}
               </span>
-              {lg.role === 'Admin' && (
-                <span className="text-[9px] font-bold text-free bg-free/15 px-2 py-[3px] rounded-md">
+              {lg.role === 'admin' && (
+                <span className="text-[9px] font-bold text-free bg-free/15 px-2 py-[3px] rounded-md uppercase">
                   Admin
                 </span>
               )}
             </div>
           </div>
-          {/* Mini stats */}
           <div className="flex gap-2">
             {[
               { n: lg.wins,         l: 'Wins'        },
@@ -157,31 +156,28 @@ function LeaguesTab() {
           </div>
         </div>
       ))}
-
-      {/* Join CTA */}
-      <button className="w-full border border-dashed border-accent/50 rounded-xl py-3.5 text-[12px] font-semibold text-accent cursor-pointer bg-transparent mt-1">
-        + Join a League
-      </button>
     </div>
   )
 }
 
 // ─── Tab: Match history ───────────────────────────────────────────────────────
-function MatchesTab() {
+function MatchesTab({ matches }) {
   return (
     <div className="flex flex-col gap-1.5">
       <SectionLabel color="dim">Recent Matches</SectionLabel>
 
-      {MATCHES.map((m, i) => (
+      {matches.length === 0 && (
+        <div className="text-center text-[13px] text-dim py-8 border border-dashed border-line rounded-xl">
+          No matches played yet.
+        </div>
+      )}
+
+      {matches.map((m, i) => (
         <div key={i} className="bg-surface rounded-xl px-3.5 py-2.5 border border-line cursor-pointer active:opacity-80 transition-opacity">
-          {/* Top row: date + tournament + result */}
           <div className="flex justify-between items-center mb-1.5">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-dim">{m.date}</span>
-              <span className={`text-[9px] font-semibold px-1.5 py-[2px] rounded
-                ${m.type === 'Tournament'
-                  ? 'text-accent bg-accent/15'
-                  : 'text-free bg-free/15'}`}>
+              <span className={`text-[9px] font-semibold px-1.5 py-[2px] rounded text-accent bg-accent/15`}>
                 {m.tourn}
               </span>
             </div>
@@ -189,7 +185,6 @@ function MatchesTab() {
               {m.won ? 'WIN' : 'LOSS'}
             </span>
           </div>
-          {/* Score row */}
           <div className="flex items-center justify-between">
             <span className="text-[12px] font-semibold text-text flex-1 truncate">{m.t1}</span>
             <div className="flex items-center gap-1 px-2">
@@ -208,11 +203,118 @@ function MatchesTab() {
 // ─── Profile page ─────────────────────────────────────────────────────────────
 export default function Profile() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [activeTab, setActiveTab] = useState('stats')
+  const [data, setData] = useState({ leagues: [], matches: [], stats: {} })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAllData() {
+      if (!profile) return
+      try {
+        const shallowLeagues = await getMyLeagues()
+        const fullLeagues = await Promise.all(
+          shallowLeagues.map(l => getLeagueById(l.id))
+        )
+
+        let totalWins = 0
+        let totalLosses = 0
+        let totalPoints = 0
+        const matchesList = []
+        const userLeagues = []
+
+        fullLeagues.forEach(league => {
+          const myPlayerRecord = league.players?.find(p => p.userId === profile.id)
+          
+          if (myPlayerRecord) {
+            totalWins += (myPlayerRecord.wins || 0)
+            totalLosses += (myPlayerRecord.losses || 0)
+            totalPoints += (myPlayerRecord.points || 0)
+
+            const sortedPlayers = [...league.players].sort((a,b) => (b.points || 0) - (a.points || 0))
+            const myRank = sortedPlayers.findIndex(p => p.id === myPlayerRecord.id) + 1
+
+            userLeagues.push({
+              name: league.name,
+              season: league.season,
+              players: league.players?.length || 0,
+              rank: myRank > 0 ? `#${myRank}` : '-',
+              role: league.myRole || 'player',
+              wins: `${myPlayerRecord.wins || 0}W`,
+              losses: `${myPlayerRecord.losses || 0}L`,
+              tournaments: String(league.tournaments?.length || 0)
+            })
+
+            // Find all matches
+            league.tournaments?.forEach(tour => {
+              const allMatches = getAllMatches(tour).filter(m => m.played)
+              allMatches.forEach(m => {
+                const inTeam1 = isPlayerInTeam(myPlayerRecord.id, m.team1, tour)
+                const inTeam2 = isPlayerInTeam(myPlayerRecord.id, m.team2, tour)
+
+                if (inTeam1 || inTeam2) {
+                  const myTeamId = inTeam1 ? m.team1 : m.team2
+                  const won = m.winner === myTeamId
+                  
+                  matchesList.push({
+                    date: tour.date || new Date(tour.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    tourn: tour.name,
+                    t1: getTeamName(m.team1, tour, league.players),
+                    t2: getTeamName(m.team2, tour, league.players),
+                    s1: m.score1,
+                    s2: m.score2,
+                    won,
+                    created_at: tour.created_at // Use for sorting if needed
+                  })
+                }
+              })
+            })
+          }
+        })
+
+        const totalMatches = totalWins + totalLosses
+        const winRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0
+
+        setData({
+          leagues: userLeagues,
+          matches: matchesList.reverse(), // Simple reverse to show newest first
+          stats: {
+            top: [
+              { value: String(totalMatches), label: 'Matches',  colorClass: 'text-accent'  },
+              { value: `${totalWins}W`,      label: 'Wins',     colorClass: 'text-success' },
+              { value: `${winRate}%`,        label: 'Win Rate', colorClass: 'text-free'    },
+            ],
+            detail: [
+              { value: String(totalPoints), label: 'Total Points', emoji: '💥' },
+              { value: '-',                 label: 'Aces',         emoji: '🎯' }, // Placeholder for now
+              { value: '-',                 label: 'Best Streak',  emoji: '🔥' }, // Placeholder for now
+              { value: userLeagues[0]?.rank || '-', label: 'Best Rank', emoji: '🏆' },
+            ]
+          }
+        })
+      } catch (err) {
+        console.error("Failed to load profile data", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAllData()
+  }, [profile])
 
   const handleNavChange = (tab) => {
     if (tab === 'home') navigate('/')
     else if (tab === 'profile') navigate('/profile')
+  }
+
+  const displayName = profile?.full_name?.split(' ')[0] || 'Player'
+  const initial = displayName[0] || '?'
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-screen bg-bg text-text items-center justify-center">
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -225,20 +327,20 @@ export default function Profile() {
           {/* ── Avatar + name row ── */}
           <div className="flex items-center gap-3.5 pt-4 mb-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-free flex items-center justify-center text-[22px] font-extrabold text-white flex-shrink-0">
-              S
+              {initial}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[18px] font-bold text-text">Santi</div>
-              <div className="text-[11px] text-dim">Playing since 2024</div>
+              <div className="text-[18px] font-bold text-text">{displayName}</div>
+              <div className="text-[11px] text-dim">Playing since {new Date(profile?.created_at || Date.now()).getFullYear()}</div>
             </div>
-            <button className="text-dim cursor-pointer bg-transparent border-0 p-1">
+            <button className="text-dim cursor-pointer bg-transparent border-0 p-1" onClick={() => navigate('/settings')}>
               <GearIcon />
             </button>
           </div>
 
           {/* ── Top stats grid (3 col) ── */}
           <div className="grid grid-cols-3 gap-2 mb-4">
-            {TOP_STATS.map(s => (
+            {data.stats.top?.map(s => (
               <div key={s.label} className="bg-surface rounded-xl py-3 px-2 text-center border border-line">
                 <div className={`text-[20px] font-extrabold leading-tight ${s.colorClass}`}>{s.value}</div>
                 <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
@@ -250,9 +352,9 @@ export default function Profile() {
           <PillTabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
           {/* ── Tab content ── */}
-          {activeTab === 'stats'   && <StatsTab />}
-          {activeTab === 'leagues' && <LeaguesTab />}
-          {activeTab === 'matches' && <MatchesTab />}
+          {activeTab === 'stats'   && <StatsTab details={data.stats.detail || []} />}
+          {activeTab === 'leagues' && <LeaguesTab leagues={data.leagues} />}
+          {activeTab === 'matches' && <MatchesTab matches={data.matches} />}
 
         </div>
       </main>

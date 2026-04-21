@@ -71,7 +71,7 @@ export async function getLeagueById(leagueId) {
   const players = (playersRes.data || []).map(normalizePlayer)
 
   const tournaments = await Promise.all(
-    (tournamentsRes.data || []).map(t => normalizeTournament(t, players))
+    (tournamentsRes.data || []).map(t => normalizeTournament(t))
   )
 
   // Collapse multiple role rows per member into one entry with roles array
@@ -149,14 +149,14 @@ function normalizePlayer(row) {
  * Build a tournament object that matches the legacy localStorage shape:
  * { id, name, date, teamSize, setsPerMatch, phase, status, teams, groups, knockout, matches }
  */
-async function normalizeTournament(row, leaguePlayers) {
+async function normalizeTournament(row) {
   const tid = row.id
 
   const [teamsRes, groupsRes, koRoundsRes, matchesRes] = await Promise.all([
     supabase.from('teams').select('*, team_players(player_id)').eq('tournament_id', tid),
     supabase.from('groups').select('*, group_teams(team_id)').eq('tournament_id', tid).order('sort_order'),
     supabase.from('knockout_rounds').select('*').eq('tournament_id', tid).order('sort_order'),
-    supabase.from('matches').select('*').eq('tournament_id', tid),
+    supabase.from('matches').select('*').eq('tournament_id', tid).order('created_at'),
   ])
 
   // Build teams (with player id arrays matching the legacy shape)
@@ -237,6 +237,40 @@ function normalizeMatch(m) {
  * Delete a league and all its nested data (cascades via FK constraints).
  * Only league admins or superAdmins should call this.
  */
+
+/**
+ * Leave a league as a member. 
+ * This unlinks the user from their player profile, removes their role, and removes their permissions.
+ * The player profile remains in the league to preserve match history.
+ */
+export async function leaveLeague(leagueId) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  // 1. Unlink the user from any player profile in this league
+  await supabase
+    .from('players')
+    .update({ user_id: null })
+    .eq('league_id', leagueId)
+    .eq('user_id', user.id)
+
+  // 2. Remove all permissions for this user in this league
+  await supabase
+    .from('league_member_permissions')
+    .delete()
+    .eq('league_id', leagueId)
+    .eq('user_id', user.id)
+
+  // 3. Remove all roles for this user in this league
+  const { error } = await supabase
+    .from('league_member_roles')
+    .delete()
+    .eq('league_id', leagueId)
+    .eq('user_id', user.id)
+
+  if (error) throw error
+}
+
 export async function deleteLeague(leagueId) {
   const { error } = await supabase
     .from('leagues')

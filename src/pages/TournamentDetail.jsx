@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
-import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import { uid } from '../lib/utils'
 import GameStats from '../components/GameStats'
 
@@ -572,6 +572,14 @@ export default function TournamentDetail() {
       await supabaseSaveMatchResult(selectedMatch.id, s1, s2, winnerId)
       if (tournament.knockout) {
         await advanceKnockoutAfterMatch(selectedMatch.id, winnerId, tournament.knockout)
+        
+        // Check if this was the final match
+        const isFinal = tournament.knockout.rounds.some(
+          r => r.id === 'final' && r.matches.some(m => m.id === selectedMatch.id)
+        )
+        if (isFinal) {
+          await completeTournament(tid, winnerId)
+        }
       }
       handleCloseModal()
       refetch()

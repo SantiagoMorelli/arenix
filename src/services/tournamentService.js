@@ -135,6 +135,54 @@ export async function updateTournamentPhase(tournamentId, phase) {
 }
 
 /**
+ * After a knockout match result is saved, propagate the winner (and loser
+ * for semi-finals) into the next round's match slots in Supabase.
+ */
+export async function advanceKnockoutAfterMatch(playedMatchId, winnerId, knockout) {
+  const rounds = knockout?.rounds || []
+
+  let foundRound = null, foundRoundIdx = -1, foundMatchIdx = -1
+  for (let ri = 0; ri < rounds.length; ri++) {
+    const mi = rounds[ri].matches.findIndex(m => m.id === playedMatchId)
+    if (mi !== -1) { foundRound = rounds[ri]; foundRoundIdx = ri; foundMatchIdx = mi; break }
+  }
+  if (!foundRound) return
+
+  const loserId = foundRound.matches[foundMatchIdx].team1 === winnerId
+    ? foundRound.matches[foundMatchIdx].team2
+    : foundRound.matches[foundMatchIdx].team1
+
+  const updates = []
+
+  if (foundRound.id === 'semi') {
+    const finalRound = rounds.find(r => r.id === 'final')
+    const thirdRound = rounds.find(r => r.id === 'third_place')
+    const isFirst    = foundMatchIdx === 0
+
+    if (finalRound?.matches[0]) {
+      updates.push({ matchId: finalRound.matches[0].id, field: isFirst ? 'team1_id' : 'team2_id', value: winnerId })
+    }
+    if (thirdRound?.matches[0]) {
+      updates.push({ matchId: thirdRound.matches[0].id, field: isFirst ? 'team1_id' : 'team2_id', value: loserId })
+    }
+  } else {
+    const nextRound = rounds[foundRoundIdx + 1]
+    if (nextRound && nextRound.id !== 'final' && nextRound.id !== 'third_place') {
+      const nextMatchIdx = Math.floor(foundMatchIdx / 2)
+      const isFirst      = foundMatchIdx % 2 === 0
+      if (nextRound.matches[nextMatchIdx]) {
+        updates.push({ matchId: nextRound.matches[nextMatchIdx].id, field: isFirst ? 'team1_id' : 'team2_id', value: winnerId })
+      }
+    }
+  }
+
+  for (const u of updates) {
+    const { error } = await supabase.from('matches').update({ [u.field]: u.value }).eq('id', u.matchId)
+    if (error) throw error
+  }
+}
+
+/**
  * Save full knockout structure (rounds + matches) to Supabase.
  * Called after "Generate Knockout" is triggered.
  */

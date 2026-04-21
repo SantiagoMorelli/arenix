@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
-import { saveMatchResult as supabaseSaveMatchResult } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
@@ -210,6 +210,9 @@ export default function LiveMatch() {
 
     try {
       await supabaseSaveMatchResult(matchId, finalScore1, finalScore2, winnerTeamId, log, sets)
+      if (tournament?.knockout) {
+        await advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
+      }
     } catch (err) {
       console.error('Failed to save match result:', err)
     }

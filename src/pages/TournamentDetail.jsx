@@ -515,8 +515,8 @@ export default function TournamentDetail() {
   // ── Match Start Modal State ──
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showScoreForm, setShowScoreForm] = useState(false)
-  const [manualScore1, setManualScore1]   = useState('')
-  const [manualScore2, setManualScore2]   = useState('')
+  const [manualScore1, setManualScore1]   = useState('0')
+  const [manualScore2, setManualScore2]   = useState('0')
 
   // ── Match Stats Overlay State ──
   const [selectedStatsMatch, setSelectedStatsMatch] = useState(null)
@@ -547,8 +547,8 @@ export default function TournamentDetail() {
   const handleStartMatchClick = (match) => {
     setSelectedMatch(match)
     setShowScoreForm(false)
-    setManualScore1('')
-    setManualScore2('')
+    setManualScore1('0')
+    setManualScore2('0')
   }
 
   const handleCloseModal = () => {
@@ -789,22 +789,36 @@ export default function TournamentDetail() {
               ) : (
                 // Score Entry Form
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type="number"
-                      value={manualScore1}
-                      onChange={e => setManualScore1(e.target.value)}
-                      placeholder="0"
-                      className="flex-1 text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
-                    />
-                    <span className="text-[24px] font-bold text-dim">-</span>
-                    <input 
-                      type="number"
-                      value={manualScore2}
-                      onChange={e => setManualScore2(e.target.value)}
-                      placeholder="0"
-                      className="flex-1 text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
-                    />
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1">
+                      <div className="text-[12px] font-semibold mb-1 text-dim text-center">
+                        {teamName(tournament.teams, selectedMatch.team1)}
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={manualScore1}
+                        onChange={e => setManualScore1(e.target.value)}
+                        placeholder="0"
+                        className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
+                      />
+                    </div>
+                    <div className="font-display text-[28px] text-dim pt-[22px]">—</div>
+                    <div className="flex-1">
+                      <div className="text-[12px] font-semibold mb-1 text-dim text-center">
+                        {teamName(tournament.teams, selectedMatch.team2)}
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={manualScore2}
+                        onChange={e => setManualScore2(e.target.value)}
+                        placeholder="0"
+                        className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
+                      />
+                    </div>
                   </div>
                   
                   <div className="text-[11px] text-center text-dim mt-1">

@@ -9,10 +9,11 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- profiles  (mirrors auth.users, created by trigger on signup)
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name  TEXT NOT NULL DEFAULT '',
-  avatar_url TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id             UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name      TEXT NOT NULL DEFAULT '',
+  avatar_url     TEXT,
+  is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Trigger: auto-create profile row when a new user signs up
@@ -51,24 +52,26 @@ CREATE TABLE IF NOT EXISTS public.league_members (
   league_id UUID NOT NULL REFERENCES public.leagues(id) ON DELETE CASCADE,
   user_id   UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   role      TEXT NOT NULL DEFAULT 'player'
-    CHECK (role IN ('admin', 'player', 'scorer', 'viewer')),
+    CHECK (role IN ('admin', 'player', 'viewer')),
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (league_id, user_id)
 );
 
 -- ──────────────────────────────────────────────────────────────
 -- league_member_roles  (multi-role junction; source of truth)
+-- Roles: admin | player | viewer  (scorer is a permission, not a role)
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.league_member_roles (
   league_id  UUID NOT NULL REFERENCES public.leagues(id) ON DELETE CASCADE,
   user_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  role       TEXT NOT NULL CHECK (role IN ('admin', 'player', 'scorer', 'viewer', 'owner')),
+  role       TEXT NOT NULL CHECK (role IN ('admin', 'player', 'viewer')),
   granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (league_id, user_id, role)
 );
 
 -- ──────────────────────────────────────────────────────────────
 -- league_member_permissions  (ad-hoc permission grants)
+-- score_match is NOT granted to players by default — must be explicit
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.league_member_permissions (
   league_id  UUID NOT NULL REFERENCES public.leagues(id) ON DELETE CASCADE,
@@ -84,27 +87,37 @@ CREATE TABLE IF NOT EXISTS public.league_member_permissions (
 -- Data migration from league_members → new tables
 -- Run ONCE in SQL Editor after deploying this schema.
 -- Safe to skip if league_members is empty.
+-- Note: old 'scorer' rows map to 'viewer' role + score_match permission.
 -- ──────────────────────────────────────────────────────────────
+-- -- Roles (scorer → viewer, owner → admin)
 -- INSERT INTO public.league_member_roles (league_id, user_id, role, granted_at)
--- SELECT league_id, user_id, role, joined_at FROM public.league_members
+-- SELECT
+--   league_id, user_id,
+--   CASE role WHEN 'scorer' THEN 'viewer' WHEN 'owner' THEN 'admin' ELSE role END,
+--   joined_at
+-- FROM public.league_members
 -- ON CONFLICT DO NOTHING;
 --
+-- -- Admin permissions (all 5)
 -- INSERT INTO public.league_member_permissions (league_id, user_id, permission, granted_at)
 -- SELECT league_id, user_id, p.permission, joined_at
 -- FROM public.league_members
 -- CROSS JOIN (VALUES ('manage_league'),('create_tournament'),('invite_players'),('score_match'),('edit_profile')) AS p(permission)
 -- WHERE role = 'admin' ON CONFLICT DO NOTHING;
 --
+-- -- Player permissions (edit_profile only — score_match must be granted explicitly)
+-- INSERT INTO public.league_member_permissions (league_id, user_id, permission, granted_at)
+-- SELECT league_id, user_id, 'edit_profile', joined_at
+-- FROM public.league_members WHERE role = 'player' ON CONFLICT DO NOTHING;
+--
+-- -- Scorer → viewer role + score_match permission
 -- INSERT INTO public.league_member_permissions (league_id, user_id, permission, granted_at)
 -- SELECT league_id, user_id, p.permission, joined_at
 -- FROM public.league_members
 -- CROSS JOIN (VALUES ('score_match'),('edit_profile')) AS p(permission)
--- WHERE role = 'player' ON CONFLICT DO NOTHING;
+-- WHERE role = 'scorer' ON CONFLICT DO NOTHING;
 --
--- INSERT INTO public.league_member_permissions (league_id, user_id, permission, granted_at)
--- SELECT league_id, user_id, 'score_match', joined_at
--- FROM public.league_members WHERE role = 'scorer' ON CONFLICT DO NOTHING;
---
+-- -- Viewer permissions (edit_profile only)
 -- INSERT INTO public.league_member_permissions (league_id, user_id, permission, granted_at)
 -- SELECT league_id, user_id, 'edit_profile', joined_at
 -- FROM public.league_members WHERE role = 'viewer' ON CONFLICT DO NOTHING;
@@ -159,8 +172,7 @@ CREATE TABLE IF NOT EXISTS public.teams (
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
+    SELECT 1 FROM pg_constraint
     WHERE conname = 'fk_tournament_winner'
       AND conrelid = 'public.tournaments'::regclass
   ) THEN
@@ -168,7 +180,8 @@ BEGIN
       ADD CONSTRAINT fk_tournament_winner
       FOREIGN KEY (winner_team_id) REFERENCES public.teams(id) ON DELETE SET NULL;
   END IF;
-END $$;
+END
+$$;
 
 -- ──────────────────────────────────────────────────────────────
 -- team_players  (junction: which players are in which team)
@@ -288,6 +301,15 @@ ALTER TABLE public.free_play_teams            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.free_play_team_players     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.free_play_games            ENABLE ROW LEVEL SECURITY;
 
+-- ── Platform-level superadmin check ──
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND is_super_admin = TRUE
+  )
+$$;
+
 -- ── Legacy helper (kept for backward compat; drop after Step 9 cleanup) ──
 CREATE OR REPLACE FUNCTION public.my_league_role(league UUID)
 RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER AS $$
@@ -296,27 +318,33 @@ RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER AS $$
   LIMIT 1
 $$;
 
--- ── New helpers ──
+-- ── League-scoped helpers (all respect superadmin) ──
 
+-- Returns true if the current user holds the given role in the league,
+-- or if they are a platform superadmin.
 CREATE OR REPLACE FUNCTION public.my_league_has_role(league UUID, check_role TEXT)
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT EXISTS (
+  SELECT public.is_super_admin() OR EXISTS (
     SELECT 1 FROM public.league_member_roles
     WHERE league_id = league AND user_id = auth.uid() AND role = check_role
   )
 $$;
 
+-- Returns true if the current user has the given permission in the league,
+-- or if they are a platform superadmin.
 CREATE OR REPLACE FUNCTION public.my_league_has_permission(league UUID, perm TEXT)
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT EXISTS (
+  SELECT public.is_super_admin() OR EXISTS (
     SELECT 1 FROM public.league_member_permissions
     WHERE league_id = league AND user_id = auth.uid() AND permission = perm
   )
 $$;
 
+-- Returns true if the current user is a member of the league,
+-- or if they are a platform superadmin (bypass membership requirement).
 CREATE OR REPLACE FUNCTION public.my_league_is_member(league UUID)
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT EXISTS (
+  SELECT public.is_super_admin() OR EXISTS (
     SELECT 1 FROM public.league_member_roles
     WHERE league_id = league AND user_id = auth.uid()
   )

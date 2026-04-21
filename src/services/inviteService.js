@@ -3,12 +3,12 @@
  */
 import { supabase } from '../lib/supabase'
 
+// Default permissions per role.
+// score_match is NOT included for player — it must be granted explicitly.
 const ROLE_PERMISSIONS = {
   admin:  ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile'],
-  player: ['score_match', 'edit_profile'],
-  scorer: ['score_match'],
+  player: ['edit_profile'],
   viewer: ['edit_profile'],
-  owner:  ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile'],
 }
 
 /**
@@ -30,6 +30,12 @@ export async function getLeagueByInviteCode(code) {
  * Join a league as 'player' (default role for invite links).
  * Safely handles the case where the user is already a member.
  */
+/**
+ * Join a league as 'player' (default role for invite links).
+ * Superadmins can call this directly without an invite code — the platform
+ * grants them access to all leagues regardless, but calling joinLeague
+ * formally sets up their role and permission rows.
+ */
 export async function joinLeague(leagueId) {
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -50,6 +56,7 @@ export async function joinLeague(leagueId) {
       user_id:   user.id,
       role:      'player',
     }),
+    // player default: edit_profile only — score_match must be granted explicitly
     supabase.from('league_member_permissions').insert(
       ROLE_PERMISSIONS.player.map(permission => ({
         league_id: leagueId,

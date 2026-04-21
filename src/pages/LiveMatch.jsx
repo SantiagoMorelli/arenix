@@ -169,8 +169,8 @@ export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
 
-  const { league, refetch } = useLeague(id)
-  const { canScore }        = useLeagueRole(id)
+  const { league, loading: leagueLoading, refetch } = useLeague(id)
+  const { canScore, loading: roleLoading }          = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
 
   // Get all matches flat to pass to the hook
@@ -185,7 +185,10 @@ export default function LiveMatch() {
     players: league?.players || [],
     informalMode: false,
     tournamentMatches: allMatches,
-    preloadMatchId: mid,
+    // Delay preload until tournament data is available so the useLiveGame
+    // effect fires with a populated tournamentMatches array (it only re-runs
+    // when preloadMatchId changes, so null → mid triggers correct population).
+    preloadMatchId: tournament ? mid : null,
     t,
     setsPerMatch: tournament?.setsPerMatch || 1
   })
@@ -213,6 +216,15 @@ export default function LiveMatch() {
 
     try { localStorage.removeItem(SAVE_KEY) } catch { /* ignored */ }
     navigate(`/league/${id}/tournament/${tid}`)
+  }
+
+  // Show spinner while league or role data is loading
+  if (leagueLoading || roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-bg">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   // Redirect viewers away from the live match screen

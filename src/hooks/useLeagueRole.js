@@ -1,15 +1,18 @@
 /**
- * useLeagueRole — returns the current user's role within a specific league.
+ * useLeagueRole — returns the current user's roles and permissions within a league.
  *
  * Usage:
- *   const { role, isAdmin, canScore, canManage, loading } = useLeagueRole(leagueId)
+ *   const { role, roles, permissions, isAdmin, canScore, canManage, can, loading } = useLeagueRole(leagueId)
+ *
+ * Backward-compatible: role, isAdmin, canScore, canManage all behave as before.
  */
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export function useLeagueRole(leagueId) {
-  const [role,    setRole]    = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [roles,       setRoles]       = useState([])
+  const [permissions, setPermissions] = useState(new Set())
+  const [loading,     setLoading]     = useState(true)
 
   useEffect(() => {
     if (!leagueId) { setLoading(false); return }
@@ -18,17 +21,27 @@ export function useLeagueRole(leagueId) {
 
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { if (!cancelled) { setRole(null); setLoading(false) }; return }
+      if (!user) {
+        if (!cancelled) { setRoles([]); setPermissions(new Set()); setLoading(false) }
+        return
+      }
 
-      const { data } = await supabase
-        .from('league_members')
-        .select('role')
-        .eq('league_id', leagueId)
-        .eq('user_id', user.id)
-        .single()
+      const [rolesRes, permsRes] = await Promise.all([
+        supabase
+          .from('league_member_roles')
+          .select('role')
+          .eq('league_id', leagueId)
+          .eq('user_id', user.id),
+        supabase
+          .from('league_member_permissions')
+          .select('permission')
+          .eq('league_id', leagueId)
+          .eq('user_id', user.id),
+      ])
 
       if (!cancelled) {
-        setRole(data?.role || null)
+        setRoles((rolesRes.data || []).map(r => r.role))
+        setPermissions(new Set((permsRes.data || []).map(r => r.permission)))
         setLoading(false)
       }
     }
@@ -37,9 +50,16 @@ export function useLeagueRole(leagueId) {
     return () => { cancelled = true }
   }, [leagueId])
 
-  const isAdmin    = role === 'admin'
-  const canScore   = role === 'admin' || role === 'scorer' || role === 'player'
-  const canManage  = role === 'admin'
+  // Legacy compat: first role string (or null)
+  const role     = roles[0] ?? null
+  const isAdmin  = roles.includes('admin')
+  // canScore is null during loading so LiveMatch guards (canScore === false) don't fire prematurely
+  const canScore  = loading ? null : permissions.has('score_match')
+  const canManage = permissions.has('manage_league') || permissions.has('create_tournament')
 
-  return { role, isAdmin, canScore, canManage, loading }
+  function can(permission) {
+    return permissions.has(permission)
+  }
+
+  return { role, roles, permissions, isAdmin, canScore, canManage, can, loading }
 }

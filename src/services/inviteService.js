@@ -1,7 +1,15 @@
 /**
- * inviteService — league invite-code management.
+ * inviteService — league invite-code management and member role/permission helpers.
  */
 import { supabase } from '../lib/supabase'
+
+const ROLE_PERMISSIONS = {
+  admin:  ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile'],
+  player: ['score_match', 'edit_profile'],
+  scorer: ['score_match'],
+  viewer: ['edit_profile'],
+  owner:  ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile'],
+}
 
 /**
  * Look up a league by its invite code.
@@ -25,23 +33,32 @@ export async function getLeagueByInviteCode(code) {
 export async function joinLeague(leagueId) {
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Check if already a member
+  // Check if already a member via new roles table
   const { data: existing } = await supabase
-    .from('league_members')
+    .from('league_member_roles')
     .select('role')
     .eq('league_id', leagueId)
     .eq('user_id', user.id)
+    .limit(1)
     .single()
 
   if (existing) return { role: existing.role, alreadyMember: true }
 
-  const { error } = await supabase.from('league_members').insert({
-    league_id: leagueId,
-    user_id:   user.id,
-    role:      'player',
-  })
+  await Promise.all([
+    supabase.from('league_member_roles').insert({
+      league_id: leagueId,
+      user_id:   user.id,
+      role:      'player',
+    }),
+    supabase.from('league_member_permissions').insert(
+      ROLE_PERMISSIONS.player.map(permission => ({
+        league_id: leagueId,
+        user_id:   user.id,
+        permission,
+      }))
+    ),
+  ])
 
-  if (error) throw error
   return { role: 'player', alreadyMember: false }
 }
 
@@ -50,7 +67,6 @@ export async function joinLeague(leagueId) {
  * Returns the new code.
  */
 export async function regenerateInviteCode(leagueId) {
-  // Generate new 8-char code in JS (fallback if SQL default not accessible)
   const newCode = Math.random().toString(36).substring(2, 10).toUpperCase()
 
   const { data, error } = await supabase
@@ -72,14 +88,68 @@ export function buildInviteLink(code) {
 }
 
 /**
- * Change a member's role (admin only).
+ * Change a member's role (admin only). Legacy shim — calls addMemberRole internally.
  */
 export async function changeMemberRole(leagueId, userId, newRole) {
+  await addMemberRole(leagueId, userId, newRole)
+}
+
+/**
+ * Grant a role to a member and upsert the default permissions for that role.
+ */
+export async function addMemberRole(leagueId, userId, role) {
+  const permissions = ROLE_PERMISSIONS[role] || []
+
+  const { error: roleError } = await supabase
+    .from('league_member_roles')
+    .upsert({ league_id: leagueId, user_id: userId, role })
+
+  if (roleError) throw roleError
+
+  if (permissions.length > 0) {
+    const { error: permError } = await supabase
+      .from('league_member_permissions')
+      .upsert(permissions.map(permission => ({ league_id: leagueId, user_id: userId, permission })))
+
+    if (permError) throw permError
+  }
+}
+
+/**
+ * Remove a single role from a member. Does not touch permissions.
+ */
+export async function removeMemberRole(leagueId, userId, role) {
   const { error } = await supabase
-    .from('league_members')
-    .update({ role: newRole })
+    .from('league_member_roles')
+    .delete()
     .eq('league_id', leagueId)
     .eq('user_id', userId)
+    .eq('role', role)
+
+  if (error) throw error
+}
+
+/**
+ * Grant an ad-hoc permission to a member (without changing their roles).
+ */
+export async function grantMemberPermission(leagueId, userId, permission) {
+  const { error } = await supabase
+    .from('league_member_permissions')
+    .upsert({ league_id: leagueId, user_id: userId, permission })
+
+  if (error) throw error
+}
+
+/**
+ * Revoke a specific permission from a member.
+ */
+export async function revokeMemberPermission(leagueId, userId, permission) {
+  const { error } = await supabase
+    .from('league_member_permissions')
+    .delete()
+    .eq('league_id', leagueId)
+    .eq('user_id', userId)
+    .eq('permission', permission)
 
   if (error) throw error
 }

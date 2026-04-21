@@ -28,19 +28,30 @@ function normalizeLeague(row) {
 /**
  * Fetch all leagues the current user is a member of.
  * Returns an array of normalized league objects (shallow — no nested data).
+ * Multiple role rows per league are collapsed into a single entry.
  */
 export async function getMyLeagues() {
   const { data, error } = await supabase
-    .from('league_members')
-    .select('league_id, role, leagues(*)')
-    .order('joined_at', { ascending: true })
+    .from('league_member_roles')
+    .select('league_id, role, granted_at, leagues(*)')
+    .order('granted_at', { ascending: true })
 
   if (error) throw error
 
-  return (data || []).map(row => ({
-    ...normalizeLeague(row.leagues),
-    myRole: row.role,
-  }))
+  // Collapse multiple role rows per league into one entry
+  const leagueMap = new Map()
+  for (const row of data || []) {
+    if (!leagueMap.has(row.league_id)) {
+      leagueMap.set(row.league_id, {
+        ...normalizeLeague(row.leagues),
+        myRole:  row.role,
+        myRoles: [row.role],
+      })
+    } else {
+      leagueMap.get(row.league_id).myRoles.push(row.role)
+    }
+  }
+  return [...leagueMap.values()]
 }
 
 /**
@@ -50,7 +61,7 @@ export async function getMyLeagues() {
 export async function getLeagueById(leagueId) {
   const [leagueRes, membersRes, playersRes, tournamentsRes] = await Promise.all([
     supabase.from('leagues').select('*').eq('id', leagueId).single(),
-    supabase.from('league_members').select('*, profiles(full_name, avatar_url)').eq('league_id', leagueId),
+    supabase.from('league_member_roles').select('user_id, role, granted_at, profiles(full_name, avatar_url)').eq('league_id', leagueId),
     supabase.from('players').select('*').eq('league_id', leagueId).order('created_at', { ascending: true }),
     supabase.from('tournaments').select('*').eq('league_id', leagueId).order('created_at', { ascending: true }),
   ])
@@ -63,13 +74,23 @@ export async function getLeagueById(leagueId) {
     (tournamentsRes.data || []).map(t => normalizeTournament(t, players))
   )
 
-  const members = (membersRes.data || []).map(m => ({
-    userId:    m.user_id,
-    role:      m.role,
-    joinedAt:  m.joined_at,
-    fullName:  m.profiles?.full_name || '',
-    avatarUrl: m.profiles?.avatar_url || null,
-  }))
+  // Collapse multiple role rows per member into one entry with roles array
+  const memberMap = new Map()
+  for (const m of membersRes.data || []) {
+    if (!memberMap.has(m.user_id)) {
+      memberMap.set(m.user_id, {
+        userId:    m.user_id,
+        role:      m.role,
+        roles:     [m.role],
+        joinedAt:  m.granted_at,
+        fullName:  m.profiles?.full_name || '',
+        avatarUrl: m.profiles?.avatar_url || null,
+      })
+    } else {
+      memberMap.get(m.user_id).roles.push(m.role)
+    }
+  }
+  const members = [...memberMap.values()]
 
   return {
     ...normalizeLeague(leagueRes.data),
@@ -93,12 +114,18 @@ export async function createLeague({ name, season = '2026' }) {
 
   if (error) throw error
 
-  // Add creator as admin
-  await supabase.from('league_members').insert({
-    league_id: league.id,
-    user_id:   user.id,
-    role:      'admin',
-  })
+  // Add creator as admin with full permissions
+  await Promise.all([
+    supabase.from('league_member_roles').insert({
+      league_id: league.id,
+      user_id:   user.id,
+      role:      'admin',
+    }),
+    supabase.from('league_member_permissions').insert(
+      ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile']
+        .map(permission => ({ league_id: league.id, user_id: user.id, permission }))
+    ),
+  ])
 
   return normalizeLeague(league)
 }

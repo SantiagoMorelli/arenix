@@ -54,9 +54,12 @@ function Toggle({ on, onClick, colorOn = 'bg-accent' }) {
 }
 
 // ─── Settings row ─────────────────────────────────────────────────────────────
-function SettingsRow({ icon, iconColor = 'text-dim', label, right, border = true }) {
+function SettingsRow({ icon, iconColor = 'text-dim', label, right, border = true, onClick }) {
   return (
-    <div className={`flex items-center gap-3 py-3 ${border ? 'border-b border-line' : ''}`}>
+    <div
+      className={`flex items-center gap-3 py-3 ${border ? 'border-b border-line' : ''} ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <div className={`w-[34px] h-[34px] rounded-[10px] bg-alt flex items-center justify-center flex-shrink-0 ${iconColor}`}>
         {icon}
       </div>
@@ -169,6 +172,7 @@ export default function Settings() {
               icon={<UserIcon />}
               label="Edit Profile"
               right={<span className="text-dim"><ArrowIcon /></span>}
+              onClick={() => navigate('/edit-profile')}
             />
             <SettingsRow
               icon={<MailIcon />}

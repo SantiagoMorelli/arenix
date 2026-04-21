@@ -40,12 +40,24 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  async function updateProfile(fields) {
+    const userId = session?.user?.id
+    if (!userId) return { error: new Error('Not authenticated') }
+    const { error } = await supabase
+      .from('profiles')
+      .update(fields)
+      .eq('id', userId)
+    if (!error) setProfile(prev => ({ ...prev, ...fields }))
+    return { error }
+  }
+
   return (
     <AuthContext.Provider value={{
       session,
       profile,
       loading,
       signOut,
+      updateProfile,
       isSuperAdmin: profile?.is_super_admin ?? false,
       canCreateLeague: profile?.can_create_league ?? false
     }}>

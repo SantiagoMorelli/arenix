@@ -35,6 +35,19 @@ const GearIcon = ({ size = 20 }) => (
   </Svg>
 )
 
+// ─── Country → flag emoji ──────────────────────────────────────────────────────
+const FLAG = {
+  argentina: '🇦🇷', 'united states': '🇺🇸', brazil: '🇧🇷', spain: '🇪🇸',
+  colombia: '🇨🇴', mexico: '🇲🇽', chile: '🇨🇱', uruguay: '🇺🇾',
+  france: '🇫🇷', germany: '🇩🇪', italy: '🇮🇹', australia: '🇦🇺',
+  portugal: '🇵🇹', japan: '🇯🇵', canada: '🇨🇦', uk: '🇬🇧',
+  'united kingdom': '🇬🇧', netherlands: '🇳🇱', sweden: '🇸🇪', norway: '🇳🇴',
+}
+function countryFlag(country) {
+  if (!country) return ''
+  return FLAG[country.toLowerCase()] || ''
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getAllMatches(tour) {
   return [
@@ -306,8 +319,11 @@ export default function Profile() {
     else if (tab === 'profile') navigate('/profile')
   }
 
-  const displayName = profile?.full_name?.split(' ')[0] || 'Player'
-  const initial = displayName[0] || '?'
+  const nickname    = profile?.nickname?.trim() || ''
+  const displayName = nickname || profile?.full_name?.split(' ')[0] || 'Player'
+  const initial     = displayName[0]?.toUpperCase() || '?'
+  const flag        = countryFlag(profile?.country)
+  const avatarUrl   = profile?.avatar_url?.startsWith('http') ? profile.avatar_url : null
 
   if (loading) {
     return (
@@ -326,11 +342,25 @@ export default function Profile() {
 
           {/* ── Avatar + name row ── */}
           <div className="flex items-center gap-3.5 pt-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-free flex items-center justify-center text-[22px] font-extrabold text-white flex-shrink-0">
-              {initial}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="avatar"
+                className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-free flex items-center justify-center text-[22px] font-extrabold text-white flex-shrink-0">
+                {initial}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <div className="text-[18px] font-bold text-text">{displayName}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[18px] font-bold text-text">{displayName}</span>
+                {flag && <span className="text-[16px] leading-none">{flag}</span>}
+              </div>
+              {nickname && profile?.full_name && (
+                <div className="text-[12px] text-dim truncate">{profile.full_name}</div>
+              )}
               <div className="text-[11px] text-dim">Playing since {new Date(profile?.created_at || Date.now()).getFullYear()}</div>
             </div>
             <button className="text-dim cursor-pointer bg-transparent border-0 p-1" onClick={() => navigate('/settings')}>

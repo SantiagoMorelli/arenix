@@ -28,6 +28,7 @@ import Signup              from './pages/Signup'
 import Home                from './pages/Home'
 import Profile             from './pages/Profile'
 import Settings            from './pages/Settings'
+import EditProfile         from './pages/EditProfile'
 import LeagueDetail        from './pages/LeagueDetail'
 import TournamentDetail    from './pages/TournamentDetail'
 import TournamentSetupWizard from './pages/TournamentSetupWizard'
@@ -60,7 +61,8 @@ export default function AppRouter() {
       </Route>
 
       {/* ── Protected: pushed screens (no bottom nav) ── */}
-      <Route path="/settings"  element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/edit-profile"  element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
       <Route path="/free-play" element={<ProtectedRoute><Placeholder title="Free Play" /></ProtectedRoute>} />
 
       {/* ── Protected: join league via invite code ── */}

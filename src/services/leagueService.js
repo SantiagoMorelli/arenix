@@ -232,3 +232,15 @@ function normalizeMatch(m) {
     sets:    m.sets,
   }
 }
+
+/**
+ * Delete a league and all its nested data (cascades via FK constraints).
+ * Only league admins or superAdmins should call this.
+ */
+export async function deleteLeague(leagueId) {
+  const { error } = await supabase
+    .from('leagues')
+    .delete()
+    .eq('id', leagueId)
+  if (error) throw error
+}

@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut, isSuperAdmin: profile?.is_super_admin ?? false }}>
       {children}
     </AuthContext.Provider>
   )

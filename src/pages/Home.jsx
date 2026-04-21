@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getMyLeagues } from '../services/leagueService'
+import { getMyLeagues, createLeague } from '../services/leagueService'
 import { BottomNav, IconButton, SectionLabel, AppBadge } from '../components/ui-new'
 import NotificationPanel from '../components/NotificationPanel'
 
@@ -106,11 +106,14 @@ const NAV_ITEMS = [
 // ─── Home page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, isSuperAdmin } = useAuth()
 
-  const [leagues, setLeagues] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [leagues,    setLeagues]    = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [showNotifs, setShowNotifs] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
+  const [newName,    setNewName]    = useState('')
+  const [creating,   setCreating]   = useState(false)
 
   useEffect(() => {
     getMyLeagues()
@@ -143,6 +146,21 @@ export default function Home() {
       Icon:         TrophyIcon,
     })),
   ].slice(0, 4)
+
+  async function handleCreateLeague(e) {
+    e.preventDefault()
+    if (!newName.trim()) return
+    setCreating(true)
+    try {
+      const league = await createLeague({ name: newName.trim() })
+      setLeagues(prev => [...prev, league])
+      setShowCreate(false)
+      setNewName('')
+      navigate(`/league/${league.id}`)
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const handleNavChange = (tab) => {
     if (tab === 'home') navigate('/')
@@ -178,6 +196,9 @@ export default function Home() {
             <div className="flex gap-2 text-dim">
               <IconButton badge={3} onClick={() => setShowNotifs(v => !v)}>
                 <BellIcon />
+              </IconButton>
+              <IconButton onClick={() => setShowCreate(true)}>
+                <PlusIcon />
               </IconButton>
               <IconButton onClick={() => navigate('/settings')}>
                 <GearIcon />
@@ -217,7 +238,13 @@ export default function Home() {
           ) : (
             <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-dashed border-accent/40 text-center">
               <div className="text-[13px] text-dim mb-2">No leagues yet</div>
-              <div className="text-[11px] text-dim">Join a league via invite link or create one from your profile.</div>
+              <div className="text-[11px] text-dim mb-4">Join a league via invite link or create a new one.</div>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[13px]"
+              >
+                + Create League
+              </button>
             </div>
           )}
 
@@ -274,6 +301,38 @@ export default function Home() {
         active="home"
         onChange={handleNavChange}
       />
+
+      {/* ── Create League modal ── */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 bg-bg/90 backdrop-blur-sm flex items-end justify-center p-4">
+          <div className="bg-surface border border-line rounded-2xl w-full max-w-[420px] p-5">
+            <div className="text-[17px] font-bold text-text mb-4">New League</div>
+            <form onSubmit={handleCreateLeague} className="flex flex-col gap-3">
+              <input
+                autoFocus
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="League name"
+                className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+              />
+              <button
+                type="submit"
+                disabled={!newName.trim() || creating}
+                className="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-[14px] disabled:opacity-50"
+              >
+                {creating ? 'Creating…' : 'Create League'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowCreate(false); setNewName('') }}
+                className="w-full py-3 rounded-xl text-dim font-semibold text-[13px] bg-transparent border-0"
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   )

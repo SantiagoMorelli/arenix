@@ -4,6 +4,7 @@ import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
+import { deleteLeague } from '../services/leagueService'
 import { buildInviteLink, regenerateInviteCode } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 
@@ -147,9 +148,11 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete }) {
 }
 
 // ── Settings Tab ──────────────────────────────────────────────────────────────
-function SettingsTab({ league, isAdmin, refetch }) {
-  const [copying, setCopying]   = useState(false)
-  const [regen, setRegen]       = useState(false)
+function SettingsTab({ league, isAdmin, isSuperAdmin, refetch }) {
+  const navigate               = useNavigate()
+  const [copying, setCopying]  = useState(false)
+  const [regen,   setRegen]    = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const inviteLink = buildInviteLink(league?.inviteCode || '')
 
   async function handleCopy() {
@@ -169,7 +172,18 @@ function SettingsTab({ league, isAdmin, refetch }) {
     }
   }
 
-  if (!isAdmin) {
+  async function handleDelete() {
+    if (!window.confirm(`Delete "${league.name}"? This cannot be undone — all tournaments and match history will be lost.`)) return
+    setDeleting(true)
+    try {
+      await deleteLeague(league.id)
+      navigate('/')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  if (!isAdmin && !isSuperAdmin) {
     return (
       <div className="text-[13px] text-dim text-center py-10">
         Only admins can view league settings.
@@ -221,6 +235,21 @@ function SettingsTab({ league, isAdmin, refetch }) {
           <div className="text-center text-[13px] text-dim py-4">No members found</div>
         )}
       </div>
+
+      <SectionLabel color="dim">Danger Zone</SectionLabel>
+      <div className="bg-surface border border-error/30 rounded-xl p-4 mb-4">
+        <div className="text-[13px] font-semibold text-text mb-1">Delete League</div>
+        <div className="text-[11px] text-dim mb-3">
+          Permanently deletes the league, all tournaments, and all match history.
+        </div>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="w-full py-3 rounded-xl bg-error/10 border border-error/30 text-error font-bold text-[13px] disabled:opacity-50"
+        >
+          {deleting ? 'Deleting…' : 'Delete League'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -232,7 +261,7 @@ export default function LeagueDetail() {
   const [activeTab, setActiveTab] = useState('rankings')
 
   const { league, loading, error, refetch } = useLeague(id)
-  const { isAdmin }                          = useLeagueRole(id)
+  const { isAdmin, isSuperAdmin }            = useLeagueRole(id)
 
   // ── Player mutations ──────────────────────────────────────────────────────
   async function handleAddPlayer(data) {
@@ -383,7 +412,7 @@ export default function LeagueDetail() {
 
           {/* ════ Settings tab ════ */}
           {activeTab === 'settings' && (
-            <SettingsTab league={league} isAdmin={isAdmin} refetch={refetch} />
+            <SettingsTab league={league} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} refetch={refetch} />
           )}
 
         </div>

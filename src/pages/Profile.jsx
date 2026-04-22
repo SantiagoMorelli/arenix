@@ -71,6 +71,7 @@ function isPlayerInTeam(playerId, teamId, tournament) {
   if (!team || !team.players) return false
   return team.players.includes(playerId)
 }
+
 const TABS = [
   { id: 'stats',   label: 'Stats'   },
   { id: 'leagues', label: 'Leagues' },
@@ -106,18 +107,19 @@ function PillTabs({ tabs, active, onChange }) {
   )
 }
 
-// ─── Tab: Stats ───────────────────────────────────────────────────────────────
-function StatsTab({ details }) {
+// ─── Tab: Stats (Performance section) ─────────────────────────────────────────
+function StatsTab({ performance }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 gap-2">
-        {details.map(s => (
-          <div key={s.label} className="bg-surface rounded-xl p-2.5 flex items-center gap-2.5 border border-line">
-            <span className="text-[18px] leading-none">{s.emoji}</span>
-            <div>
-              <div className="text-[16px] font-extrabold text-text leading-tight">{s.value}</div>
-              <div className="text-[9px] text-dim">{s.label}</div>
-            </div>
+    <div>
+      <SectionLabel color="dim">Performance</SectionLabel>
+      <div className="bg-surface rounded-xl border border-line px-3.5 mb-2">
+        {(performance || []).map((s, i, arr) => (
+          <div
+            key={i}
+            className={`flex justify-between items-center py-[7px] ${i < arr.length - 1 ? 'border-b border-line' : ''}`}
+          >
+            <span className="text-[12px] text-text">{s.l}</span>
+            <span className="text-[12px] font-bold text-accent">{s.v}</span>
           </div>
         ))}
       </div>
@@ -157,9 +159,9 @@ function LeaguesTab({ leagues }) {
           </div>
           <div className="flex gap-2">
             {[
-              { n: lg.wins,         l: 'Wins'        },
-              { n: lg.losses,       l: 'Losses'      },
-              { n: lg.tournaments,  l: 'Tournaments' },
+              { n: lg.wins,        l: 'Wins'        },
+              { n: lg.losses,      l: 'Losses'      },
+              { n: lg.tournaments, l: 'Tournaments'  },
             ].map(s => (
               <div key={s.l} className="flex-1 bg-bg rounded-lg py-1.5 px-1 text-center">
                 <div className="text-[13px] font-bold text-text">{s.n}</div>
@@ -190,7 +192,11 @@ function MatchesTab({ matches }) {
           <div className="flex justify-between items-center mb-1.5">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-dim">{m.date}</span>
-              <span className={`text-[9px] font-semibold px-1.5 py-[2px] rounded text-accent bg-accent/15`}>
+              <span className={`text-[9px] font-semibold px-1.5 py-[2px] rounded ${
+                m.type === 'Free Play'
+                  ? 'text-free bg-free/15'
+                  : 'text-accent bg-accent/15'
+              }`}>
                 {m.tourn}
               </span>
             </div>
@@ -232,33 +238,34 @@ export default function Profile() {
 
         let totalWins = 0
         let totalLosses = 0
-        let totalPoints = 0
+        let totalAces = 0
+        let totalPointsScored = 0
+        let serveWins = 0
+        let bestStreak = 0
         const matchesList = []
         const userLeagues = []
 
         fullLeagues.forEach(league => {
           const myPlayerRecord = league.players?.find(p => p.userId === profile.id)
-          
-          if (myPlayerRecord) {
-            totalWins += (myPlayerRecord.wins || 0)
-            totalLosses += (myPlayerRecord.losses || 0)
-            totalPoints += (myPlayerRecord.points || 0)
 
-            const sortedPlayers = [...league.players].sort((a,b) => (b.points || 0) - (a.points || 0))
+          if (myPlayerRecord) {
+            totalWins   += (myPlayerRecord.wins   || 0)
+            totalLosses += (myPlayerRecord.losses || 0)
+
+            const sortedPlayers = [...league.players].sort((a, b) => (b.points || 0) - (a.points || 0))
             const myRank = sortedPlayers.findIndex(p => p.id === myPlayerRecord.id) + 1
 
             userLeagues.push({
-              name: league.name,
-              season: league.season,
-              players: league.players?.length || 0,
-              rank: myRank > 0 ? `#${myRank}` : '-',
-              role: league.myRole || 'player',
-              wins: `${myPlayerRecord.wins || 0}W`,
-              losses: `${myPlayerRecord.losses || 0}L`,
-              tournaments: String(league.tournaments?.length || 0)
+              name:        league.name,
+              season:      league.season,
+              players:     league.players?.length || 0,
+              rank:        myRank > 0 ? `#${myRank}` : '-',
+              role:        league.myRole || 'player',
+              wins:        `${myPlayerRecord.wins   || 0}W`,
+              losses:      `${myPlayerRecord.losses || 0}L`,
+              tournaments: String(league.tournaments?.length || 0),
             })
 
-            // Find all matches
             league.tournaments?.forEach(tour => {
               const allMatches = getAllMatches(tour).filter(m => m.played)
               allMatches.forEach(m => {
@@ -266,18 +273,34 @@ export default function Profile() {
                 const inTeam2 = isPlayerInTeam(myPlayerRecord.id, m.team2, tour)
 
                 if (inTeam1 || inTeam2) {
-                  const myTeamId = inTeam1 ? m.team1 : m.team2
-                  const won = m.winner === myTeamId
-                  
+                  const myTeamId  = inTeam1 ? m.team1 : m.team2
+                  const myTeamNum = inTeam1 ? 1 : 2
+                  const won       = m.winner === myTeamId
+
+                  // Points scored from set-level scores
+                  if (m.sets?.length > 0) {
+                    totalPointsScored += m.sets.reduce(
+                      (sum, s) => sum + (myTeamNum === 1 ? (s.s1 || 0) : (s.s2 || 0)), 0
+                    )
+                  }
+
+                  // Aces, streak, serve wins from point log
+                  if (m.log?.length > 0) {
+                    const myLogs = m.log.filter(e => e.team === myTeamNum)
+                    totalAces += myLogs.filter(e => e.pointType === 'ace').length
+                    serveWins += myLogs.filter(e => e.serverTeam === myTeamNum).length
+                    myLogs.forEach(e => { if ((e.streak || 0) > bestStreak) bestStreak = e.streak })
+                  }
+
                   matchesList.push({
-                    date: tour.date || new Date(tour.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    date:  tour.date || new Date(tour.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                     tourn: tour.name,
-                    t1: getTeamName(m.team1, tour, league.players),
-                    t2: getTeamName(m.team2, tour, league.players),
-                    s1: m.score1,
-                    s2: m.score2,
+                    t1:    getTeamName(m.team1, tour, league.players),
+                    t2:    getTeamName(m.team2, tour, league.players),
+                    s1:    m.score1,
+                    s2:    m.score2,
                     won,
-                    created_at: tour.created_at // Use for sorting if needed
+                    type:  'Tournament',
                   })
                 }
               })
@@ -285,12 +308,17 @@ export default function Profile() {
           }
         })
 
-        const totalMatches = totalWins + totalLosses
-        const winRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0
+        const totalMatches   = totalWins + totalLosses
+        const winRate        = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0
+        const pointsPerMatch = totalMatches > 0 ? (totalPointsScored / totalMatches).toFixed(1) : '-'
+        const acesPerMatch   = totalMatches > 0 ? (totalAces / totalMatches).toFixed(1) : '-'
+        const serveWinPct    = totalPointsScored > 0
+          ? `${Math.round((serveWins / totalPointsScored) * 100)}%`
+          : '-'
 
         setData({
           leagues: userLeagues,
-          matches: matchesList.reverse(), // Simple reverse to show newest first
+          matches: matchesList.reverse(),
           stats: {
             top: [
               { value: String(totalMatches), label: 'Matches',  colorClass: 'text-accent'  },
@@ -298,15 +326,20 @@ export default function Profile() {
               { value: `${winRate}%`,        label: 'Win Rate', colorClass: 'text-free'    },
             ],
             detail: [
-              { value: String(totalPoints), label: 'Total Points', emoji: '💥' },
-              { value: '-',                 label: 'Aces',         emoji: '🎯' }, // Placeholder for now
-              { value: '-',                 label: 'Best Streak',  emoji: '🔥' }, // Placeholder for now
-              { value: userLeagues[0]?.rank || '-', label: 'Best Rank', emoji: '🏆' },
-            ]
-          }
+              { value: String(totalPointsScored),                  label: 'Total Points', emoji: '💥' },
+              { value: String(totalAces),                          label: 'Aces',         emoji: '🎯' },
+              { value: bestStreak > 0 ? String(bestStreak) : '-',  label: 'Best Streak',  emoji: '🔥' },
+              { value: userLeagues[0]?.rank || '-',                label: 'Best Rank',    emoji: '🏆' },
+            ],
+            performance: [
+              { l: 'Points per Match', v: pointsPerMatch },
+              { l: 'Aces per Match',   v: acesPerMatch   },
+              { l: 'Serve Win %',      v: serveWinPct    },
+            ],
+          },
         })
       } catch (err) {
-        console.error("Failed to load profile data", err)
+        console.error('Failed to load profile data', err)
       } finally {
         setLoading(false)
       }
@@ -315,7 +348,7 @@ export default function Profile() {
   }, [profile])
 
   const handleNavChange = (tab) => {
-    if (tab === 'home') navigate('/')
+    if (tab === 'home')    navigate('/')
     else if (tab === 'profile') navigate('/profile')
   }
 
@@ -378,11 +411,24 @@ export default function Profile() {
             ))}
           </div>
 
+          {/* ── Detail stats grid (2×2) — always visible ── */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {data.stats.detail?.map(s => (
+              <div key={s.label} className="bg-surface rounded-xl p-2.5 flex items-center gap-2.5 border border-line">
+                <span className="text-[18px] leading-none">{s.emoji}</span>
+                <div>
+                  <div className="text-[16px] font-extrabold text-text leading-tight">{s.value}</div>
+                  <div className="text-[9px] text-dim">{s.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* ── Pill tabs ── */}
           <PillTabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
           {/* ── Tab content ── */}
-          {activeTab === 'stats'   && <StatsTab details={data.stats.detail || []} />}
+          {activeTab === 'stats'   && <StatsTab   performance={data.stats.performance} />}
           {activeTab === 'leagues' && <LeaguesTab leagues={data.leagues} />}
           {activeTab === 'matches' && <MatchesTab matches={data.matches} />}
 

@@ -75,6 +75,17 @@ const PlusIcon = ({ size = 18 }) => (
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
+function formatShortDate(dateVal) {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+    const [y, m, day] = dateVal.split('-');
+    return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return dateVal;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function getAllMatches(tour) {
   return [
     ...(tour.groups   || []).flatMap(g => g.matches || []),
@@ -91,12 +102,6 @@ function phaseLabel(tour) {
   if (p === 'knockout') return 'Knockout'
   if (p === 'freeplay') return 'Round Robin'
   return 'Active'
-}
-
-function phaseBadgeVariant(tour) {
-  if (tour.status === 'completed') return 'dim'
-  if (tour.phase === 'group' || tour.phase === 'knockout' || tour.phase === 'freeplay') return 'success'
-  return 'accent'
 }
 
 const NAV_ITEMS = [
@@ -147,13 +152,45 @@ export default function Home() {
   const league        = leagues[0] || null
   const tournaments   = league?.tournaments || []
   const leaguePlayers = league?.players     || []
-  const totalMatches  = tournaments.flatMap(t => getAllMatches(t)).filter(m => m.played).length
-  const totalTeams    = tournaments.reduce((n, t) => n + (t.teams?.length || 0), 0)
+
+  let myRank = '-'
+  let myWins = 0
+  let myLosses = 0
+  let myMatches = 0
+  let myTournaments = 0
+
+  if (profile && leaguePlayers.length > 0) {
+    const myPlayerRecord = leaguePlayers.find(p => p.userId === profile.id)
+    if (myPlayerRecord) {
+      const sortedPlayers = [...leaguePlayers].sort((a, b) => (b.points || 0) - (a.points || 0))
+      const rankIndex = sortedPlayers.findIndex(p => p.id === myPlayerRecord.id)
+      if (rankIndex >= 0) myRank = `#${rankIndex + 1} Rank`
+
+      tournaments.forEach(tour => {
+        const allMatches = getAllMatches(tour).filter(m => m.played)
+        let playedInThisTournament = false
+
+        allMatches.forEach(m => {
+          const inTeam1 = tour.teams?.find(t => t.id === m.team1)?.players?.includes(myPlayerRecord.id)
+          const inTeam2 = tour.teams?.find(t => t.id === m.team2)?.players?.includes(myPlayerRecord.id)
+          if (inTeam1 || inTeam2) {
+            playedInThisTournament = true
+            myMatches++
+            const myTeamId = inTeam1 ? m.team1 : m.team2
+            if (m.winner === myTeamId) myWins++
+            else myLosses++
+          }
+        })
+
+        if (playedInThisTournament) myTournaments++
+      })
+    }
+  }
 
   const leagueStats = [
-    { value: String(tournaments.length), label: 'Tournaments' },
-    { value: String(totalMatches),       label: 'Matches'     },
-    { value: String(totalTeams),         label: 'Teams'       },
+    { value: String(myTournaments), label: 'Tournaments' },
+    { value: String(myMatches),     label: 'Matches'     },
+    { value: `${myWins}W-${myLosses}L`,  label: 'Record'      },
   ]
 
   const recentActivity = []
@@ -163,9 +200,9 @@ export default function Home() {
     recentActivity.push({
       id:           'tour-' + lastTour.id,
       title:        lastTour.name,
-      sub:          `Tournament · ${lastTour.date}`,
-      badge:        phaseLabel(lastTour),
-      badgeVariant: phaseBadgeVariant(lastTour),
+      sub:          `Tournament · ${formatShortDate(lastTour.date || lastTour.created_at)} · ${phaseLabel(lastTour)}`,
+      badge:        lastTour.status === 'completed' ? 'Done' : 'LIVE',
+      badgeVariant: lastTour.status === 'completed' ? 'dim' : 'success',
       iconBg:       'bg-accent/15',
       iconColor:    'text-accent',
       Icon:         TrophyIcon,
@@ -174,12 +211,20 @@ export default function Home() {
   }
 
   if (recentFreePlay) {
+    const fpPlayersCount = Array.from(new Set(
+      (recentFreePlay.games || []).flatMap(g => {
+        const t1 = recentFreePlay.teams?.find(t => t.id === g.team1_id)?.players || []
+        const t2 = recentFreePlay.teams?.find(t => t.id === g.team2_id)?.players || []
+        return [...t1, ...t2]
+      })
+    )).length
+
     recentActivity.push({
       id:           'fp-' + recentFreePlay.id,
-      title:        recentFreePlay.name || 'Free Play Session',
-      sub:          `Free Play · ${new Date(recentFreePlay.created_at).toLocaleDateString('en-US')}`,
-      badge:        'Active',
-      badgeVariant: 'success',
+      title:        recentFreePlay.name || 'Free Play',
+      sub:          `Free Play · ${formatShortDate(recentFreePlay.created_at)} · ${fpPlayersCount} players`,
+      badge:        'Done',
+      badgeVariant: 'dim',
       iconBg:       'bg-free/15',
       iconColor:    'text-free',
       Icon:         PlayIcon,
@@ -264,9 +309,11 @@ export default function Home() {
                     Season {league.season} · {leaguePlayers.length} players
                   </div>
                 </div>
-                <div className="bg-accent/15 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-accent shrink-0">
-                  {tournaments.length} Tourn.
-                </div>
+                {myRank !== '-' && (
+                  <div className="bg-accent/15 rounded-lg px-3 py-1.5 text-[11px] font-bold text-accent shrink-0">
+                    {myRank}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 {leagueStats.map(s => (

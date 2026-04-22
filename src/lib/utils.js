@@ -10,6 +10,84 @@ export const LEVELS = [
 
 export const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
 
+/**
+ * Circle Method for Round-Robin scheduling to maximize rest between matches.
+ * Generates matches round by round (e.g. 1v2, 3v4) to naturally interleave games.
+ */
+export function generateRoundRobinSchedule(teamIds, prefix = "") {
+  if (teamIds.length < 2) return [];
+
+  // Clone to avoid mutating original, add 'Bye' if odd number of teams
+  const t = [...teamIds];
+  if (t.length % 2 !== 0) t.push(null);
+  
+  const n = t.length;
+  const roundsCount = n - 1;
+  const matchesPerRound = n / 2;
+  const schedule = [];
+  
+  // Track the last team that played to avoid back-to-backs across rounds if possible
+  let lastPlayedTeam1 = null;
+  let lastPlayedTeam2 = null;
+
+  for (let r = 0; r < roundsCount; r++) {
+    const roundMatches = [];
+    for (let m = 0; m < matchesPerRound; m++) {
+      // For the first team, alternate home/away based on round to balance it
+      let home, away;
+      if (m === 0 && r % 2 === 1) {
+        home = t[n - 1];
+        away = t[0];
+      } else {
+        home = t[m];
+        away = t[n - 1 - m];
+      }
+      
+      // If not playing a Bye
+      if (home !== null && away !== null) {
+        roundMatches.push({
+          id: prefix + uid(),
+          team1: home,
+          team2: away,
+          played: false,
+          winner: null,
+          score1: 0,
+          score2: 0,
+        });
+      }
+    }
+
+    // Shuffle the match order within the round randomly to prevent pattern predictability 
+    // AND prevent back-to-backs if possible
+    if (roundMatches.length > 1) {
+      // Put the match that DOES NOT contain lastPlayed teams at the front
+      const safeFirstMatchIndex = roundMatches.findIndex(m => 
+        m.team1 !== lastPlayedTeam1 && m.team1 !== lastPlayedTeam2 &&
+        m.team2 !== lastPlayedTeam1 && m.team2 !== lastPlayedTeam2
+      );
+
+      if (safeFirstMatchIndex > 0) {
+        // Swap to make it the first match of the round
+        const temp = roundMatches[0];
+        roundMatches[0] = roundMatches[safeFirstMatchIndex];
+        roundMatches[safeFirstMatchIndex] = temp;
+      }
+    }
+
+    if (roundMatches.length > 0) {
+      lastPlayedTeam1 = roundMatches[roundMatches.length - 1].team1;
+      lastPlayedTeam2 = roundMatches[roundMatches.length - 1].team2;
+    }
+
+    schedule.push(...roundMatches);
+    
+    // Rotate teams: fix the first team, rotate the rest clockwise
+    t.splice(1, 0, t.pop());
+  }
+
+  return schedule;
+}
+
 // ── Match Results & Knockout Logic (Shared between Old and New App) ──────────
 
 export function advanceKnockout(knockout, teams) {

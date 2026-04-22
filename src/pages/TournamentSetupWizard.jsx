@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { createTournament } from '../services/tournamentService'
-import { uid, now, levelOf } from '../lib/utils'
+import { uid, now, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 
 const STEPS = ['Players', 'Teams', 'Schedule']
 
@@ -51,16 +51,6 @@ function Stepper({ step }) {
 
 function getValidGroupOptions(numTeams) {
   return [2, 4, 8].filter(g => Math.floor(numTeams / g) >= 3)
-}
-
-function makeRoundRobinMatches(teamIds) {
-  const matches = []
-  for (let i = 0; i < teamIds.length; i++) {
-    for (let j = i + 1; j < teamIds.length; j++) {
-      matches.push({ id: uid(), team1: teamIds[i], team2: teamIds[j], played: false, winner: null, score1: 0, score2: 0 })
-    }
-  }
-  return matches
 }
 
 export default function TournamentSetupWizard() {
@@ -189,15 +179,10 @@ export default function TournamentSetupWizard() {
         }))
         teams.forEach((tm, idx) => { groups[idx % selectedGroups].teamIds.push(tm.id) })
         groups.forEach(group => {
-          const ids = group.teamIds
-          for (let i = 0; i < ids.length; i++) {
-            for (let j = i + 1; j < ids.length; j++) {
-              group.matches.push({ id: uid(), team1: ids[i], team2: ids[j], played: false, winner: null, score1: 0, score2: 0 })
-            }
-          }
+          group.matches = generateRoundRobinSchedule(group.teamIds, "gm_" + group.id + "_")
         })
       } else {
-        matches = makeRoundRobinMatches(teams.map(t => t.id))
+        matches = generateRoundRobinSchedule(teams.map(t => t.id), "fp_")
       }
 
       const tournament = await createTournament(id, { name: name.trim(), date, teamSize, setsPerMatch, teams, groups, matches })

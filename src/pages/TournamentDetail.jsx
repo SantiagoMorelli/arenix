@@ -174,32 +174,49 @@ function buildKnockout(groups) {
   return { rounds }
 }
 
-function calcGroupStandings(group, teams) {
+function calcGroupStandings(group, teams, players = []) {
   return group.teamIds.map(teamId => {
-    let wins = 0, losses = 0
+    let wins = 0, losses = 0, pf = 0, pa = 0
     group.matches
       .filter(m => m.played && (m.team1 === teamId || m.team2 === teamId))
       .forEach(m => {
         const scored   = m.team1 === teamId ? m.score1 : m.score2
         const conceded = m.team1 === teamId ? m.score2 : m.score1
+        pf += scored
+        pa += conceded
         if (scored > conceded) wins++; else losses++
       })
-    return { id: teamId, name: teamName(teams, teamId), wins, losses, pts: wins * 3 }
-  }).sort((a, b) => b.pts - a.pts || b.wins - a.wins)
+    
+    const t = teams.find(x => x.id === teamId)
+    const playerNames = (t?.players || []).map(pid => {
+      const p = players.find(x => x.id === pid)
+      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+    }).join(' · ')
+    
+    return { id: teamId, name: teamName(teams, teamId), playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins * 3 }
+  }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
 }
 
-function calcOverallStandings(teams, matches) {
+function calcOverallStandings(teams, matches, players = []) {
   return teams.map(tm => {
-    let wins = 0, losses = 0
+    let wins = 0, losses = 0, pf = 0, pa = 0
     ;(matches || [])
       .filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
       .forEach(m => {
         const scored   = m.team1 === tm.id ? m.score1 : m.score2
         const conceded = m.team1 === tm.id ? m.score2 : m.score1
+        pf += scored
+        pa += conceded
         if (scored > conceded) wins++; else losses++
       })
-    return { id: tm.id, name: tm.name, wins, losses, pts: wins * 3 }
-  }).sort((a, b) => b.pts - a.pts || b.wins - a.wins)
+      
+    const playerNames = (tm.players || []).map(pid => {
+      const p = players.find(x => x.id === pid)
+      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+    }).join(' · ')
+
+    return { id: tm.id, name: tm.name, playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins * 3 }
+  }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
 }
 
 function getAllMatches(tournament) {
@@ -227,11 +244,14 @@ function StandingsTable({ rows }) {
     <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
       {/* Column headers */}
       <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
-        <span className="w-[22px] text-[10px] font-bold text-dim">#</span>
+        <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
         <span className="flex-1  text-[10px] font-bold text-dim">TEAM</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">W</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">L</span>
-        <span className="w-9 text-center text-[10px] font-bold text-dim">PTS</span>
+        <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
+        <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
+        <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
+        <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
+        <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
+        <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
       </div>
 
       {rows.length === 0 ? (
@@ -245,13 +265,23 @@ function StandingsTable({ rows }) {
             ${i === 0 ? 'bg-accent/15' : ''}
           `}
         >
-          <span className={`w-[22px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>
+          <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>
             {i + 1}
           </span>
-          <span className="flex-1 text-[13px] font-semibold text-text truncate">{row.name}</span>
-          <span className="w-7 text-center text-[13px] font-semibold text-success">{row.wins}</span>
-          <span className="w-7 text-center text-[13px] font-semibold text-error">{row.losses}</span>
-          <span className="w-9 text-center text-[13px] font-bold text-accent">{row.pts}</span>
+          <div className="flex-1 overflow-hidden">
+            <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
+            {row.playerNames && (
+              <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>
+            )}
+          </div>
+          <span className="w-6 text-center text-[13px] font-semibold text-success">{row.wins}</span>
+          <span className="w-6 text-center text-[13px] font-semibold text-error">{row.losses}</span>
+          <span className="w-7 text-center text-[13px] font-semibold text-text">{row.pf}</span>
+          <span className="w-7 text-center text-[13px] font-semibold text-text">{row.pa}</span>
+          <span className={`w-7 text-center text-[13px] font-semibold ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
+            {row.pd > 0 ? '+' + row.pd : row.pd}
+          </span>
+          <span className="w-8 text-center text-[13px] font-bold text-accent">{row.pts}</span>
         </div>
       ))}
     </div>
@@ -314,7 +344,7 @@ function KnockoutResults({ tournament, onMatchClick }) {
 // TAB: STANDINGS
 // — Groups first, then knockout (user's requested modification)
 // ═══════════════════════════════════════════════════════════════════════════════
-function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage }) {
+function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage, players }) {
   const { phase, groups, teams, matches } = tournament
   const hasGroups = (groups || []).length > 0
 
@@ -332,7 +362,7 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage 
 
   // Free-play / round-robin (no groups)
   if (!hasGroups) {
-    const rows = calcOverallStandings(teams, matches)
+    const rows = calcOverallStandings(teams, matches, players)
     return (
       <div className="px-4">
         <StandingsTable rows={rows} />
@@ -348,7 +378,7 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage 
           <div className="text-[12px] font-bold text-accent tracking-wide uppercase mb-2.5">
             {group.name}
           </div>
-          <StandingsTable rows={calcGroupStandings(group, teams)} />
+          <StandingsTable rows={calcGroupStandings(group, teams, players)} />
         </div>
       ))}
 
@@ -379,13 +409,75 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage 
 // TAB: MATCHES
 // ═══════════════════════════════════════════════════════════════════════════════
 function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
-  const all       = getAllMatches(tournament)
-  const pending   = all.filter(m => !m.played && m.team1 && m.team2)
-  const completed = all.filter(m => m.played)
-  const tName     = id => teamName(tournament.teams, id)
+  const { groups = [], knockout = null, phase } = tournament
+  const hasGroups = groups.length > 0
+  const isFreePlay = !hasGroups
+
+  // Setup tabs
+  const groupTabs = hasGroups ? groups.map(g => ({ id: `g_${g.id}`, label: g.name })) : []
+  const koTab = knockout ? [{ id: 'knockout', label: 'Knockout' }] : []
+  const allTabs = [...groupTabs, ...koTab]
+
+  // Default active subtab: first group, or knockout if we're past groups, or 'all' if free play
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    if (isFreePlay) return 'all'
+    if ((phase === 'knockout' || phase === 'completed') && knockout) return 'knockout'
+    return allTabs[0]?.id || 'all'
+  })
+
+  const tName = id => teamName(tournament.teams, id)
+
+  // Get matches based on active tab
+  let matchesToDisplay = []
+  let displayTitle = ''
+
+  if (isFreePlay) {
+    matchesToDisplay = (tournament.matches || []).map((m, i) => ({ ...m, label: `Match ${i + 1}` }))
+    displayTitle = 'Free Play Matches'
+  } else if (activeSubTab === 'knockout') {
+    matchesToDisplay = (knockout?.rounds || []).flatMap(r => 
+      r.matches.map(m => ({ ...m, label: roundLabel(r.id) }))
+    )
+    displayTitle = 'Knockout Matches'
+  } else {
+    const groupId = activeSubTab.replace('g_', '')
+    const group = groups.find(g => g.id === groupId)
+    matchesToDisplay = group ? group.matches.map(m => ({ ...m, label: group.name })) : []
+    displayTitle = group ? `${group.name} (Matches)` : ''
+  }
+
+  const pending   = matchesToDisplay.filter(m => !m.played && m.team1 && m.team2)
+  const completed = matchesToDisplay.filter(m => m.played)
 
   return (
     <div className="px-4">
+      {hasGroups && allTabs.length > 1 && (
+        <div className="mb-4 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex gap-2 min-w-max">
+            {allTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`
+                  px-4 py-2 rounded-xl text-[12px] font-bold cursor-pointer transition-all border-2
+                  ${activeSubTab === tab.id 
+                    ? 'bg-accent/10 border-accent text-accent' 
+                    : 'bg-surface border-line text-dim'}
+                `}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {displayTitle && (
+        <div className="font-display text-[22px] text-accent tracking-[2px] mb-4">
+          {displayTitle}
+        </div>
+      )}
+
       {/* Pending */}
       {pending.length > 0 && (
         <div className="mb-4">
@@ -465,18 +557,47 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB: TEAMS
+// TAB: POSITIONS
 // ═══════════════════════════════════════════════════════════════════════════════
-function TeamsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
+function PositionsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
   const { teams } = tournament
+  const [subTab, setSubTab] = useState('teams')
+
+  if (!teams || teams.length === 0) {
+    return <div className="px-4 text-[13px] text-dim text-center py-10">No teams yet</div>
+  }
+
+  return (
+    <div className="px-4">
+      {/* Inner Pill Tabs for Teams vs Players */}
+      <PillTabs
+        items={[
+          { id: 'teams', label: 'Teams' },
+          { id: 'players', label: 'Players' }
+        ]}
+        active={subTab}
+        onChange={setSubTab}
+      />
+
+      {subTab === 'teams' ? (
+        <TeamsPositionsTable tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={currentUserId} isAdmin={isAdmin} onRenameTeam={onRenameTeam} />
+      ) : (
+        <PlayersPositionsTable tournament={tournament} leaguePlayers={leaguePlayers} />
+      )}
+    </div>
+  )
+}
+
+function TeamsPositionsTable({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
+  const { teams } = tournament
+  const allMatches = getAllMatches(tournament)
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editName, setEditName]           = useState('')
   const [saving, setSaving]               = useState(false)
   const [saveError, setSaveError]         = useState(null)
 
-  if (!teams || teams.length === 0) {
-    return <div className="px-4 text-[13px] text-dim text-center py-10">No teams yet</div>
-  }
+  // Calculate overall standings based on all matches in tournament
+  const rows = calcOverallStandings(teams, allMatches, leaguePlayers)
 
   async function handleSave(teamId) {
     const trimmed = editName.trim()
@@ -494,41 +615,68 @@ function TeamsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameT
   }
 
   return (
-    <div className="px-4">
-      <div className="flex flex-col gap-3">
-        {teams.map(team => {
-          const isMember = currentUserId && (team.players || []).some(pid => {
-            const p = leaguePlayers.find(pl => pl.id === pid)
-            return p?.userId === currentUserId
-          })
-          const canEdit   = isAdmin || isMember
-          const isEditing = editingTeamId === team.id
-          const displayName = team.name
+    <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
+      {/* Column headers */}
+      <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
+        <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
+        <span className="flex-1  text-[10px] font-bold text-dim">TEAM</span>
+        <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
+        <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
+        <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
+        <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
+        <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
+        <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
+      </div>
 
-          return (
-            <div key={team.id} className="bg-surface rounded-xl p-3.5 border border-line">
+      {rows.length === 0 ? (
+        <div className="text-center text-[13px] text-dim py-4">No teams yet</div>
+      ) : rows.map((row, i) => {
+        const team = teams.find(t => t.id === row.id)
+        if (!team) return null
+
+        const isMember = currentUserId && (team.players || []).some(pid => {
+          const p = leaguePlayers.find(pl => pl.id === pid)
+          return p?.userId === currentUserId
+        })
+        const canEdit   = isAdmin || isMember
+        const isEditing = editingTeamId === team.id
+
+        return (
+          <div
+            key={row.id}
+            className={`
+              flex items-center px-3.5 py-2.5
+              ${i < rows.length - 1 ? 'border-b border-line' : ''}
+              ${i === 0 ? 'bg-accent/15' : ''}
+            `}
+          >
+            <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>
+              {i + 1}
+            </span>
+            
+            <div className="flex-1 overflow-hidden pr-2">
               {isEditing ? (
-                <div className="flex flex-col gap-1.5 mb-2.5">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-1.5 mb-1">
+                  <div className="flex items-center gap-1">
                     <input
                       autoFocus
                       value={editName}
                       onChange={e => { setEditName(e.target.value); setSaveError(null) }}
                       onKeyDown={e => { if (e.key === 'Enter') handleSave(team.id); if (e.key === 'Escape') { setEditingTeamId(null); setSaveError(null) } }}
-                      className="flex-1 bg-bg border border-accent rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-text outline-none"
+                      className="w-full min-w-0 bg-bg border border-accent rounded px-1.5 py-1 text-[13px] font-bold text-text outline-none"
                     />
                     <button
                       onClick={() => handleSave(team.id)}
                       disabled={saving || !editName.trim()}
-                      className="text-[11px] font-bold text-white bg-accent px-3 py-1.5 rounded-lg border-0 cursor-pointer disabled:opacity-50"
+                      className="text-[10px] font-bold text-white bg-accent px-2 py-1 rounded border-0 cursor-pointer disabled:opacity-50"
                     >
-                      {saving ? '…' : 'Save'}
+                      {saving ? '…' : '✔'}
                     </button>
                     <button
                       onClick={() => { setEditingTeamId(null); setSaveError(null) }}
-                      className="text-[11px] font-semibold text-dim bg-transparent border-0 cursor-pointer px-1"
+                      className="text-[10px] font-semibold text-dim bg-transparent border-0 cursor-pointer px-1"
                     >
-                      Cancel
+                      ✕
                     </button>
                   </div>
                   {saveError && (
@@ -536,15 +684,15 @@ function TeamsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameT
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 mb-2.5">
-                  <div className="flex-1 text-[13px] font-bold text-text">{displayName}</div>
+                <div className="flex items-center gap-1.5">
+                  <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
                   {canEdit && (
                     <button
                       onClick={() => { setEditingTeamId(team.id); setEditName(team.name); setSaveError(null) }}
-                      className="text-dim hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0.5"
+                      className="text-dim hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0 flex-shrink-0"
                       title="Rename team"
                     >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                       </svg>
@@ -552,26 +700,104 @@ function TeamsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameT
                   )}
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
-                {(team.players || []).map(pid => {
-                  const player = leaguePlayers.find(p => p.id === pid)
-                  if (!player) return null
-                  const label = player.displayName || player.name
-                  return (
-                    <div key={pid} className="flex items-center gap-1.5 text-[11px] bg-alt text-text rounded-md px-2.5 py-1.5 font-medium border border-line/50">
-                      <div className="w-4 h-4 rounded-sm bg-bg flex items-center justify-center text-[9px] font-bold text-dim">
-                        {label[0]}
-                      </div>
-                      {label}
-                    </div>
-                  )
-                })}
-              </div>
+              {row.playerNames && (
+                <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>
+              )}
             </div>
-          )
-        })}
-      </div>
+
+            <span className="w-6 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
+            <span className="w-6 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
+            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pf}</span>
+            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pa}</span>
+            <span className={`w-7 text-center text-[13px] font-semibold flex-shrink-0 ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
+              {row.pd > 0 ? '+' + row.pd : row.pd}
+            </span>
+            <span className="w-8 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
+          </div>
+        )
+      })}
     </div>
+  )
+}
+
+function PlayersPositionsTable({ tournament, leaguePlayers }) {
+  const { teams } = tournament
+  const allMatches = getAllMatches(tournament)
+
+  // Calculate player stats based on team matches
+  // Player gets 1 win = 1 pt, 1 loss = 0 pt
+  const playerStats = {}
+
+  teams.forEach(team => {
+    // Determine wins/losses for this team
+    let wins = 0, losses = 0
+    allMatches
+      .filter(m => m.played && (m.team1 === team.id || m.team2 === team.id))
+      .forEach(m => {
+        const scored   = m.team1 === team.id ? m.score1 : m.score2
+        const conceded = m.team1 === team.id ? m.score2 : m.score1
+        if (scored > conceded) wins++; else losses++
+      })
+
+    // Assign to players
+    ;(team.players || []).forEach(pid => {
+      if (!playerStats[pid]) {
+        const p = leaguePlayers.find(pl => pl.id === pid)
+        playerStats[pid] = { 
+          id: pid, 
+          name: p ? (p.displayName || p.nickname || p.name) : 'Unknown',
+          wins: 0, 
+          losses: 0,
+          pts: 0
+        }
+      }
+      playerStats[pid].wins += wins
+      playerStats[pid].losses += losses
+      playerStats[pid].pts += wins // 1 win = 1 point as requested
+    })
+  })
+
+  const rows = Object.values(playerStats).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.losses - b.losses || a.name.localeCompare(b.name))
+
+  return (
+    <>
+    <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
+      {/* Column headers */}
+      <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
+        <span className="w-[30px] text-[10px] font-bold text-dim text-center">#</span>
+        <span className="flex-1  text-[10px] font-bold text-dim">PLAYER</span>
+        <span className="w-10 text-center text-[10px] font-bold text-dim">W</span>
+        <span className="w-10 text-center text-[10px] font-bold text-dim">L</span>
+        <span className="w-12 text-center text-[10px] font-bold text-dim">PTS</span>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="text-center text-[13px] text-dim py-4">No players yet</div>
+      ) : rows.map((row, i) => (
+        <div
+          key={row.id}
+          className={`
+            flex items-center px-3.5 py-2.5
+            ${i < rows.length - 1 ? 'border-b border-line' : ''}
+            ${i === 0 ? 'bg-accent/15' : ''}
+          `}
+        >
+          <span className={`w-[30px] text-[13px] font-bold text-center ${i === 0 ? 'text-accent' : 'text-dim'}`}>
+            {i + 1}
+          </span>
+          <div className="flex-1 overflow-hidden pr-2">
+            <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
+          </div>
+          <span className="w-10 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
+          <span className="w-10 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
+          <span className="w-12 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
+        </div>
+      ))}
+    </div>
+    <div className="mt-3.5 text-[12px] text-dim text-center leading-relaxed">
+      Player rankings will update the league standings when the tournament ends.
+    </div>
+    </>
   )
 }
 
@@ -801,7 +1027,7 @@ export default function TournamentDetail() {
         items={[
           { id: 'standings', label: 'Standings' },
           { id: 'matches',   label: 'Matches'   },
-          { id: 'teams',     label: 'Teams'     },
+          { id: 'positions', label: 'Positions' },
         ]}
         active={activeTab}
         onChange={setActiveTab}
@@ -813,8 +1039,9 @@ export default function TournamentDetail() {
           <StandingsTab
             tournament={tournament}
             onGenerateKnockout={handleGenerateKnockout}
-            onMatchClick={handleMatchClick}
+            onMatchClick={m => navigate(`/league/${id}/tournament/${tid}/match/${m.id}`)}
             canManage={canManage}
+            players={leaguePlayers}
           />
         )}
         {activeTab === 'matches' && (
@@ -825,8 +1052,8 @@ export default function TournamentDetail() {
             canScore={canScore}
           />
         )}
-        {activeTab === 'teams' && (
-          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} isAdmin={isAdmin} onRenameTeam={handleRenameTeam} />
+        {activeTab === 'positions' && (
+          <PositionsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} isAdmin={isAdmin} onRenameTeam={handleRenameTeam} />
         )}
       </main>
 

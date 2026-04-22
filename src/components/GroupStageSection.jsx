@@ -159,6 +159,15 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
   const [showLegend, setShowLegend] = useState(false);
 
   const tName = id => tournament.teams.find(tm => tm.id === id)?.name || "?";
+  
+  const tPlayers = id => {
+    const t = tournament.teams?.find(x => x.id === id);
+    if (!t || !t.players) return "";
+    return t.players.map(pid => {
+      const p = (players || []).find(x => x.id === pid);
+      return p ? (p.displayName || p.nickname || p.name) : "Unknown";
+    }).join(" · ");
+  };
 
   const allGroupMatchesPlayed = (tournament.groups || []).every(g =>
     g.matches.every(m => m.played)
@@ -241,10 +250,24 @@ const GroupStageSection = ({ tournament, setTournaments, players, onOpenLive, re
                     <span className={`font-bold text-[12px] ${advances ? "text-success" : "text-dim"}`}>
                       {rank + 1}
                     </span>
-                    <span className={`text-[13px] ${advances ? "font-bold text-success" : "font-medium text-text"}`}>
-                      {tName(row.teamId)}
-                      {advances && <span className="text-[10px] ml-1 text-success">↑</span>}
-                    </span>
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                      <span className={`text-[13px] truncate ${advances ? "font-bold text-success" : "font-medium text-text"}`}>
+                        {tName(row.teamId)}
+                        {advances && <span className="text-[10px] ml-1 text-success">↑</span>}
+                      </span>
+                      {tPlayers(row.teamId) && (
+                        <span className="text-[10px] text-dim mt-0.5 truncate">{tPlayers(row.teamId)}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                      <span className={`text-[13px] truncate ${advances ? "font-bold text-success" : "font-medium text-text"}`}>
+                        {tName(row.teamId)}
+                        {advances && <span className="text-[10px] ml-1 text-success">↑</span>}
+                      </span>
+                      {tPlayers(row.teamId) && (
+                        <span className="text-[10px] text-dim mt-0.5 truncate">{tPlayers(row.teamId)}</span>
+                      )}
+                    </div>
                     {[row.played, row.wins, row.losses, row.pf, row.pa, row.pd, row.mp].map((val, ci) => (
                       <span key={ci} className={`text-center text-[13px] ${
                         ci === 6 ? "font-bold text-accent" :

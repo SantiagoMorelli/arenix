@@ -27,6 +27,19 @@ const GearIcon  = () => <Svg><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.
 const PlusIcon  = ({ size = 14 }) => <Svg size={size}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Svg>
 const CopyIcon  = () => <Svg size={16}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></Svg>
 
+// ─── Country → flag emoji ──────────────────────────────────────────────────────
+const FLAG = {
+  argentina: '🇦🇷', 'united states': '🇺🇸', brazil: '🇧🇷', spain: '🇪🇸',
+  colombia: '🇨🇴', mexico: '🇲🇽', chile: '🇨🇱', uruguay: '🇺🇾',
+  france: '🇫🇷', germany: '🇩🇪', italy: '🇮🇹', australia: '🇦🇺',
+  portugal: '🇵🇹', japan: '🇯🇵', canada: '🇨🇦', uk: '🇬🇧',
+  'united kingdom': '🇬🇧', netherlands: '🇳🇱', sweden: '🇸🇪', norway: '🇳🇴',
+}
+function countryFlag(country) {
+  if (!country) return ''
+  return FLAG[country.toLowerCase()] || ''
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getTournamentStatus(t) {
@@ -38,6 +51,80 @@ function getTournamentStatus(t) {
 
 function getTournamentPlayerCount(t) {
   return new Set((t.teams || []).flatMap(team => team.players || [])).size
+}
+
+function getTournamentPodium(t, leaguePlayers = []) {
+  if (t.status !== 'completed') return null
+  
+  let firstTeamId = null
+  let secondTeamId = null
+  let thirdTeamId = null
+  const teams = t.teams || []
+
+  // 1. Try Knockout final and third place matches
+  const ko = t.knockout?.rounds
+  if (ko) {
+    const finalRound = ko.find(r => r.id === 'final')
+    if (finalRound?.matches?.length) {
+      const match = finalRound.matches[0]
+      if (match.played && match.winner) {
+        firstTeamId = match.winner
+        secondTeamId = match.winner === match.team1 ? match.team2 : match.team1
+      }
+    }
+    const thirdRound = ko.find(r => r.id === 'third_place')
+    if (thirdRound?.matches?.length) {
+      const match = thirdRound.matches[0]
+      if (match.played && match.winner) {
+        thirdTeamId = match.winner
+      }
+    }
+  }
+
+  // 2. Fallback to winnerTeamId if not found from KO
+  if (!firstTeamId && t.winnerTeamId) {
+    firstTeamId = t.winnerTeamId
+  }
+
+  // 3. Fallback to points/wins if not fully decided by KO
+  if (!firstTeamId && teams.length > 0) {
+    const sorted = [...teams].sort((a, b) => {
+      if ((b.points || 0) !== (a.points || 0)) return (b.points || 0) - (a.points || 0)
+      return (b.wins || 0) - (a.wins || 0)
+    })
+    firstTeamId = sorted[0]?.id
+    secondTeamId = sorted[1]?.id
+    thirdTeamId = sorted[2]?.id
+  } else if (firstTeamId && (!secondTeamId || !thirdTeamId) && teams.length > 1) {
+    const remaining = teams.filter(tm => tm.id !== firstTeamId && tm.id !== secondTeamId).sort((a, b) => {
+      if ((b.points || 0) !== (a.points || 0)) return (b.points || 0) - (a.points || 0)
+      return (b.wins || 0) - (a.wins || 0)
+    })
+    if (!secondTeamId) secondTeamId = remaining[0]?.id
+    if (!thirdTeamId && remaining.length > (secondTeamId ? 1 : 0)) {
+      thirdTeamId = remaining[secondTeamId ? 1 : 0]?.id
+    }
+  }
+
+  const formatTeam = (teamId) => {
+    if (!teamId) return null
+    const team = teams.find(tm => tm.id === teamId)
+    if (!team) return null
+    const pNames = (team.players || []).map(pid => {
+      const p = leaguePlayers.find(lp => lp.id === pid)
+      return p ? (p.displayName || p.name) : 'Unknown'
+    }).join(', ')
+    return pNames ? `${team.name} (${pNames})` : team.name
+  }
+
+  const result = {
+    first: formatTeam(firstTeamId),
+    second: formatTeam(secondTeamId),
+    third: formatTeam(thirdTeamId)
+  }
+  
+  if (!result.first && !result.second && !result.third) return null
+  return result
 }
 
 const ROLE_COLORS = {
@@ -87,7 +174,7 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
   return (
     <div>
       <div className="flex justify-between items-center mb-2.5">
-        <span className="text-[12px] font-bold text-accent tracking-wide uppercase">Roster</span>
+        <span className="text-[12px] font-bold text-accent tracking-wide uppercase">RANKINGS</span>
         <div className="flex gap-2">
           {!myPlayer && (
             <button
@@ -147,34 +234,41 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
         {(league?.players || []).length === 0 ? (
           <div className="text-center text-[13px] text-dim py-6">No players yet</div>
         ) : (
-          (league.players || []).map((p, i, arr) => {
+          [...(league.players || [])]
+            .sort((a, b) => (b.points || 0) - (a.points || 0))
+            .map((p, i, arr) => {
             const isMe = p.userId === currentUserId
             const isUnclaimed = !p.userId
             const isLinkingThis = linkingPlayerId === p.id
             const label = p.displayName || p.name
+            const flag = countryFlag(p.country)
 
             return (
               <div key={p.id} className={`flex items-center px-3.5 py-2.5 flex-wrap gap-y-2 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
+                <span className={`w-[22px] text-[13px] font-bold flex-shrink-0 ${i < 3 ? 'text-accent' : 'text-dim'}`}>
+                  {i + 1}
+                </span>
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-semibold mr-2.5 flex-shrink-0 ${isMe ? 'bg-accent/20 text-accent' : 'bg-alt text-text'}`}>
                   {label[0]}
                 </div>
-                <div className="flex-1 min-w-[120px] flex items-center gap-2">
+                <div className="flex-1 min-w-0 flex items-center gap-2">
                   <span className={`text-[13px] font-medium truncate ${isMe ? 'text-accent' : 'text-text'}`}>
                     {label}
                   </span>
+                  {flag && <span className="text-[14px] leading-none flex-shrink-0">{flag}</span>}
                   {isMe && (
-                    <span className="text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded flex-shrink-0">
                       YOU
                     </span>
                   )}
                   {p.userId && !isMe && (
-                    <span className="text-[9px] font-bold bg-success/20 text-success px-1.5 py-0.5 rounded" title="Account linked">
+                    <span className="text-[9px] font-bold bg-success/20 text-success px-1.5 py-0.5 rounded flex-shrink-0" title="Account linked">
                       ✓
                     </span>
                   )}
                 </div>
                 
-                <span className="text-[10px] text-dim capitalize mr-3 min-w-[50px] text-right">{p.level}</span>
+                <span className="text-[12px] font-semibold text-dim ml-2 mr-3 min-w-[30px] text-right">{p.points ?? 0}</span>
                 
                 {/* Regular users claiming themselves (Optional: keeping this for regular users if you want them to be able to claim, but usually admins handle this)
                     Let's only show this if I am an admin OR if I don't have a player yet. */}
@@ -573,7 +667,10 @@ export default function LeagueDetail() {
                       <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text mr-2.5 flex-shrink-0">
                         {label[0]}
                       </div>
-                      <span className="flex-1 text-[13px] font-medium text-text truncate">{label}</span>
+                      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                        <span className="text-[13px] font-medium text-text truncate">{label}</span>
+                        {countryFlag(player.country) && <span className="text-[14px] leading-none flex-shrink-0">{countryFlag(player.country)}</span>}
+                      </div>
                       <span className="text-[12px] font-semibold text-dim ml-2">{player.points ?? 0}</span>
                     </div>
                   )})}
@@ -616,20 +713,33 @@ export default function LeagueDetail() {
                   {tournaments.slice(0, 5).map(t => {
                     const { label, variant } = getTournamentStatus(t)
                     const pCount             = getTournamentPlayerCount(t)
+                    const podium             = getTournamentPodium(t, league?.players || [])
+                    const modeLabel          = t.teamSize ? `${t.teamSize} vs ${t.teamSize}` : 'Custom'
+                    const teamsCount         = (t.teams || []).length
+
                     return (
                       <div
                         key={t.id}
                         onClick={() => navigate(`/league/${id}/tournament/${t.id}`)}
-                        className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
+                        className="bg-surface rounded-xl p-3.5 flex flex-col gap-2.5 border border-line cursor-pointer active:opacity-80 transition-opacity"
                       >
-                        <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">
-                          <TrophyIcon size={18} />
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">
+                            <TrophyIcon size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-semibold text-text truncate">{t.name}</div>
+                            <div className="text-[11px] text-dim">{modeLabel} • {teamsCount} teams • {pCount} players</div>
+                          </div>
+                          <AppBadge text={label} variant={variant} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] font-semibold text-text truncate">{t.name}</div>
-                          <div className="text-[11px] text-dim">{pCount} players</div>
-                        </div>
-                        <AppBadge text={label} variant={variant} />
+                        {podium && (
+                          <div className="mt-1 pt-2.5 border-t border-line/50 flex flex-col gap-1.5 pl-12">
+                            {podium.first && <div className="text-[12px] text-text font-medium truncate">🥇 {podium.first}</div>}
+                            {podium.second && <div className="text-[12px] text-dim truncate">🥈 {podium.second}</div>}
+                            {podium.third && <div className="text-[12px] text-dim truncate">🥉 {podium.third}</div>}
+                          </div>
+                        )}
                       </div>
                     )
                   })}

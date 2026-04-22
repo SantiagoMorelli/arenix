@@ -62,7 +62,7 @@ export async function getLeagueById(leagueId) {
   const [leagueRes, membersRes, playersRes, tournamentsRes, permissionsRes] = await Promise.all([
     supabase.from('leagues').select('*').eq('id', leagueId).single(),
     supabase.from('league_member_roles').select('user_id, role, granted_at, profiles(full_name, avatar_url)').eq('league_id', leagueId),
-    supabase.from('players').select('*, profiles!players_user_id_fkey(nickname, full_name)').eq('league_id', leagueId).order('created_at', { ascending: true }),
+    supabase.from('players').select('*, profiles!players_user_id_fkey(nickname, full_name, country)').eq('league_id', leagueId).order('created_at', { ascending: true }),
     supabase.from('tournaments').select('*').eq('league_id', leagueId).order('created_at', { ascending: true }),
     supabase.from('league_member_permissions').select('user_id, permission').eq('league_id', leagueId),
   ])
@@ -143,6 +143,7 @@ function normalizePlayer(row) {
     id:          row.id,
     name:        row.name,
     displayName: (linked?.nickname || linked?.full_name) || row.name,
+    country:     linked?.country,
     level:       row.level,
     wins:        row.wins,
     losses:      row.losses,

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { uid } from "../lib/utils";
 
-function calcStandings(teams, games) {
+function calcStandings(teams, games, players = []) {
   return teams.map(tm => {
     let wins = 0, losses = 0, pf = 0, pa = 0, played = 0;
     (games || [])
@@ -13,7 +13,11 @@ function calcStandings(teams, games) {
         pa += isT1 ? g.score2 : g.score1;
         if (g.winner === tm.id) wins++; else losses++;
       });
-    return { id: tm.id, name: tm.name, played, wins, losses, pf, pa, pd: pf - pa, pts: wins };
+    const playerNames = (tm.players || []).map(pid => {
+      const p = players.find(x => x.id === pid);
+      return p ? (p.displayName || p.nickname || p.name) : "Unknown";
+    }).join(" · ");
+    return { id: tm.id, name: tm.name, playerNames, played, wins, losses, pf, pa, pd: pf - pa, pts: wins };
   }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf);
 }
 
@@ -86,7 +90,12 @@ function StandingsTable({ rows }) {
           <span className={`font-bold text-[15px] ${rank === 0 ? "text-free" : "text-dim"}`}>
             {rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : rank + 1}
           </span>
-          <span className="font-semibold text-[13px]">{row.name}</span>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <span className="font-semibold text-[13px] truncate">{row.name}</span>
+            {row.playerNames && (
+              <span className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</span>
+            )}
+          </div>
           {[row.played, row.wins, row.losses, row.pd, row.pts].map((val, ci) => (
             <span
               key={ci}
@@ -113,7 +122,7 @@ export default function FreePlayTeamsSection({ freePlay, setFreePlays, players }
   const teams    = freePlay.teams || [];
   const games    = freePlay.games || [];
   const hasGames = games.some(g => g.played);
-  const standings = calcStandings(teams, games);
+  const standings = calcStandings(teams, games, players);
 
   const togglePlayer = (pid) =>
     setPickedPlayerIds(prev => prev.includes(pid) ? prev.filter(x => x !== pid) : [...prev, pid]);

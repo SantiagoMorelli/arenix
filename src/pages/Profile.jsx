@@ -49,6 +49,17 @@ function countryFlag(country) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatShortDate(dateVal) {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+    const [y, m, day] = dateVal.split('-');
+    return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return dateVal;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function getAllMatches(tour) {
   return [
     ...(tour.groups   || []).flatMap(g => g.matches || []),
@@ -128,7 +139,7 @@ function StatsTab({ performance }) {
 }
 
 // ─── Tab: Leagues ─────────────────────────────────────────────────────────────
-function LeaguesTab({ leagues }) {
+function LeaguesTab({ leagues, navigate }) {
   return (
     <div className="flex flex-col gap-2">
       <SectionLabel color="accent">My Leagues</SectionLabel>
@@ -151,7 +162,7 @@ function LeaguesTab({ leagues }) {
                 {lg.rank}
               </span>
               {lg.role === 'admin' && (
-                <span className="text-[9px] font-bold text-free bg-free/15 px-2 py-[3px] rounded-md uppercase">
+                <span className="text-[9px] font-bold text-free bg-free/15 px-2 py-[3px] rounded-md">
                   Admin
                 </span>
               )}
@@ -171,6 +182,12 @@ function LeaguesTab({ leagues }) {
           </div>
         </div>
       ))}
+      <div 
+        onClick={() => navigate('/')}
+        className="border border-dashed border-accent/50 rounded-xl py-3.5 text-center text-[12px] font-semibold text-accent cursor-pointer mt-1 active:opacity-80 transition-opacity"
+      >
+        + Join a League
+      </div>
     </div>
   )
 }
@@ -285,7 +302,7 @@ export default function Profile() {
                   }
 
                   matchesList.push({
-                    date:  tour.date || new Date(tour.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    date:  formatShortDate(tour.date || tour.created_at || Date.now()),
                     tourn: tour.name,
                     t1:    getTeamName(m.team1, tour, league.players),
                     t2:    getTeamName(m.team2, tour, league.players),
@@ -303,7 +320,7 @@ export default function Profile() {
               season:      league.season,
               players:     league.players?.length || 0,
               rank:        myRank > 0 ? `#${myRank}` : '-',
-              role:        league.myRole || 'player',
+              role:        league.members?.find(m => m.userId === profile.id)?.roles?.includes('admin') ? 'admin' : 'player',
               wins:        `${leagueWins}W`,
               losses:      `${leagueLosses}L`,
               tournaments: String(league.tournaments?.length || 0),
@@ -432,7 +449,7 @@ export default function Profile() {
 
           {/* ── Tab content ── */}
           {activeTab === 'stats'   && <StatsTab   performance={data.stats.performance} />}
-          {activeTab === 'leagues' && <LeaguesTab leagues={data.leagues} />}
+          {activeTab === 'leagues' && <LeaguesTab leagues={data.leagues} navigate={navigate} />}
           {activeTab === 'matches' && <MatchesTab matches={data.matches} />}
 
         </div>

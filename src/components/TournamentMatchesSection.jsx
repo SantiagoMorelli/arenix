@@ -30,7 +30,7 @@ function getValidGroupOptions(numTeams) {
   return [2, 4, 8].filter(g => Math.floor(numTeams / g) >= 3);
 }
 
-function calcFreePlayStandings(teams, matches) {
+function calcFreePlayStandings(teams, matches, players = []) {
   return teams.map(tm => {
     let mp = 0, pf = 0, pa = 0, played = 0, wins = 0, losses = 0;
     (matches || []).filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
@@ -43,7 +43,11 @@ function calcFreePlayStandings(teams, matches) {
         if (scored > conceded) { mp += 1; wins++;   }
         else                   {          losses++; }
       });
-    return { id: tm.id, name: tm.name, played, wins, losses, pf, pa, pd: pf - pa, mp };
+    const playerNames = tm.players?.map(pid => {
+      const p = players.find(x => x.id === pid);
+      return p ? (p.displayName || p.nickname || p.name) : "Unknown";
+    }).join(" · ") || "";
+    return { id: tm.id, name: tm.name, playerNames, played, wins, losses, pf, pa, pd: pf - pa, mp };
   }).sort((a, b) => b.mp - a.mp || b.pd - a.pd || b.pf - a.pf);
 }
 
@@ -245,7 +249,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
   if (isFreePlay) {
     const unplayed = (tournament.matches || []).filter(m => !m.played);
     const played   = (tournament.matches || []).filter(m => m.played);
-    const standings = calcFreePlayStandings(tournament.teams, tournament.matches || []);
+    const standings = calcFreePlayStandings(tournament.teams, tournament.matches || [], players);
 
     return (
       <div>
@@ -456,63 +460,30 @@ function SectionLabel({ children }) {
 }
 
 function StandingsTable({ rows }) {
-  const [showLegend, setShowLegend] = React.useState(false);
-  const cols = ["#", "Team", "P", "W", "L", "PF", "PA", "PD", "MP"];
   return (
-    <>
-      <div className="flex justify-end mb-1.5">
-        <button
-          onClick={() => setShowLegend(true)}
-          className="bg-transparent border-0 cursor-pointer text-dim text-[12px] px-1.5 py-0.5"
-        >
-          ℹ️ key
-        </button>
+    <div className="flex flex-col gap-[2px]">
+      <div className="flex px-3 py-1.5 bg-alt rounded-[8px] text-[10px] font-bold text-dim uppercase tracking-[0.5px]">
+        <span className="w-[20px]">#</span>
+        <span className="flex-1">Team</span>
+        <span className="w-[30px] text-center">W</span>
+        <span className="w-[30px] text-center">L</span>
+        <span className="w-[30px] text-center">PTS</span>
       </div>
-      {showLegend && (
-        <ModalShell title="STANDINGS GUIDE" onClose={() => setShowLegend(false)}>
-          <div className="grid gap-0">
-            {BV_LEGEND.map(({ key, label }, i) => (
-              <div key={key} className={`flex items-center gap-3.5 py-3 ${i < BV_LEGEND.length - 1 ? "border-b border-line" : ""}`}>
-                <div className="w-9 h-9 rounded-[10px] bg-accent flex items-center justify-center font-display text-[15px] text-white tracking-wide flex-shrink-0">
-                  {key}
-                </div>
-                <span className="text-[14px] text-text">{label}</span>
-              </div>
-            ))}
+      {rows.map((row, i) => (
+        <div key={row.teamId || i} className={`flex px-3 py-2 items-center rounded-[8px] ${i === 0 ? "bg-accent/15" : "bg-surface border border-line"} mb-1`}>
+          <span className={`w-[20px] font-bold text-[12px] ${i === 0 ? "text-accent" : "text-dim"}`}>{i + 1}</span>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <span className="text-[13px] font-semibold text-text truncate">{row.name}</span>
+            {row.playerNames && (
+              <span className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</span>
+            )}
           </div>
-          <div className="mt-4 p-3 bg-accent/[0.07] rounded-[10px] border-l-[3px] border-accent">
-            <div className="text-[11px] font-bold text-accent uppercase tracking-[0.8px] mb-1">Tiebreaker order</div>
-            <div className="text-[13px] text-text">MP → PD → PF</div>
-          </div>
-        </ModalShell>
-      )}
-      <div className="grid grid-cols-[24px_1fr_28px_28px_28px_36px_36px_36px_36px] gap-1 text-[10px] font-bold text-dim uppercase tracking-[0.5px] pb-1.5 border-b border-line mb-1">
-        {cols.map(c => (
-          <span key={c} className={c === "Team" ? "text-left" : "text-center"}>{c}</span>
-        ))}
-      </div>
-      {rows.map((row, rank) => (
-        <div
-          key={row.id}
-          className={`grid grid-cols-[24px_1fr_28px_28px_28px_36px_36px_36px_36px] gap-1 items-center py-[7px] ${rank < rows.length - 1 ? "border-b border-line" : ""}`}
-        >
-          <span className={`font-bold text-[12px] ${rank === 0 ? "text-free" : "text-dim"}`}>{rank + 1}</span>
-          <span className="font-semibold text-[13px]">{row.name}</span>
-          {[row.played, row.wins, row.losses, row.pf, row.pa, row.pd, row.mp].map((val, ci) => (
-            <span
-              key={ci}
-              className={`text-center text-[13px] ${
-                ci === 6 ? "font-bold text-accent" :
-                ci === 5 ? (val > 0 ? "text-success" : val < 0 ? "text-error" : "text-text") :
-                "text-text"
-              }`}
-            >
-              {val}
-            </span>
-          ))}
+          <span className="w-[30px] text-center font-bold text-[13px] text-success">{row.wins}</span>
+          <span className="w-[30px] text-center font-bold text-[13px] text-error">{row.losses}</span>
+          <span className="w-[30px] text-center font-bold text-[13px] text-accent">{row.pts ?? row.mp}</span>
         </div>
       ))}
-    </>
+    </div>
   );
 }
 

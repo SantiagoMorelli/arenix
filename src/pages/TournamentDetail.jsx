@@ -467,11 +467,12 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: TEAMS
 // ═══════════════════════════════════════════════════════════════════════════════
-function TeamsTab({ tournament, leaguePlayers, currentUserId, onRenameTeam }) {
+function TeamsTab({ tournament, leaguePlayers, currentUserId, canManage, onRenameTeam }) {
   const { teams } = tournament
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editName, setEditName]           = useState('')
   const [saving, setSaving]               = useState(false)
+  const [saveError, setSaveError]         = useState(null)
 
   if (!teams || teams.length === 0) {
     return <div className="px-4 text-[13px] text-dim text-center py-10">No teams yet</div>
@@ -481,9 +482,12 @@ function TeamsTab({ tournament, leaguePlayers, currentUserId, onRenameTeam }) {
     const trimmed = editName.trim()
     if (!trimmed) return
     setSaving(true)
+    setSaveError(null)
     try {
       await onRenameTeam(teamId, trimmed)
       setEditingTeamId(null)
+    } catch (err) {
+      setSaveError(err?.message || 'Failed to save. Check your permissions.')
     } finally {
       setSaving(false)
     }
@@ -497,40 +501,46 @@ function TeamsTab({ tournament, leaguePlayers, currentUserId, onRenameTeam }) {
             const p = leaguePlayers.find(pl => pl.id === pid)
             return p?.userId === currentUserId
           })
+          const canEdit   = isMember || canManage
           const isEditing = editingTeamId === team.id
           const displayName = team.name
 
           return (
             <div key={team.id} className="bg-surface rounded-xl p-3.5 border border-line">
               {isEditing ? (
-                <div className="flex items-center gap-2 mb-2.5">
-                  <input
-                    autoFocus
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleSave(team.id); if (e.key === 'Escape') setEditingTeamId(null) }}
-                    className="flex-1 bg-bg border border-accent rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-text outline-none"
-                  />
-                  <button
-                    onClick={() => handleSave(team.id)}
-                    disabled={saving || !editName.trim()}
-                    className="text-[11px] font-bold text-white bg-accent px-3 py-1.5 rounded-lg border-0 cursor-pointer disabled:opacity-50"
-                  >
-                    {saving ? '…' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => setEditingTeamId(null)}
-                    className="text-[11px] font-semibold text-dim bg-transparent border-0 cursor-pointer px-1"
-                  >
-                    Cancel
-                  </button>
+                <div className="flex flex-col gap-1.5 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={editName}
+                      onChange={e => { setEditName(e.target.value); setSaveError(null) }}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSave(team.id); if (e.key === 'Escape') { setEditingTeamId(null); setSaveError(null) } }}
+                      className="flex-1 bg-bg border border-accent rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-text outline-none"
+                    />
+                    <button
+                      onClick={() => handleSave(team.id)}
+                      disabled={saving || !editName.trim()}
+                      className="text-[11px] font-bold text-white bg-accent px-3 py-1.5 rounded-lg border-0 cursor-pointer disabled:opacity-50"
+                    >
+                      {saving ? '…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => { setEditingTeamId(null); setSaveError(null) }}
+                      className="text-[11px] font-semibold text-dim bg-transparent border-0 cursor-pointer px-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {saveError && (
+                    <div className="text-[10px] text-error font-medium px-0.5">{saveError}</div>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 mb-2.5">
                   <div className="flex-1 text-[13px] font-bold text-text">{displayName}</div>
-                  {isMember && (
+                  {canEdit && (
                     <button
-                      onClick={() => { setEditingTeamId(team.id); setEditName(team.name) }}
+                      onClick={() => { setEditingTeamId(team.id); setEditName(team.name); setSaveError(null) }}
                       className="text-dim hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0.5"
                       title="Rename team"
                     >
@@ -612,7 +622,7 @@ export default function TournamentDetail() {
 
   // ── Handlers ──
   const handleRenameTeam = async (teamId, newName) => {
-    await renameTeam(teamId, newName)
+    await renameTeam(teamId, newName)  // throws on error — propagates to TeamsTab
     refetch()
   }
 
@@ -816,7 +826,7 @@ export default function TournamentDetail() {
           />
         )}
         {activeTab === 'teams' && (
-          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} onRenameTeam={handleRenameTeam} />
+          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} canManage={canManage} onRenameTeam={handleRenameTeam} />
         )}
       </main>
 

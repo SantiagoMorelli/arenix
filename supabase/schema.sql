@@ -482,6 +482,25 @@ CREATE POLICY "teams: admin can manage" ON public.teams
             AND public.my_league_has_role(t.league_id, 'admin'))
   );
 
+DROP POLICY IF EXISTS "teams: team member can rename" ON public.teams;
+CREATE POLICY "teams: team member can rename" ON public.teams
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.team_players tp
+      JOIN public.players p ON p.id = tp.player_id
+      WHERE tp.team_id = teams.id
+        AND p.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.team_players tp
+      JOIN public.players p ON p.id = tp.player_id
+      WHERE tp.team_id = teams.id
+        AND p.user_id = auth.uid()
+    )
+  );
+
 -- ── team_players ──
 DROP POLICY IF EXISTS "team_players: members can view" ON public.team_players;
 CREATE POLICY "team_players: members can view" ON public.team_players

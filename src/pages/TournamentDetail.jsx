@@ -467,7 +467,7 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: TEAMS
 // ═══════════════════════════════════════════════════════════════════════════════
-function TeamsTab({ tournament, leaguePlayers, currentUserId, canManage, onRenameTeam }) {
+function TeamsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
   const { teams } = tournament
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editName, setEditName]           = useState('')
@@ -501,7 +501,7 @@ function TeamsTab({ tournament, leaguePlayers, currentUserId, canManage, onRenam
             const p = leaguePlayers.find(pl => pl.id === pid)
             return p?.userId === currentUserId
           })
-          const canEdit   = isMember || canManage
+          const canEdit   = isAdmin || isMember
           const isEditing = editingTeamId === team.id
           const displayName = team.name
 
@@ -584,7 +584,7 @@ export default function TournamentDetail() {
   const [activeTab, setActiveTab] = useState('standings')
 
   const { league, loading, refetch } = useLeague(id)
-  const { canScore, canManage }      = useLeagueRole(id)
+  const { canScore, canManage, isAdmin } = useLeagueRole(id)
   const { profile }                  = useAuth()
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
@@ -826,7 +826,7 @@ export default function TournamentDetail() {
           />
         )}
         {activeTab === 'teams' && (
-          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} canManage={canManage} onRenameTeam={handleRenameTeam} />
+          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} isAdmin={isAdmin} onRenameTeam={handleRenameTeam} />
         )}
       </main>
 

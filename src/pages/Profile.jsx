@@ -249,22 +249,11 @@ export default function Profile() {
           const myPlayerRecord = league.players?.find(p => p.userId === profile.id)
 
           if (myPlayerRecord) {
-            totalWins   += (myPlayerRecord.wins   || 0)
-            totalLosses += (myPlayerRecord.losses || 0)
-
             const sortedPlayers = [...league.players].sort((a, b) => (b.points || 0) - (a.points || 0))
             const myRank = sortedPlayers.findIndex(p => p.id === myPlayerRecord.id) + 1
 
-            userLeagues.push({
-              name:        league.name,
-              season:      league.season,
-              players:     league.players?.length || 0,
-              rank:        myRank > 0 ? `#${myRank}` : '-',
-              role:        league.myRole || 'player',
-              wins:        `${myPlayerRecord.wins   || 0}W`,
-              losses:      `${myPlayerRecord.losses || 0}L`,
-              tournaments: String(league.tournaments?.length || 0),
-            })
+            let leagueWins = 0
+            let leagueLosses = 0
 
             league.tournaments?.forEach(tour => {
               const allMatches = getAllMatches(tour).filter(m => m.played)
@@ -276,6 +265,9 @@ export default function Profile() {
                   const myTeamId  = inTeam1 ? m.team1 : m.team2
                   const myTeamNum = inTeam1 ? 1 : 2
                   const won       = m.winner === myTeamId
+
+                  if (won) { totalWins++;   leagueWins++   }
+                  else     { totalLosses++; leagueLosses++ }
 
                   // Points scored from set-level scores
                   if (m.sets?.length > 0) {
@@ -304,6 +296,17 @@ export default function Profile() {
                   })
                 }
               })
+            })
+
+            userLeagues.push({
+              name:        league.name,
+              season:      league.season,
+              players:     league.players?.length || 0,
+              rank:        myRank > 0 ? `#${myRank}` : '-',
+              role:        league.myRole || 'player',
+              wins:        `${leagueWins}W`,
+              losses:      `${leagueLosses}L`,
+              tournaments: String(league.tournaments?.length || 0),
             })
           }
         })

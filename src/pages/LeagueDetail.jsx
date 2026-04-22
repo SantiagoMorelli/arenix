@@ -5,7 +5,7 @@ import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
 import { deleteLeague, leaveLeague } from '../services/leagueService'
-import { buildInviteLink, regenerateInviteCode } from '../services/inviteService'
+import { buildInviteLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -151,15 +151,16 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
             const isMe = p.userId === currentUserId
             const isUnclaimed = !p.userId
             const isLinkingThis = linkingPlayerId === p.id
-            
+            const label = p.displayName || p.name
+
             return (
               <div key={p.id} className={`flex items-center px-3.5 py-2.5 flex-wrap gap-y-2 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-semibold mr-2.5 flex-shrink-0 ${isMe ? 'bg-accent/20 text-accent' : 'bg-alt text-text'}`}>
-                  {p.name[0]}
+                  {label[0]}
                 </div>
                 <div className="flex-1 min-w-[120px] flex items-center gap-2">
                   <span className={`text-[13px] font-medium truncate ${isMe ? 'text-accent' : 'text-text'}`}>
-                    {p.name}
+                    {label}
                   </span>
                   {isMe && (
                     <span className="text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded">
@@ -274,8 +275,37 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
   const [regen,   setRegen]    = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [leaving, setLeaving]   = useState(false)
+  const [saving,  setSaving]    = useState(null) // userId being saved
   const isOwner = league?.ownerId === currentUserId;
   const inviteLink = buildInviteLink(league?.inviteCode || '')
+
+  async function handleToggleAdmin(member) {
+    setSaving(member.userId)
+    try {
+      if (member.roles.includes('admin')) {
+        await removeMemberRole(league.id, member.userId, 'admin')
+      } else {
+        await addMemberRole(league.id, member.userId, 'admin')
+      }
+      await refetch()
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  async function handleToggleScore(member) {
+    setSaving(member.userId)
+    try {
+      if (member.permissions.has('score_match')) {
+        await revokeMemberPermission(league.id, member.userId, 'score_match')
+      } else {
+        await grantMemberPermission(league.id, member.userId, 'score_match')
+      }
+      await refetch()
+    } finally {
+      setSaving(null)
+    }
+  }
 
   async function handleCopy() {
     await navigator.clipboard.writeText(inviteLink)
@@ -349,20 +379,58 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
       )}
 
       <SectionLabel color="dim">Members</SectionLabel>
-      <div className="bg-surface border border-line rounded-xl overflow-hidden">
-        {(league?.members || []).map((m, i, arr) => (
-          <div key={m.userId} className={`flex items-center px-3.5 py-2.5 gap-3 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
-            <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[11px] font-bold text-text flex-shrink-0">
-              {(m.fullName || '?')[0]}
+      <div className="bg-surface border border-line rounded-xl overflow-hidden mb-4">
+        {(league?.members || []).map((m, i, arr) => {
+          const isSelf    = m.userId === currentUserId
+          const isLoading = saving === m.userId
+          const canEdit   = (isAdmin || isSuperAdmin) && !isSelf
+          const memberIsAdmin = m.roles.includes('admin')
+          const canScore  = m.permissions?.has('score_match') ?? false
+
+          return (
+            <div key={m.userId} className={`px-3.5 py-2.5 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[11px] font-bold text-text flex-shrink-0">
+                  {(m.fullName || '?')[0]}
+                </div>
+                <span className="flex-1 text-[13px] font-medium text-text truncate">
+                  {m.fullName || 'Unknown'}
+                  {isSelf && <span className="ml-1.5 text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded">YOU</span>}
+                </span>
+                <span className={`text-[9px] font-bold px-2 py-[3px] rounded-md capitalize ${ROLE_COLORS[memberIsAdmin ? 'admin' : m.role] || ROLE_COLORS.viewer}`}>
+                  {memberIsAdmin ? 'admin' : m.role}
+                </span>
+              </div>
+
+              {canEdit && (
+                <div className="flex items-center gap-2 mt-2 pl-[38px]">
+                  <button
+                    onClick={() => handleToggleAdmin(m)}
+                    disabled={isLoading}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border cursor-pointer disabled:opacity-50 transition-colors ${
+                      memberIsAdmin
+                        ? 'border-error/40 text-error bg-error/10 hover:bg-error/20'
+                        : 'border-free/40 text-free bg-free/10 hover:bg-free/20'
+                    }`}
+                  >
+                    {isLoading ? '…' : memberIsAdmin ? 'Remove Admin' : 'Make Admin'}
+                  </button>
+                  <button
+                    onClick={() => handleToggleScore(m)}
+                    disabled={isLoading}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border cursor-pointer disabled:opacity-50 transition-colors ${
+                      canScore
+                        ? 'border-success/40 text-success bg-success/10 hover:bg-success/20'
+                        : 'border-line text-dim bg-alt hover:bg-surface'
+                    }`}
+                  >
+                    {isLoading ? '…' : canScore ? 'Can Score ✓' : 'Can Score'}
+                  </button>
+                </div>
+              )}
             </div>
-            <span className="flex-1 text-[13px] font-medium text-text truncate">
-              {m.fullName || 'Unknown'}
-            </span>
-            <span className={`text-[9px] font-bold px-2 py-[3px] rounded-md capitalize ${ROLE_COLORS[m.role] || ROLE_COLORS.viewer}`}>
-              {m.role}
-            </span>
-          </div>
-        ))}
+          )
+        })}
         {(league?.members || []).length === 0 && (
           <div className="text-center text-[13px] text-dim py-4">No members found</div>
         )}
@@ -492,7 +560,9 @@ export default function LeagueDetail() {
               <SectionLabel color="accent">Top Rankings</SectionLabel>
               {rankedPlayers.length > 0 ? (
                 <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-[18px]">
-                  {rankedPlayers.slice(0, 5).map((player, i) => (
+                  {rankedPlayers.slice(0, 5).map((player, i) => {
+                    const label = player.displayName || player.name
+                    return (
                     <div
                       key={player.id}
                       className={`flex items-center px-3.5 py-2.5 ${i < rankedPlayers.length - 1 ? 'border-b border-line' : ''}`}
@@ -501,12 +571,12 @@ export default function LeagueDetail() {
                         {i + 1}
                       </span>
                       <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text mr-2.5 flex-shrink-0">
-                        {player.name[0]}
+                        {label[0]}
                       </div>
-                      <span className="flex-1 text-[13px] font-medium text-text truncate">{player.name}</span>
+                      <span className="flex-1 text-[13px] font-medium text-text truncate">{label}</span>
                       <span className="text-[12px] font-semibold text-dim ml-2">{player.points ?? 0}</span>
                     </div>
-                  ))}
+                  )})}
                 </div>
               ) : (
                 <div className="text-[13px] text-dim text-center py-6 mb-4">No players yet</div>

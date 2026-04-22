@@ -59,11 +59,12 @@ export async function getMyLeagues() {
  * players, tournaments (with teams + groups + knockout + matches).
  */
 export async function getLeagueById(leagueId) {
-  const [leagueRes, membersRes, playersRes, tournamentsRes] = await Promise.all([
+  const [leagueRes, membersRes, playersRes, tournamentsRes, permissionsRes] = await Promise.all([
     supabase.from('leagues').select('*').eq('id', leagueId).single(),
     supabase.from('league_member_roles').select('user_id, role, granted_at, profiles(full_name, avatar_url)').eq('league_id', leagueId),
-    supabase.from('players').select('*').eq('league_id', leagueId).order('created_at', { ascending: true }),
+    supabase.from('players').select('*, profiles!players_user_id_fkey(nickname, full_name)').eq('league_id', leagueId).order('created_at', { ascending: true }),
     supabase.from('tournaments').select('*').eq('league_id', leagueId).order('created_at', { ascending: true }),
+    supabase.from('league_member_permissions').select('user_id, permission').eq('league_id', leagueId),
   ])
 
   if (leagueRes.error) throw leagueRes.error
@@ -79,16 +80,20 @@ export async function getLeagueById(leagueId) {
   for (const m of membersRes.data || []) {
     if (!memberMap.has(m.user_id)) {
       memberMap.set(m.user_id, {
-        userId:    m.user_id,
-        role:      m.role,
-        roles:     [m.role],
-        joinedAt:  m.granted_at,
-        fullName:  m.profiles?.full_name || '',
-        avatarUrl: m.profiles?.avatar_url || null,
+        userId:      m.user_id,
+        role:        m.role,
+        roles:       [m.role],
+        joinedAt:    m.granted_at,
+        fullName:    m.profiles?.full_name || '',
+        avatarUrl:   m.profiles?.avatar_url || null,
+        permissions: new Set(),
       })
     } else {
       memberMap.get(m.user_id).roles.push(m.role)
     }
+  }
+  for (const p of permissionsRes.data || []) {
+    memberMap.get(p.user_id)?.permissions.add(p.permission)
   }
   const members = [...memberMap.values()]
 
@@ -133,15 +138,17 @@ export async function createLeague({ name, season = '2026' }) {
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 function normalizePlayer(row) {
+  const linked = row.profiles
   return {
-    id:       row.id,
-    name:     row.name,
-    level:    row.level,
-    wins:     row.wins,
-    losses:   row.losses,
-    points:   row.points,
-    userId:   row.user_id,
-    leagueId: row.league_id,
+    id:          row.id,
+    name:        row.name,
+    displayName: (linked?.nickname || linked?.full_name) || row.name,
+    level:       row.level,
+    wins:        row.wins,
+    losses:      row.losses,
+    points:      row.points,
+    userId:      row.user_id,
+    leagueId:    row.league_id,
   }
 }
 

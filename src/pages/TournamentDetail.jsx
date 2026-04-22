@@ -193,7 +193,7 @@ function calcGroupStandings(group, teams, players = []) {
       return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
     }).join(' · ')
     
-    return { id: teamId, name: teamName(teams, teamId), playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins * 3 }
+    return { id: teamId, name: teamName(teams, teamId), playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins }
   }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
 }
 
@@ -215,7 +215,7 @@ function calcOverallStandings(teams, matches, players = []) {
       return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
     }).join(' · ')
 
-    return { id: tm.id, name: tm.name, playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins * 3 }
+    return { id: tm.id, name: tm.name, playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins }
   }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
 }
 
@@ -886,7 +886,8 @@ export default function TournamentDetail() {
           r => r.id === 'final' && r.matches.some(m => m.id === selectedMatch.id)
         )
         if (isFinal) {
-          await completeTournament(tid, winnerId)
+          const runnerUpId = selectedMatch.team1 === winnerId ? selectedMatch.team2 : selectedMatch.team1
+          await completeTournament(tid, winnerId, runnerUpId)
         }
       }
       handleCloseModal()

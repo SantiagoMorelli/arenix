@@ -218,7 +218,9 @@ export default function LiveMatch() {
           r => r.id === 'final' && r.matches.some(m => m.id === matchId)
         )
         if (isFinal) {
-          await completeTournament(tid, winnerTeamId)
+          const match = tournament.knockout.rounds.find(r => r.id === 'final').matches.find(m => m.id === matchId)
+          const runnerUpId = match.team1 === winnerTeamId ? match.team2 : match.team1
+          await completeTournament(tid, winnerTeamId, runnerUpId)
         }
       }
     } catch (err) {

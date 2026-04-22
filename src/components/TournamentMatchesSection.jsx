@@ -196,7 +196,7 @@ const TournamentMatchesSection = ({ tournament, setTournaments, players, onOpenL
 
           {effectiveMode === "freeplay" && (
             <div className={`text-[13px] text-dim ${canGroupStage ? "" : "mt-2"}`}>
-              All teams play each other once. Final standings based on points (W=3, D=1, L=0).
+              All teams play each other once. Final standings based on points (Win=1, Loss=0).
             </div>
           )}
 

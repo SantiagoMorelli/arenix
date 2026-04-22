@@ -107,6 +107,18 @@ export async function createTournament(leagueId, payload) {
  * @param {object[]} sets - sets array
  */
 export async function saveMatchResult(matchId, score1, score2, winnerId, log = null, sets = null) {
+  // 1. Get the match to determine the loser team
+  const { data: matchData, error: matchError } = await supabase
+    .from('matches')
+    .select('team1_id, team2_id')
+    .eq('id', matchId)
+    .single()
+    
+  if (matchError) throw matchError
+
+  const loserId = matchData.team1_id === winnerId ? matchData.team2_id : matchData.team1_id
+
+  // 2. Save the match result
   const { error } = await supabase
     .from('matches')
     .update({
@@ -120,6 +132,75 @@ export async function saveMatchResult(matchId, score1, score2, winnerId, log = n
     .eq('id', matchId)
 
   if (error) throw error
+  
+  // 3. Update team stats (1 pt and 1 win for winner, 1 loss for loser)
+  if (winnerId) {
+    const { error: winErr } = await supabase.rpc('increment_team_stats', {
+      p_team_id: winnerId,
+      p_wins: 1,
+      p_losses: 0,
+      p_points: 1
+    })
+    
+    // If RPC doesn't exist, fallback to direct update
+    if (winErr) {
+      const { data: wTeam } = await supabase.from('teams').select('wins, points').eq('id', winnerId).single()
+      if (wTeam) {
+        await supabase.from('teams').update({
+          wins: wTeam.wins + 1,
+          points: wTeam.points + 1
+        }).eq('id', winnerId)
+      }
+    }
+  }
+  
+  if (loserId) {
+    const { error: lossErr } = await supabase.rpc('increment_team_stats', {
+      p_team_id: loserId,
+      p_wins: 0,
+      p_losses: 1,
+      p_points: 0
+    })
+    
+    if (lossErr) {
+      const { data: lTeam } = await supabase.from('teams').select('losses').eq('id', loserId).single()
+      if (lTeam) {
+        await supabase.from('teams').update({
+          losses: lTeam.losses + 1
+        }).eq('id', loserId)
+      }
+    }
+  }
+
+  // 4. Update player stats
+  if (winnerId) {
+    const { data: wPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', winnerId)
+    if (wPlayers) {
+      for (const wp of wPlayers) {
+        const { data: pData } = await supabase.from('players').select('wins, points').eq('id', wp.player_id).single()
+        if (pData) {
+          await supabase.from('players').update({
+            wins: pData.wins + 1,
+            points: pData.points + 1
+          }).eq('id', wp.player_id)
+        }
+      }
+    }
+  }
+  
+  if (loserId) {
+    const { data: lPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', loserId)
+    if (lPlayers) {
+      for (const lp of lPlayers) {
+        const { data: pData } = await supabase.from('players').select('losses').eq('id', lp.player_id).single()
+        if (pData) {
+          await supabase.from('players').update({
+            losses: pData.losses + 1
+          }).eq('id', lp.player_id)
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -185,7 +266,7 @@ export async function advanceKnockoutAfterMatch(playedMatchId, winnerId, knockou
 /**
  * Marks a tournament as completed and sets the winner.
  */
-export async function completeTournament(tournamentId, winnerTeamId) {
+export async function completeTournament(tournamentId, winnerTeamId, runnerUpTeamId) {
   const { error } = await supabase
     .from('tournaments')
     .update({ 
@@ -196,6 +277,41 @@ export async function completeTournament(tournamentId, winnerTeamId) {
     .eq('id', tournamentId)
 
   if (error) throw error
+  
+  // Apply tournament completion bonus points
+  if (winnerTeamId) {
+    const { data: wTeam } = await supabase.from('teams').select('points').eq('id', winnerTeamId).single()
+    if (wTeam) {
+      await supabase.from('teams').update({ points: wTeam.points + 2 }).eq('id', winnerTeamId)
+      
+      const { data: wPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', winnerTeamId)
+      if (wPlayers) {
+        for (const wp of wPlayers) {
+          const { data: pData } = await supabase.from('players').select('points').eq('id', wp.player_id).single()
+          if (pData) {
+            await supabase.from('players').update({ points: pData.points + 2 }).eq('id', wp.player_id)
+          }
+        }
+      }
+    }
+  }
+  
+  if (runnerUpTeamId) {
+    const { data: rTeam } = await supabase.from('teams').select('points').eq('id', runnerUpTeamId).single()
+    if (rTeam) {
+      await supabase.from('teams').update({ points: rTeam.points + 1 }).eq('id', runnerUpTeamId)
+      
+      const { data: rPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', runnerUpTeamId)
+      if (rPlayers) {
+        for (const rp of rPlayers) {
+          const { data: pData } = await supabase.from('players').select('points').eq('id', rp.player_id).single()
+          if (pData) {
+            await supabase.from('players').update({ points: pData.points + 1 }).eq('id', rp.player_id)
+          }
+        }
+      }
+    }
+  }
 }
 
 /**

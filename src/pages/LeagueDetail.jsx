@@ -710,7 +710,7 @@ export default function LeagueDetail() {
 
               {tournaments.length > 0 ? (
                 <div className="flex flex-col gap-2">
-                  {tournaments.slice(0, 5).map(t => {
+                  {(activeTab === 'tournaments' ? tournaments : tournaments.slice(0, 5)).map(t => {
                     const { label, variant } = getTournamentStatus(t)
                     const pCount             = getTournamentPlayerCount(t)
                     const podium             = getTournamentPodium(t, league?.players || [])

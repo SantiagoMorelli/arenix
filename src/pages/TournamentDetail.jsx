@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
-import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
+import { useAuth } from '../contexts/AuthContext'
+import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam } from '../services/tournamentService'
 import { uid } from '../lib/utils'
 import GameStats from '../components/GameStats'
 
@@ -466,34 +467,99 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: TEAMS
 // ═══════════════════════════════════════════════════════════════════════════════
-function TeamsTab({ tournament, leaguePlayers }) {
+function TeamsTab({ tournament, leaguePlayers, currentUserId, onRenameTeam }) {
   const { teams } = tournament
+  const [editingTeamId, setEditingTeamId] = useState(null)
+  const [editName, setEditName]           = useState('')
+  const [saving, setSaving]               = useState(false)
 
   if (!teams || teams.length === 0) {
     return <div className="px-4 text-[13px] text-dim text-center py-10">No teams yet</div>
   }
 
+  async function handleSave(teamId) {
+    const trimmed = editName.trim()
+    if (!trimmed) return
+    setSaving(true)
+    try {
+      await onRenameTeam(teamId, trimmed)
+      setEditingTeamId(null)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="px-4">
       <div className="flex flex-col gap-3">
-        {teams.map(team => (
-          <div key={team.id} className="bg-surface rounded-xl p-3.5 border border-line">
-            <div className="text-[13px] font-bold text-text mb-2.5">{team.name}</div>
-            <div className="flex flex-wrap gap-2">
-              {(team.players || []).map(pid => {
-                const player = leaguePlayers.find(p => p.id === pid)
-                return player ? (
-                  <div key={pid} className="flex items-center gap-1.5 text-[11px] bg-alt text-text rounded-md px-2.5 py-1.5 font-medium border border-line/50">
-                    <div className="w-4 h-4 rounded-sm bg-bg flex items-center justify-center text-[9px] font-bold text-dim">
-                      {player.name[0]}
+        {teams.map(team => {
+          const isMember = currentUserId && (team.players || []).some(pid => {
+            const p = leaguePlayers.find(pl => pl.id === pid)
+            return p?.userId === currentUserId
+          })
+          const isEditing = editingTeamId === team.id
+          const displayName = team.name
+
+          return (
+            <div key={team.id} className="bg-surface rounded-xl p-3.5 border border-line">
+              {isEditing ? (
+                <div className="flex items-center gap-2 mb-2.5">
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSave(team.id); if (e.key === 'Escape') setEditingTeamId(null) }}
+                    className="flex-1 bg-bg border border-accent rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-text outline-none"
+                  />
+                  <button
+                    onClick={() => handleSave(team.id)}
+                    disabled={saving || !editName.trim()}
+                    className="text-[11px] font-bold text-white bg-accent px-3 py-1.5 rounded-lg border-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? '…' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => setEditingTeamId(null)}
+                    className="text-[11px] font-semibold text-dim bg-transparent border-0 cursor-pointer px-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="flex-1 text-[13px] font-bold text-text">{displayName}</div>
+                  {isMember && (
+                    <button
+                      onClick={() => { setEditingTeamId(team.id); setEditName(team.name) }}
+                      className="text-dim hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0.5"
+                      title="Rename team"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {(team.players || []).map(pid => {
+                  const player = leaguePlayers.find(p => p.id === pid)
+                  if (!player) return null
+                  const label = player.displayName || player.name
+                  return (
+                    <div key={pid} className="flex items-center gap-1.5 text-[11px] bg-alt text-text rounded-md px-2.5 py-1.5 font-medium border border-line/50">
+                      <div className="w-4 h-4 rounded-sm bg-bg flex items-center justify-center text-[9px] font-bold text-dim">
+                        {label[0]}
+                      </div>
+                      {label}
                     </div>
-                    {player.name}
-                  </div>
-                ) : null
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -509,6 +575,7 @@ export default function TournamentDetail() {
 
   const { league, loading, refetch } = useLeague(id)
   const { canScore, canManage }      = useLeagueRole(id)
+  const { profile }                  = useAuth()
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
 
@@ -544,6 +611,11 @@ export default function TournamentDetail() {
   }
 
   // ── Handlers ──
+  const handleRenameTeam = async (teamId, newName) => {
+    await renameTeam(teamId, newName)
+    refetch()
+  }
+
   const handleStartMatchClick = (match) => {
     setSelectedMatch(match)
     setShowScoreForm(false)
@@ -744,7 +816,7 @@ export default function TournamentDetail() {
           />
         )}
         {activeTab === 'teams' && (
-          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} />
+          <TeamsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} onRenameTeam={handleRenameTeam} />
         )}
       </main>
 

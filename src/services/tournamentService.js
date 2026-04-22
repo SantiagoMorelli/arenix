@@ -230,3 +230,11 @@ export async function saveKnockoutRounds(tournamentId, rounds) {
     }
   }
 }
+
+export async function renameTeam(teamId, newName) {
+  const { error } = await supabase
+    .from('teams')
+    .update({ name: newName })
+    .eq('id', teamId)
+  if (error) throw error
+}

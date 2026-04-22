@@ -320,6 +320,20 @@ $$;
 
 -- ── League-scoped helpers (all respect superadmin) ──
 
+-- Returns true if the current user (auth.uid()) is a player on the given team.
+-- SECURITY DEFINER so it bypasses RLS on team_players/players and avoids
+-- the circular-reference loop that arises when the teams policy queries
+-- team_players whose policy in turn queries teams.
+CREATE OR REPLACE FUNCTION public.is_team_member(p_team_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.team_players tp
+    JOIN public.players pl ON pl.id = tp.player_id
+    WHERE tp.team_id = p_team_id
+      AND pl.user_id = auth.uid()
+  )
+$$;
+
 -- Returns true if the current user holds the given role in the league,
 -- or if they are a platform superadmin.
 CREATE OR REPLACE FUNCTION public.my_league_has_role(league UUID, check_role TEXT)
@@ -484,22 +498,9 @@ CREATE POLICY "teams: admin can manage" ON public.teams
 
 DROP POLICY IF EXISTS "teams: team member can rename" ON public.teams;
 CREATE POLICY "teams: team member can rename" ON public.teams
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM public.team_players tp
-      JOIN public.players p ON p.id = tp.player_id
-      WHERE tp.team_id = teams.id
-        AND p.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.team_players tp
-      JOIN public.players p ON p.id = tp.player_id
-      WHERE tp.team_id = teams.id
-        AND p.user_id = auth.uid()
-    )
-  );
+  FOR UPDATE
+  USING     (public.is_team_member(teams.id))
+  WITH CHECK (public.is_team_member(teams.id));
 
 -- ── team_players ──
 DROP POLICY IF EXISTS "team_players: members can view" ON public.team_players;

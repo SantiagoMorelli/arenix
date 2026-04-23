@@ -7,17 +7,58 @@ import { uid, now, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 
 const STEPS = ['Players', 'Teams', 'Schedule']
 
-const AUTO_OPTIONS = [
-  { id: 'random',   title: 'Random',   subtitle: 'Random distribution', emoji: '🎲' },
-  { id: 'balanced', title: 'By level', subtitle: 'Balanced teams',      emoji: '⚖️' },
-]
-
 const FORMAT_OPTIONS = [
   { id: 'group',    label: 'Group + Knockout', emoji: '🏆' },
   { id: 'freeplay', label: 'Free Play',         emoji: '🎮' },
 ]
 
-const levelScore = { beginner: 1, intermediate: 2, advanced: 3 }
+// ── Team generation helpers ───────────────────────────────────────────────────
+const LEVEL_SCORE = { beginner: 1, intermediate: 2, advanced: 3 }
+
+function snakeDraft(sorted, numTeams, teamSize) {
+  const slots = Array.from({ length: numTeams }, () => [])
+  sorted.forEach((p, i) => {
+    const row = Math.floor(i / numTeams)
+    const col = row % 2 === 0 ? i % numTeams : numTeams - 1 - (i % numTeams)
+    if (slots[col] && slots[col].length < teamSize) slots[col].push(p.id)
+  })
+  return slots.filter(s => s.length === teamSize)
+}
+
+function interleave(...arrs) {
+  const result = []
+  const max = Math.max(...arrs.map(a => a.length), 0)
+  for (let i = 0; i < max; i++) arrs.forEach(arr => { if (i < arr.length) result.push(arr[i]) })
+  return result
+}
+
+function buildTeamGroups(pool, params, teamSize) {
+  const n = Math.floor(pool.length / teamSize)
+  if (n < 1) return []
+  const byLevel = arr => [...arr].sort((a, b) => (LEVEL_SCORE[b.level] || 1) - (LEVEL_SCORE[a.level] || 1))
+  const rand    = arr => [...arr].sort(() => Math.random() - 0.5)
+  const M = p => p.sex === 'M', F = p => p.sex === 'F', O = p => p.sex !== 'M' && p.sex !== 'F'
+  let sorted
+  if      (params.length === 0)                          sorted = rand(pool)
+  else if (params[0] === 'sex'   && params.length === 1) sorted = interleave(rand(pool.filter(M)), rand(pool.filter(F)), rand(pool.filter(O)))
+  else if (params[0] === 'level' && params.length === 1) sorted = byLevel(pool)
+  else if (params[0] === 'sex')                          sorted = interleave(byLevel(pool.filter(M)), byLevel(pool.filter(F)), byLevel(pool.filter(O)))
+  else                                                   sorted = [...pool].sort((a, b) => {
+    const ld = (LEVEL_SCORE[b.level] || 1) - (LEVEL_SCORE[a.level] || 1)
+    if (ld !== 0) return ld
+    const s = x => x.sex === 'M' ? 0 : x.sex === 'F' ? 1 : 2
+    return s(a) - s(b)
+  })
+  return snakeDraft(sorted, n, teamSize)
+}
+
+function paramDescription(params) {
+  if (params.length === 0)                            return 'Teams generated randomly with no prioritization.'
+  if (params[0] === 'sex'   && params.length === 1)   return 'Teams balanced by sex — males and females distributed evenly.'
+  if (params[0] === 'level' && params.length === 1)   return 'Teams balanced by skill level using a snake draft.'
+  if (params[0] === 'sex')   return 'Primary: balance sex across teams. Secondary: balance skill level within each sex group.'
+  return 'Primary: balance skill level across teams. Secondary: alternate sex within the same level.'
+}
 
 function Stepper({ step }) {
   return (
@@ -72,12 +113,13 @@ export default function TournamentSetupWizard() {
   const [pickedPlayers, setPickedPlayers] = useState([])
 
   // Step 1 state — teams live fully in local state
-  const [teams,          setTeams]          = useState([])
-  const [teamMode,       setTeamMode]       = useState('auto')
-  const [autoMethod,     setAutoMethod]     = useState('random')
-  const [proposedTeams,  setProposedTeams]  = useState([])
-  const [manualTeamName, setManualTeamName] = useState('')
-  const [manualPicked,   setManualPicked]   = useState([])
+  const [teams,            setTeams]            = useState([])
+  const [teamMode,         setTeamMode]         = useState('auto')
+  const [params,           setParams]           = useState([])       // ordered: ['sex','level']
+  const [proposedTeams,    setProposedTeams]    = useState([])
+  const [addingTeam,       setAddingTeam]       = useState(false)
+  const [addingTeamName,   setAddingTeamName]   = useState('')
+  const [pickingForTeamId, setPickingForTeamId] = useState(null)    // teamId or null
 
   // Step 2 state
   const [formatMode,      setFormatMode]      = useState('group')
@@ -119,49 +161,43 @@ export default function TournamentSetupWizard() {
     setPickedPlayers(prev => prev.includes(pid) ? prev.filter(x => x !== pid) : [...prev, pid])
 
   // ── Auto-generate teams ───────────────────────────────────────────────────
-  const generateRandom = () => {
-    const shuffled = [...availablePlayers].sort(() => Math.random() - 0.5)
-    const next = []
-    for (let i = 0; i < shuffled.length; i += teamSize) {
-      const chunk = shuffled.slice(i, i + teamSize)
-      if (chunk.length === teamSize) {
-        next.push({ id: uid(), name: `Team ${teams.length + next.length + 1}`, players: chunk.map(p => p.id), wins: 0, losses: 0, points: 0 })
-      }
-    }
-    setProposedTeams(next)
+  const toggleParam = p => {
+    setParams(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
+    setProposedTeams([])
   }
 
-  const generateBalanced = () => {
-    const sorted = [...availablePlayers].sort((a, b) => (levelScore[b.level] || 1) - (levelScore[a.level] || 1))
-    const numberOfTeams = Math.floor(sorted.length / teamSize)
-    const slots = Array.from({ length: numberOfTeams }, () => [])
-    sorted.forEach((player, idx) => {
-      if (!slots.length) return
-      const row = Math.floor(idx / numberOfTeams)
-      const col = row % 2 === 0 ? idx % numberOfTeams : numberOfTeams - 1 - (idx % numberOfTeams)
-      if (slots[col] && slots[col].length < teamSize) slots[col].push(player.id)
-    })
-    const next = slots
-      .filter(group => group.length === teamSize)
-      .map((playerIds, idx) => ({ id: uid(), name: `Team ${teams.length + idx + 1}`, players: playerIds, wins: 0, losses: 0, points: 0 }))
-    setProposedTeams(next)
+  const propose = () => {
+    const groups = buildTeamGroups(availablePlayers, params, teamSize)
+    setProposedTeams(groups.map((pIds, i) => ({
+      id: uid(), name: `Team ${teams.length + i + 1}`, players: pIds, wins: 0, losses: 0, points: 0,
+    })))
   }
 
-  const generateAutoTeams   = () => { if (autoMethod === 'balanced') generateBalanced(); else generateRandom() }
-  const confirmProposedTeams = () => { if (!proposedTeams.length) return; setTeams(prev => [...prev, ...proposedTeams]); setProposedTeams([]) }
+  const confirmProposed = () => {
+    if (!proposedTeams.length) return
+    setTeams(prev => [...prev, ...proposedTeams])
+    setProposedTeams([])
+  }
 
   // ── Manual team creation ──────────────────────────────────────────────────
-  const toggleManualPicked = pid =>
-    setManualPicked(prev =>
-      prev.includes(pid) ? prev.filter(x => x !== pid) : prev.length < teamSize ? [...prev, pid] : prev
-    )
-
-  const addManualTeam = () => {
-    if (!manualTeamName.trim() || manualPicked.length !== teamSize) return
-    setTeams(prev => [...prev, { id: uid(), name: manualTeamName.trim(), players: manualPicked, wins: 0, losses: 0, points: 0 }])
-    setManualTeamName('')
-    setManualPicked([])
+  const addEmptyTeam = () => {
+    if (!addingTeamName.trim()) return
+    setTeams(prev => [...prev, { id: uid(), name: addingTeamName.trim(), players: [], wins: 0, losses: 0, points: 0 }])
+    setAddingTeamName('')
+    setAddingTeam(false)
   }
+
+  const assignPlayer = (teamId, pid) => {
+    setTeams(prev => prev.map(t =>
+      t.id !== teamId ? t : t.players.length < teamSize ? { ...t, players: [...t.players, pid] } : t
+    ))
+    setPickingForTeamId(null)
+  }
+
+  const removePlayerFromTeam = (teamId, pid) =>
+    setTeams(prev => prev.map(t =>
+      t.id !== teamId ? t : { ...t, players: t.players.filter(id => id !== pid) }
+    ))
 
   const removeTeam = teamId => setTeams(prev => prev.filter(t => t.id !== teamId))
 
@@ -337,114 +373,242 @@ export default function TournamentSetupWizard() {
         {step === 1 && (
           <div>
             <div className="text-[16px] font-bold mb-1">Create Teams</div>
-            <div className="text-[12px] text-dim mb-4">{invitedPlayers.length} players invited</div>
+            <div className="text-[12px] text-dim mb-4">{invitedPlayers.length} players · {teamSize} per team</div>
 
-            <div className="flex bg-alt rounded-[10px] p-[3px] mb-3.5">
+            {/* Mode toggle */}
+            <div className="flex bg-alt rounded-[10px] p-[3px] mb-4">
               {[{ id: 'auto', label: 'Auto Generate', emoji: '🔀' }, { id: 'manual', label: 'Manual', emoji: '✏️' }].map(opt => (
                 <button key={opt.id} onClick={() => { setTeamMode(opt.id); setProposedTeams([]) }}
-                  className={`flex-1 py-2 rounded-lg text-[11px] font-semibold cursor-pointer border-0 ${teamMode === opt.id ? 'bg-surface text-accent shadow-sm' : 'bg-transparent text-dim'}`}>
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-semibold cursor-pointer border-0 transition-all ${teamMode === opt.id ? 'bg-surface text-accent shadow-sm' : 'bg-transparent text-dim'}`}>
                   {opt.emoji} {opt.label}
                 </button>
               ))}
             </div>
 
+            {/* ── AUTO SECTION ── */}
             {teamMode === 'auto' && (
-              <>
-                <div className="grid grid-cols-2 gap-2 mb-3.5">
-                  {AUTO_OPTIONS.map(option => (
-                    <button key={option.id} onClick={() => setAutoMethod(option.id)}
-                      className={`p-3 rounded-xl border-2 text-left cursor-pointer ${autoMethod === option.id ? 'border-accent bg-accent/10' : 'border-line bg-surface'}`}>
-                      <div className="text-[22px] mb-1">{option.emoji}</div>
-                      <div className={`text-[13px] font-bold ${autoMethod === option.id ? 'text-accent' : 'text-text'}`}>{option.title}</div>
-                      <div className="text-[11px] text-dim">{option.subtitle}</div>
-                    </button>
-                  ))}
+              <div className="flex flex-col gap-3 mb-4">
+
+                {/* Parameter selector */}
+                <div className="bg-surface border border-line rounded-xl px-3.5 py-3">
+                  <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2.5">Balance by (tap to set priority)</div>
+                  <div className="flex gap-2 mb-2.5">
+                    {[{ id: 'sex', label: 'Sex', icon: '⚥' }, { id: 'level', label: 'Level', icon: '📊' }].map(({ id, label, icon }) => {
+                      const idx    = params.indexOf(id)
+                      const active = idx !== -1
+                      return (
+                        <button key={id} onClick={() => toggleParam(id)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold border-2 cursor-pointer transition-all ${active ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-alt text-dim'}`}>
+                          <span>{icon}</span>
+                          {label}
+                          {active && (
+                            <span className="w-4 h-4 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center leading-none shrink-0">
+                              {idx + 1}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {params.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] text-dim">Priority:</span>
+                      {params.map((p, i) => {
+                        const def = { sex: { icon: '⚥', label: 'Sex' }, level: { icon: '📊', label: 'Level' } }[p]
+                        return (
+                          <span key={p} className="flex items-center gap-1 text-[11px] font-semibold text-accent">
+                            {i > 0 && <span className="text-dim">→</span>}
+                            {def.icon} {def.label}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                <div className="bg-accent/10 border border-accent/30 rounded-lg px-3 py-2.5 text-[12px] text-accent mb-3.5">
-                  {autoMethod === 'random' ? 'Teams are generated randomly. Use regenerate to shuffle.' : 'Teams are generated by player level balance.'}
+                {/* Tip */}
+                <div className="bg-accent/10 border border-accent/30 rounded-lg px-3 py-2.5 text-[12px] text-accent">
+                  💡 {paramDescription(params)}
                 </div>
 
-                <button onClick={generateAutoTeams} disabled={availablePlayers.length < teamSize}
-                  className="w-full min-h-[42px] rounded-lg border border-accent/40 text-accent font-semibold bg-transparent cursor-pointer disabled:opacity-50 mb-3.5">
-                  🔄 {proposedTeams.length ? 'Regenerate' : autoMethod === 'random' ? 'Generate Random Teams' : 'Generate by Level'}
+                {/* Generate / Regenerate button */}
+                <button onClick={propose} disabled={availablePlayers.length < teamSize}
+                  className="w-full min-h-[42px] rounded-lg border border-dashed border-accent/50 text-accent font-semibold bg-transparent cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
+                  🔀 {proposedTeams.length ? 'Regenerate' : 'Generate Teams'}
                 </button>
 
+                {/* Preview */}
                 {proposedTeams.length > 0 && (
-                  <div className="mb-3.5">
-                    <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Generated teams</div>
+                  <>
+                    <div className="text-[11px] font-bold text-dim uppercase tracking-wide">Preview ({proposedTeams.length} teams)</div>
                     <div className="flex flex-col gap-2">
                       {proposedTeams.map(tm => (
-                        <div key={tm.id} className="bg-surface border border-line rounded-xl p-3">
-                          <div className="text-[13px] font-bold text-text mb-1">{tm.name}</div>
+                        <div key={tm.id} className="bg-surface border border-line rounded-xl px-3.5 py-3">
+                          <div className="text-[14px] font-bold text-text mb-1.5">{tm.name}</div>
                           <div className="flex flex-wrap gap-1.5">
                             {tm.players.map(pid => {
                               const pl = invitedPlayers.find(p => p.id === pid)
-                              return pl ? <span key={pid} className="text-[11px] bg-accent/15 text-accent rounded-md px-2 py-1">{pl.name}</span> : null
+                              return pl ? (
+                                <span key={pid} className="flex items-center gap-1 bg-accent/10 text-accent text-[11px] font-medium px-2.5 py-1 rounded-lg">
+                                  <span>{levelOf(pl.level).icon}</span>{pl.name}
+                                  {pl.sex && <span className="text-[10px] text-accent/70">({pl.sex})</span>}
+                                </span>
+                              ) : null
                             })}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <button onClick={confirmProposedTeams} className="w-full mt-3 min-h-[42px] rounded-lg text-[13px] font-bold bg-accent text-white border-0 cursor-pointer">
-                      ✓ Confirm Generated Teams
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={propose}
+                        className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">
+                        🔄 Regenerate
+                      </button>
+                      <button onClick={confirmProposed}
+                        className="min-h-[42px] rounded-lg text-[13px] font-bold text-white bg-accent border-0 cursor-pointer">
+                        ✓ Confirm
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Confirmed teams */}
+                {teams.length > 0 && (
+                  <>
+                    <div className="text-[11px] font-bold text-success uppercase tracking-wide">Confirmed ({teams.length} teams)</div>
+                    <div className="flex flex-col gap-2">
+                      {teams.map(tm => (
+                        <div key={tm.id} className="bg-surface rounded-xl border border-success/40 px-3.5 py-3 flex items-center gap-2">
+                          <div className="flex-1">
+                            <div className="text-[13px] font-bold text-text mb-1">{tm.name}</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {tm.players.map(pid => {
+                                const pl = invitedPlayers.find(p => p.id === pid)
+                                return pl ? (
+                                  <span key={pid} className="flex items-center gap-1 bg-accent/10 text-accent text-[11px] font-medium px-2 py-0.5 rounded-lg">
+                                    <span>{levelOf(pl.level).icon}</span>{pl.name}
+                                  </span>
+                                ) : null
+                              })}
+                            </div>
+                          </div>
+                          <button onClick={() => removeTeam(tm.id)} className="text-dim bg-transparent border-0 cursor-pointer text-[16px] leading-none shrink-0">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {availablePlayers.length > 0 && availablePlayers.length < teamSize && (
+                  <div className="text-[11px] text-dim text-center">
+                    {availablePlayers.length} unassigned player{availablePlayers.length > 1 ? 's' : ''} — not enough for a full team
                   </div>
                 )}
-              </>
-            )}
-
-            {teamMode === 'manual' && (
-              <div className="mb-3.5">
-                <div className="bg-surface border border-line rounded-xl p-3 mb-3">
-                  <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Create team manually</div>
-                  <input value={manualTeamName} onChange={e => setManualTeamName(e.target.value)}
-                    placeholder="Team name"
-                    className="w-full border border-line rounded-lg px-3 py-2 text-[13px] bg-bg text-text outline-none focus:border-accent mb-2"
-                  />
-                  <div className="text-[11px] text-dim mb-2">Pick {teamSize} players ({manualPicked.length}/{teamSize})</div>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {availablePlayers.map(player => {
-                      const active = manualPicked.includes(player.id)
-                      return (
-                        <button key={player.id} onClick={() => toggleManualPicked(player.id)}
-                          className={`text-[11px] rounded-md px-2 py-1 cursor-pointer border ${active ? 'bg-accent/15 text-accent border-accent/40' : 'bg-alt text-text border-line'}`}>
-                          {player.name}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <button onClick={addManualTeam} disabled={!manualTeamName.trim() || manualPicked.length !== teamSize}
-                    className="w-full min-h-[42px] rounded-lg text-[13px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50">
-                    + Add Team
-                  </button>
-                </div>
               </div>
             )}
 
-            <div className="mb-3.5">
-              <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Current teams ({teams.length})</div>
-              {teams.length === 0 ? (
-                <div className="text-[12px] text-dim bg-surface border border-line rounded-xl p-3 text-center">No teams yet</div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {teams.map(team => (
-                    <div key={team.id} className="bg-surface border border-line rounded-xl p-3">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="text-[13px] font-bold text-text">{team.name}</div>
-                        <button onClick={() => removeTeam(team.id)} className="text-[11px] text-error bg-transparent border-0 cursor-pointer">Remove</button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {team.players.map(pid => {
-                          const pl = invitedPlayers.find(p => p.id === pid)
-                          return pl ? <span key={pid} className="text-[11px] bg-alt text-text rounded-md px-2 py-1">{pl.name}</span> : null
-                        })}
+            {/* ── MANUAL SECTION ── */}
+            {teamMode === 'manual' && (
+              <div className="flex flex-col gap-3 mb-4">
+
+                {/* Team cards */}
+                {teams.length === 0 && !addingTeam && (
+                  <div className="bg-surface border border-line rounded-xl p-6 text-center text-dim text-[13px]">
+                    Add your first team below
+                  </div>
+                )}
+                {teams.map(tm => (
+                  <div key={tm.id} className={`bg-surface rounded-xl border px-3.5 py-3 ${tm.players.length === teamSize ? 'border-success/40' : 'border-line'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[14px] font-bold text-text">{tm.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-dim">{tm.players.length}/{teamSize}</span>
+                        <button onClick={() => removeTeam(tm.id)} className="bg-transparent border-0 cursor-pointer text-dim text-[16px] leading-none">✕</button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {tm.players.map(pid => {
+                        const pl = invitedPlayers.find(p => p.id === pid)
+                        return pl ? (
+                          <span key={pid} className="flex items-center gap-1 bg-accent/10 text-accent text-[11px] font-medium px-2.5 py-1 rounded-lg">
+                            <span>{levelOf(pl.level).icon}</span>{pl.name}
+                            {pl.sex && <span className="text-[10px] text-accent/70">({pl.sex})</span>}
+                            <button onClick={() => removePlayerFromTeam(tm.id, pid)} className="bg-transparent border-0 cursor-pointer text-dim leading-none ml-0.5">×</button>
+                          </span>
+                        ) : null
+                      })}
+                      {tm.players.length < teamSize && (
+                        <button
+                          onClick={() => setPickingForTeamId(pickingForTeamId === tm.id ? null : tm.id)}
+                          className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border border-dashed cursor-pointer transition-all ${pickingForTeamId === tm.id ? 'border-accent text-accent bg-accent/10' : 'border-dim/40 text-dim bg-transparent'}`}>
+                          + Add player
+                        </button>
+                      )}
+                    </div>
+                    {/* Inline picker */}
+                    {pickingForTeamId === tm.id && (
+                      <div className="mt-2.5 pt-2.5 border-t border-line flex flex-wrap gap-1.5">
+                        {availablePlayers.filter(p => !tm.players.includes(p.id)).length === 0 ? (
+                          <span className="text-[11px] text-dim">No unassigned players</span>
+                        ) : (
+                          availablePlayers
+                            .filter(p => !tm.players.includes(p.id))
+                            .map(p => (
+                              <button key={p.id} onClick={() => assignPlayer(tm.id, p.id)}
+                                className="flex items-center gap-1 bg-alt text-text text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-line cursor-pointer active:opacity-70 transition-opacity">
+                                <span>{levelOf(p.level).icon}</span>{p.name}
+                                {p.sex && <span className="text-[10px] text-dim">({p.sex})</span>}
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Add Team input */}
+                {addingTeam ? (
+                  <div className="bg-surface border border-accent/40 rounded-xl px-3.5 py-3 flex gap-2 items-center">
+                    <input
+                      value={addingTeamName}
+                      onChange={e => setAddingTeamName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addEmptyTeam()}
+                      placeholder="Team name…"
+                      autoFocus
+                      className="flex-1 bg-transparent text-[14px] font-bold text-text outline-none placeholder:text-dim"
+                    />
+                    <button onClick={addEmptyTeam} disabled={!addingTeamName.trim()}
+                      className="text-accent font-bold text-[13px] bg-transparent border-0 cursor-pointer disabled:opacity-40">
+                      Add
+                    </button>
+                    <button onClick={() => { setAddingTeam(false); setAddingTeamName('') }}
+                      className="text-dim bg-transparent border-0 cursor-pointer text-[14px]">✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setAddingTeam(true)}
+                    className="w-full min-h-[44px] border border-dashed border-accent/50 rounded-xl text-[13px] font-semibold text-accent bg-transparent cursor-pointer flex items-center justify-center gap-2">
+                    + Add Team
+                  </button>
+                )}
+
+                {/* Unassigned strip */}
+                {availablePlayers.length > 0 && (
+                  <div className="bg-alt rounded-xl px-3.5 py-3">
+                    <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">
+                      Unassigned ({availablePlayers.length})
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {availablePlayers.map(p => (
+                        <span key={p.id} className="flex items-center gap-1 bg-surface text-text text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-line">
+                          <span>{levelOf(p.level).icon}</span>{p.name}
+                          {p.sex && <span className="text-[10px] text-dim">({p.sex})</span>}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setStep(0)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>

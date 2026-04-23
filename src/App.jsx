@@ -8,7 +8,6 @@ import TournamentsSection from "./components/TournamentsSection";
 import TournamentMatchesSection from "./components/TournamentMatchesSection";
 import TournamentTeamsSection from "./components/TournamentTeamsSection";
 import LiveScoreSection from "./components/LiveScoreSection";
-import TournamentSetupWizard from "./components/TournamentSetupWizard";
 import FreePlaysSection from "./components/FreePlaysSection";
 import FreePlayTeamsSection from "./components/FreePlayTeamsSection";
 import FreePlayGamesSection from "./components/FreePlayGamesSection";
@@ -341,18 +340,8 @@ export default function App() {
           <PlayersSection players={players} setPlayers={setPlayers} />
         )}
 
-        {/* ── Tournament setup wizard ── */}
-        {inTournament && activeTournament.phase === "setup" && (
-          <TournamentSetupWizard
-            tournament={activeTournament}
-            setTournaments={setTournaments}
-            players={players}
-            onDone={() => setTourTab("tour_matches")}
-          />
-        )}
-
         {/* ── Tournament tabs ── */}
-        {inTournament && activeTournament.phase !== "setup" && tourTab === "tour_matches" && (
+        {inTournament && tourTab === "tour_matches" && (
           <TournamentMatchesSection
             tournament={activeTournament}
             setTournaments={setTournaments}
@@ -360,17 +349,17 @@ export default function App() {
             onOpenLive={openLiveMatch}
           />
         )}
-        {inTournament && activeTournament.phase !== "setup" && tourTab === "tour_teams" && (
+        {inTournament && tourTab === "tour_teams" && (
           <TournamentTeamsSection
             tournament={activeTournament}
             setTournaments={setTournaments}
             players={players}
           />
         )}
-        {inTournament && activeTournament.phase !== "setup" && tourTab === "tour_players" && (
+        {inTournament && tourTab === "tour_players" && (
           <PlayersSection players={players} setPlayers={setPlayers} contextual />
         )}
-        {inTournament && activeTournament.phase !== "setup" && tourTab === "tour_live" && (
+        {inTournament && tourTab === "tour_live" && (
           <LiveScoreSection
             teams={activeTournament.teams}
             players={players}
@@ -427,8 +416,8 @@ export default function App() {
 
       </div>
 
-      {/* Bottom Nav — hidden during setup wizard */}
-      {!(inTournament && activeTournament.phase === "setup") && <div
+      {/* Bottom Nav */}
+      <div
         className="fixed bottom-0 left-0 right-0 bg-surface border-t-2 border-line flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))", paddingTop: 8 }}
       >
@@ -447,7 +436,7 @@ export default function App() {
             )}
           </button>
         ))}
-      </div>}
+      </div>
     </LangCtx.Provider>
   );
 }

@@ -64,6 +64,7 @@ export default function TournamentSetupWizard() {
   const [saving, setSaving] = useState(false)
 
   // Step 0 state
+  const [playerSearch, setPlayerSearch] = useState('')
   const [name,         setName]         = useState('')
   const [date,         setDate]         = useState(now())
   const [teamSize,     setTeamSize]     = useState(2)
@@ -224,7 +225,7 @@ export default function TournamentSetupWizard() {
         {step === 0 && (
           <div>
             <div className="text-[16px] font-bold mb-1">Invite Players</div>
-            <div className="text-[12px] text-dim mb-4">Select players and tournament setup</div>
+            <div className="text-[12px] text-dim mb-3.5">Select from your league roster</div>
 
             <div className="bg-surface rounded-xl border border-line p-3.5 mb-3.5">
               <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Tournament Info</div>
@@ -266,43 +267,68 @@ export default function TournamentSetupWizard() {
               </div>
             </div>
 
+            {/* Search */}
+            <input
+              value={playerSearch}
+              onChange={e => setPlayerSearch(e.target.value)}
+              placeholder="🔍 Search players..."
+              className="w-full bg-surface border border-line rounded-[10px] px-3.5 py-2.5 text-[13px] text-text outline-none focus:border-accent mb-3.5"
+            />
+
+            {/* Selected pills */}
             <div className="text-[11px] font-bold text-accent uppercase tracking-wide mb-2">
               Selected ({pickedPlayers.length})
             </div>
-            <div className="flex flex-wrap gap-1.5 mb-3.5">
+            <div className="flex flex-wrap gap-1.5 mb-4">
               {pickedPlayers.map(pid => {
                 const pl = league.players.find(p => p.id === pid)
                 return pl ? (
-                  <button key={pid} onClick={() => togglePickedPlayer(pid)}
-                    className="text-[11px] bg-accent/15 text-accent rounded-md px-2 py-1 border-0 cursor-pointer">
-                    {pl.name} ✕
-                  </button>
+                  <span key={pid} className="text-[11px] bg-accent/15 text-accent rounded-lg px-2.5 py-1.5 font-medium flex items-center gap-1">
+                    {pl.name}
+                    <button
+                      onClick={() => togglePickedPlayer(pid)}
+                      className="text-[9px] text-dim cursor-pointer bg-transparent border-0 p-0 leading-none"
+                    >✕</button>
+                  </span>
                 ) : null
               })}
             </div>
 
+            {/* Available league players */}
             <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">League Players</div>
-            <div className="flex flex-col gap-2">
-              {league.players.map(player => {
-                const active = pickedPlayers.includes(player.id)
-                return (
-                  <button key={player.id} onClick={() => togglePickedPlayer(player.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors cursor-pointer ${active ? 'bg-accent/10 border-accent/40' : 'bg-surface border-line'}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-medium text-text">{player.name}</span>
-                      <span className="text-[11px] text-dim">{levelOf(player.level).label}</span>
+            <div className="flex flex-col">
+              {(league.players || [])
+                .filter(p => !pickedPlayers.includes(p.id))
+                .filter(p => p.name.toLowerCase().includes(playerSearch.toLowerCase()))
+                .map(player => (
+                  <div key={player.id} className="bg-surface rounded-[10px] border border-line px-3.5 py-2.5 mb-1.5 flex items-center gap-2.5">
+                    <div className="w-[30px] h-[30px] rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text flex-shrink-0">
+                      {player.name[0]}
                     </div>
-                  </button>
-                )
-              })}
+                    <span className="flex-1 text-[13px] font-medium text-text">{player.name}</span>
+                    <button
+                      onClick={() => togglePickedPlayer(player.id)}
+                      className="w-6 h-6 rounded-[6px] border-2 border-line flex items-center justify-center cursor-pointer bg-transparent text-dim flex-shrink-0"
+                    >
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              }
             </div>
 
             <button
               onClick={() => setStep(1)}
               disabled={!canContinueFromPlayers}
-              className="w-full mt-4 min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+              className="w-full mt-3.5 min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               Next: Create Teams
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
             </button>
           </div>
         )}

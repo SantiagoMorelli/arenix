@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS public.players (
   name       TEXT NOT NULL,
   level      TEXT NOT NULL DEFAULT 'beginner'
     CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+  sex        TEXT CHECK (sex IS NULL OR sex IN ('M', 'F')),
   wins       INTEGER NOT NULL DEFAULT 0,
   losses     INTEGER NOT NULL DEFAULT 0,
   points     INTEGER NOT NULL DEFAULT 0,

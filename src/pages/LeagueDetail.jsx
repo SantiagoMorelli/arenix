@@ -145,6 +145,7 @@ const NAV_ITEMS = [
 function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId }) {
   const [newName, setNewName]   = useState('')
   const [newLevel, setNewLevel] = useState('beginner')
+  const [newSex, setNewSex]     = useState(null) // 'M' | 'F' | null
   const [adding, setAdding]     = useState(false)
   const [formMode, setFormMode] = useState(null) // 'join' or 'add'
   const [linkingPlayerId, setLinkingPlayerId] = useState(null)
@@ -161,11 +162,11 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
     if (!newName.trim()) return
     setAdding(true)
     try {
-      const payload = { name: newName.trim(), level: newLevel }
+      const payload = { name: newName.trim(), level: newLevel, sex: newSex }
       if (formMode === 'join') payload.userId = currentUserId
-      
+
       await onAdd(payload)
-      setNewName(''); setNewLevel('beginner'); setFormMode(null)
+      setNewName(''); setNewLevel('beginner'); setNewSex(null); setFormMode(null)
     } finally {
       setAdding(false)
     }
@@ -206,12 +207,31 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
           <select
             value={newLevel}
             onChange={e => setNewLevel(e.target.value)}
-            className="w-full bg-bg border border-line rounded-lg px-3 py-2 text-[13px] text-text outline-none mb-3 focus:border-accent"
+            className="w-full bg-bg border border-line rounded-lg px-3 py-2 text-[13px] text-text outline-none mb-2 focus:border-accent"
           >
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
           </select>
+          <div className="mb-3">
+            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-1.5">Gender (optional)</div>
+            <div className="flex gap-2">
+              {[{ v: 'M', label: '♂ Male' }, { v: 'F', label: '♀ Female' }].map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setNewSex(newSex === opt.v ? null : opt.v)}
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-semibold border cursor-pointer transition-all ${
+                    newSex === opt.v
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-line bg-bg text-dim'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => setFormMode(null)}
@@ -255,6 +275,11 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
                   <span className={`text-[13px] font-medium truncate ${isMe ? 'text-accent' : 'text-text'}`}>
                     {label}
                   </span>
+                  {p.sex && (
+                    <span className="text-[9px] font-bold text-dim bg-alt px-1.5 py-0.5 rounded flex-shrink-0">
+                      {p.sex === 'M' ? '♂' : '♀'}
+                    </span>
+                  )}
                   {flag && <span className="text-[14px] leading-none flex-shrink-0">{flag}</span>}
                   {isMe && (
                     <span className="text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded flex-shrink-0">

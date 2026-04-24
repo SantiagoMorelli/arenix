@@ -35,9 +35,18 @@ function seqDraft(sorted, numTeams, teamSize) {
 }
 
 function interleave(...arrs) {
+  const pools = arrs.map(arr => ({ arr, idx: 0 })).filter(p => p.arr.length > 0)
   const result = []
-  const max = Math.max(...arrs.map(a => a.length), 0)
-  for (let i = 0; i < max; i++) arrs.forEach(arr => { if (i < arr.length) result.push(arr[i]) })
+  const total = arrs.reduce((s, a) => s + a.length, 0)
+  for (let i = 0; i < total; i++) {
+    let best = null, bestScore = Infinity
+    for (const p of pools) {
+      if (p.idx >= p.arr.length) continue
+      const score = p.idx / p.arr.length
+      if (score < bestScore) { bestScore = score; best = p }
+    }
+    if (best) result.push(best.arr[best.idx++])
+  }
   return result
 }
 

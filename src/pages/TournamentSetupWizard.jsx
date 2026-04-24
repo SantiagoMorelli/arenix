@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
@@ -113,6 +113,16 @@ function getValidGroupOptions(numTeams) {
   return [2, 4, 8].filter(g => Math.floor(numTeams / g) >= 3)
 }
 
+function buildPreviewGroups(teamList, numGroups) {
+  const groups = Array.from({ length: numGroups }, (_, i) => ({
+    id: `g${i}`,
+    name: `Group ${String.fromCharCode(65 + i)}`,
+    teamIds: [],
+  }))
+  teamList.forEach((tm, idx) => { groups[idx % numGroups].teamIds.push(tm.id) })
+  return groups
+}
+
 export default function TournamentSetupWizard() {
   const navigate  = useNavigate()
   const { id }    = useParams()
@@ -143,6 +153,8 @@ export default function TournamentSetupWizard() {
   // Step 2 state
   const [formatMode,      setFormatMode]      = useState('group')
   const [numGroupsChoice, setNumGroupsChoice] = useState(null)
+  const [previewGroups,   setPreviewGroups]   = useState([])
+  const [selectedTeamId,  setSelectedTeamId]  = useState(null)
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const invitedPlayers = useMemo(
@@ -161,6 +173,14 @@ export default function TournamentSetupWizard() {
   const canGroupStage          = validGroupOptions.length > 0
   const effectiveFormat        = canGroupStage ? formatMode : 'freeplay'
   const selectedGroups         = numGroupsChoice || validGroupOptions[0] || 2
+
+  // ── Group preview — regenerate when step/format/group-count changes ──────
+  useEffect(() => {
+    if (step === 2 && effectiveFormat === 'group') {
+      setPreviewGroups(buildPreviewGroups(teams, selectedGroups))
+      setSelectedTeamId(null)
+    }
+  }, [step, effectiveFormat, selectedGroups])
 
   // ── Redirect non-admins ───────────────────────────────────────────────────
   if (!isAdmin && league) {
@@ -220,6 +240,21 @@ export default function TournamentSetupWizard() {
 
   const removeTeam = teamId => setTeams(prev => prev.filter(t => t.id !== teamId))
 
+  // ── Group editing ─────────────────────────────────────────────────────────
+  const handleTeamTap = teamId =>
+    setSelectedTeamId(prev => prev === teamId ? null : teamId)
+
+  const handleGroupTap = groupId => {
+    if (!selectedTeamId) return
+    setPreviewGroups(prev => prev.map(g => ({
+      ...g,
+      teamIds: g.id === groupId
+        ? g.teamIds.includes(selectedTeamId) ? g.teamIds : [...g.teamIds, selectedTeamId]
+        : g.teamIds.filter(id => id !== selectedTeamId),
+    })))
+    setSelectedTeamId(null)
+  }
+
   // ── Final submit — write everything to Supabase at once ───────────────────
   const handleStartTournament = async () => {
     if (!league || teams.length < 2) return
@@ -230,13 +265,10 @@ export default function TournamentSetupWizard() {
       let matches = []
 
       if (effectiveFormat === 'group') {
-        groups = Array.from({ length: selectedGroups }, (_, i) => ({
-          id: `g${i}`, name: `Group ${String.fromCharCode(65 + i)}`, teamIds: [], matches: [],
+        groups = previewGroups.map(g => ({
+          ...g,
+          matches: generateRoundRobinSchedule(g.teamIds, `gm_${g.id}_`),
         }))
-        teams.forEach((tm, idx) => { groups[idx % selectedGroups].teamIds.push(tm.id) })
-        groups.forEach(group => {
-          group.matches = generateRoundRobinSchedule(group.teamIds, "gm_" + group.id + "_")
-        })
       } else {
         matches = generateRoundRobinSchedule(teams.map(t => t.id), "fp_")
       }
@@ -681,6 +713,51 @@ export default function TournamentSetupWizard() {
                 </div>
               )}
             </div>
+
+            {effectiveFormat === 'group' && previewGroups.length > 0 && (
+              <div className="mb-3.5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[11px] font-bold text-dim uppercase tracking-wide">Groups preview</div>
+                  {selectedTeamId && (
+                    <div className="text-[11px] text-accent font-semibold">Tap a group to move team</div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {previewGroups.map(group => (
+                    <div
+                      key={group.id}
+                      onClick={() => handleGroupTap(group.id)}
+                      className={`rounded-xl border p-2.5 transition-colors ${
+                        selectedTeamId
+                          ? 'border-accent/60 bg-accent/5 cursor-pointer'
+                          : 'border-line bg-surface'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">
+                        {group.name}
+                      </div>
+                      {group.teamIds.map(teamId => {
+                        const team = teams.find(t => t.id === teamId)
+                        if (!team) return null
+                        return (
+                          <div
+                            key={teamId}
+                            onClick={e => { e.stopPropagation(); handleTeamTap(teamId) }}
+                            className={`text-[12px] px-2 py-1.5 rounded-lg mb-1 font-medium cursor-pointer transition-colors ${
+                              selectedTeamId === teamId
+                                ? 'bg-accent text-white'
+                                : 'bg-bg text-text border border-line'
+                            }`}
+                          >
+                            {team.name}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setStep(1)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>

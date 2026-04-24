@@ -743,13 +743,21 @@ export default function TournamentSetupWizard() {
                           <div
                             key={teamId}
                             onClick={e => { e.stopPropagation(); handleTeamTap(teamId) }}
-                            className={`text-[12px] px-2 py-1.5 rounded-lg mb-1 font-medium cursor-pointer transition-colors ${
+                            className={`px-2 py-1.5 rounded-lg mb-1 cursor-pointer transition-colors ${
                               selectedTeamId === teamId
                                 ? 'bg-accent text-white'
                                 : 'bg-bg text-text border border-line'
                             }`}
                           >
-                            {team.name}
+                            <div className="text-[12px] font-medium">{team.name}</div>
+                            {team.players.length > 0 && (
+                              <div className={`text-[10px] mt-0.5 truncate ${selectedTeamId === teamId ? 'text-white/70' : 'text-dim'}`}>
+                                {team.players.map(pid => {
+                                  const p = invitedPlayers.find(x => x.id === pid)
+                                  return p ? (p.displayName || p.nickname || p.name) : null
+                                }).filter(Boolean).join(' · ')}
+                              </div>
+                            )}
                           </div>
                         )
                       })}

@@ -25,6 +25,15 @@ function snakeDraft(sorted, numTeams, teamSize) {
   return slots.filter(s => s.length === teamSize)
 }
 
+function seqDraft(sorted, numTeams, teamSize) {
+  const slots = Array.from({ length: numTeams }, () => [])
+  sorted.forEach((p, i) => {
+    const col = Math.floor(i / teamSize)
+    if (col < numTeams && slots[col].length < teamSize) slots[col].push(p.id)
+  })
+  return slots.filter(s => s.length === teamSize)
+}
+
 function interleave(...arrs) {
   const result = []
   const max = Math.max(...arrs.map(a => a.length), 0)
@@ -49,7 +58,8 @@ function buildTeamGroups(pool, params, teamSize) {
     const s = x => x.sex === 'M' ? 0 : x.sex === 'F' ? 1 : 2
     return s(a) - s(b)
   })
-  return snakeDraft(sorted, n, teamSize)
+  const useSexBalance = params[0] === 'sex'
+  return useSexBalance ? seqDraft(sorted, n, teamSize) : snakeDraft(sorted, n, teamSize)
 }
 
 function paramDescription(params) {

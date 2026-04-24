@@ -15,7 +15,6 @@
  *   /league/:id/tournament/:tid    → TournamentDetail
  *   /league/:id/tournament/:tid/match/:mid → Live Match
  *   /join/:code                    → JoinLeague
- *   /legacy                        → Original App (full state-based app)
  */
 import { Routes, Route } from 'react-router-dom'
 
@@ -34,8 +33,6 @@ import TournamentDetail    from './pages/TournamentDetail'
 import TournamentSetupWizard from './pages/TournamentSetupWizard'
 import LiveMatch           from './pages/LiveMatch'
 import JoinLeague          from './pages/JoinLeague'
-
-import LegacyApp from './App'
 
 function Placeholder({ title }) {
   return (
@@ -75,9 +72,6 @@ export default function AppRouter() {
         <Route path="tournament/:tid"       element={<TournamentDetail />} />
         <Route path="tournament/:tid/match/:mid" element={<LiveMatch />} />
       </Route>
-
-      {/* ── Legacy state-based app (all original functionality preserved) ── */}
-      <Route path="/legacy/*" element={<LegacyApp />} />
 
     </Routes>
   )

@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { LangCtx } from "../lib/i18n";
 import { useLiveGame, loadSaved } from "../hooks/useLiveGame";
-import InformalWizard from "./InformalWizard";
 import GameSetupScreen from "./GameSetupScreen";
 import GameStats from "./GameStats";
 import ScoreBoard from "./ScoreBoard";
@@ -9,15 +8,12 @@ import PointLog from "./PointLog";
 import PointButtons from "./PointButtons";
 
 function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = null,
-  tournamentMatches = null, onSaveResult = null, informalMode = false }) {
+  tournamentMatches = null, onSaveResult = null }) {
   const { t } = useContext(LangCtx);
   const {
     showRestore, restoreGame, discardSaved,
     team1Id, setTeam1Id, team2Id, setTeam2Id,
     gameStarted, setGameStarted, activeTourMatchId, setActiveTourMatchId,
-    informalStep, setInformalStep, informalSets, setInformalSets,
-    informalTeamSize, setInformalTeamSize, informalTeam1, setInformalTeam1,
-    informalTeam2, setInformalTeam2,
     t1ServeOrder, setT1ServeOrder, t2ServeOrder, setT2ServeOrder,
     t1InitialSide, setT1InitialSide, firstServingTeam, setFirstServingTeam,
     setSide, setPointsToWin, startGame,
@@ -30,7 +26,7 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     addPoint, confirmPointType, confirmPlayer, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
     requestEnd, confirmEnd, cancelEnd,
-  } = useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch });
+  } = useLiveGame({ teams, players, informalMode: false, tournamentMatches, preloadMatchId, t, setsPerMatch });
 
   // ── Restore saved game ──────────────────────────────────────────────────────
   if (showRestore) {
@@ -84,23 +80,6 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
 
   // ── Pre-game setup ──────────────────────────────────────────────────────────
   if (!gameStarted) {
-    if (informalMode) return (
-      <InformalWizard
-        players={players} t={t}
-        informalStep={informalStep} setInformalStep={setInformalStep}
-        informalSets={informalSets} setInformalSets={setInformalSets}
-        informalTeamSize={informalTeamSize} setInformalTeamSize={setInformalTeamSize}
-        informalTeam1={informalTeam1} setInformalTeam1={setInformalTeam1}
-        informalTeam2={informalTeam2} setInformalTeam2={setInformalTeam2}
-        t1ServeOrder={t1ServeOrder} setT1ServeOrder={setT1ServeOrder}
-        t2ServeOrder={t2ServeOrder} setT2ServeOrder={setT2ServeOrder}
-        t1InitialSide={t1InitialSide} setT1InitialSide={setT1InitialSide}
-        setSide={setSide}
-        setTeam1Id={setTeam1Id} setTeam2Id={setTeam2Id}
-        setPointsToWin={setPointsToWin} setGameStarted={setGameStarted}
-      />
-    );
-
     return (
       <GameSetupScreen
         teams={teams} players={players} tournamentMatches={tournamentMatches}

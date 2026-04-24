@@ -142,7 +142,7 @@ const NAV_ITEMS = [
 ]
 
 // ── Players Tab ───────────────────────────────────────────────────────────────
-function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId }) {
+function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId, currentUserSex }) {
   const [newName, setNewName]   = useState('')
   const [newLevel, setNewLevel] = useState('beginner')
   const [newSex, setNewSex]     = useState(null) // 'M' | 'F' | null
@@ -299,7 +299,7 @@ function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId 
                     Let's only show this if I am an admin OR if I don't have a player yet. */}
                 {!myPlayer && isUnclaimed && !isAdmin && (
                   <button
-                    onClick={() => onUpdate(p.id, { userId: currentUserId })}
+                    onClick={() => onUpdate(p.id, { userId: currentUserId, ...(currentUserSex && !p.sex ? { sex: currentUserSex } : {}) })}
                     className="text-free text-[10px] font-bold bg-free/15 px-2 py-1 rounded cursor-pointer mr-2 border-0"
                   >
                     Claim
@@ -715,6 +715,7 @@ export default function LeagueDetail() {
               onDelete={handleDeletePlayer}
               onUpdate={handleUpdatePlayer}
               currentUserId={profile?.id}
+              currentUserSex={profile?.gender ?? null}
             />
           )}
 

@@ -36,11 +36,8 @@ const GameSetupScreen = ({
       setTimeout(() => setServeOrder(pIds), 0);
       return null;
     }
-    const moveUp = (idx) => {
-      if (idx === 0) return;
-      const o = [...serveOrder];
-      [o[idx-1], o[idx]] = [o[idx], o[idx-1]];
-      setServeOrder(o);
+    const rotate = () => {
+      setServeOrder([...serveOrder.slice(1), serveOrder[0]]);
     };
     const highlightBg    = isTeam1 ? "bg-accent/15" : "bg-free/15";
     const numberBg       = isTeam1 ? "bg-accent"    : "bg-free";
@@ -66,16 +63,13 @@ const GameSetupScreen = ({
                   <div className={`text-[10px] mt-px ${firstTextColor}`}>🏐 Saca primero</div>
                 )}
               </div>
-              {idx > 0 && (
-                <button
-                  onClick={() => moveUp(idx)}
-                  className="text-[12px] text-dim cursor-pointer bg-transparent border-0 p-0 leading-none"
-                >↑</button>
-              )}
             </div>
           );
         })}
-        <div className="text-[10px] text-dim mt-0.5">Usá ↑ para cambiar el orden</div>
+        <button
+          onClick={rotate}
+          className="w-full mt-1 py-[5px] rounded-lg text-[11px] font-semibold text-dim border border-line bg-transparent cursor-pointer"
+        >↻ Rotar orden</button>
       </div>
     );
   };

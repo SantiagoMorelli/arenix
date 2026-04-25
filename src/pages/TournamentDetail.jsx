@@ -5,6 +5,7 @@ import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam, fetchMatchScorer, claimMatchScorer } from '../services/tournamentService'
 import { uid } from '../lib/utils'
+import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import GameStats from '../components/GameStats'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
 
@@ -919,9 +920,38 @@ export default function TournamentDetail() {
 
     try {
       await supabaseSaveMatchResult(selectedMatch.id, s1, s2, winnerId)
+
+      // Notify players in this match of the result
+      const team1 = tournament.teams?.find(t => t.id === selectedMatch.team1)
+      const team2 = tournament.teams?.find(t => t.id === selectedMatch.team2)
+      const t1Name = team1?.name || 'Team 1'
+      const t2Name = team2?.name || 'Team 2'
+      const playerUserIds = [
+        ...(team1?.players || []),
+        ...(team2?.players || []),
+      ]
+        .map(pid => leaguePlayers.find(p => p.id === pid)?.userId)
+        .filter(Boolean)
+      const uniqueUserIds = [...new Set(playerUserIds)]
+      await Promise.all(
+        uniqueUserIds.map(userId => {
+          const myTeam = (team1?.players || []).includes(
+            leaguePlayers.find(p => p.userId === userId)?.id
+          ) ? team1 : team2
+          const won = myTeam?.id === winnerId
+          return createNotification(
+            userId,
+            'match_result',
+            won ? 'You won! 🎉' : 'Match result 📋',
+            `${t1Name} ${s1} – ${s2} ${t2Name}`,
+            { matchId: selectedMatch.id, tournamentId: tid, leagueId: id },
+          )
+        })
+      )
+
       if (tournament.knockout) {
         await advanceKnockoutAfterMatch(selectedMatch.id, winnerId, tournament.knockout)
-        
+
         // Check if this was the final match
         const isFinal = tournament.knockout.rounds.some(
           r => r.id === 'final' && r.matches.some(m => m.id === selectedMatch.id)
@@ -929,6 +959,13 @@ export default function TournamentDetail() {
         if (isFinal) {
           const runnerUpId = selectedMatch.team1 === winnerId ? selectedMatch.team2 : selectedMatch.team1
           await completeTournament(tid, winnerId, runnerUpId)
+          await createNotificationsForLeagueMembers(
+            id,
+            'tournament_finished',
+            '🏆 Tournament finished!',
+            `${tournament.name} has ended`,
+            { leagueId: id, tournamentId: tid },
+          )
         }
       }
       handleCloseModal()

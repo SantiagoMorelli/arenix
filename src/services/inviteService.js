@@ -2,6 +2,10 @@
  * inviteService — league invite-code management and member role/permission helpers.
  */
 import { supabase } from '../lib/supabase'
+import {
+  createNotification,
+  createNotificationsForLeagueMembers,
+} from './notificationService'
 
 // Default permissions per role.
 // score_match is NOT included for player — it must be granted explicitly.
@@ -50,6 +54,12 @@ export async function joinLeague(leagueId) {
 
   if (existing) return { role: existing.role, alreadyMember: true }
 
+  const { data: leagueRow } = await supabase
+    .from('leagues')
+    .select('name, season')
+    .eq('id', leagueId)
+    .single()
+
   await Promise.all([
     supabase.from('league_member_roles').insert({
       league_id: leagueId,
@@ -65,6 +75,34 @@ export async function joinLeague(leagueId) {
       }))
     ),
   ])
+
+  // Notify league admins that a new player joined
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+  const joinerName = profile?.full_name || 'Someone'
+  const leagueName = leagueRow?.name || 'the league'
+
+  const { data: adminRows } = await supabase
+    .from('league_member_permissions')
+    .select('user_id')
+    .eq('league_id', leagueId)
+    .eq('permission', 'manage_league')
+  const adminIds = (adminRows || []).map(r => r.user_id).filter(id => id !== user.id)
+
+  await Promise.all(
+    adminIds.map(adminId =>
+      createNotification(
+        adminId,
+        'member_joined',
+        'New player joined 👋',
+        `${joinerName} joined ${leagueName}`,
+        { leagueId },
+      )
+    )
+  )
 
   return { role: 'player', alreadyMember: false }
 }
@@ -120,6 +158,21 @@ export async function addMemberRole(leagueId, userId, role) {
 
     if (permError) throw permError
   }
+
+  if (role === 'admin') {
+    const { data: leagueRow } = await supabase
+      .from('leagues')
+      .select('name')
+      .eq('id', leagueId)
+      .single()
+    await createNotification(
+      userId,
+      'role_admin',
+      "You're now an admin 🛡️",
+      `Admin in ${leagueRow?.name || 'the league'}`,
+      { leagueId },
+    )
+  }
 }
 
 /**
@@ -145,6 +198,21 @@ export async function grantMemberPermission(leagueId, userId, permission) {
     .upsert({ league_id: leagueId, user_id: userId, permission })
 
   if (error) throw error
+
+  if (permission === 'score_match') {
+    const { data: leagueRow } = await supabase
+      .from('leagues')
+      .select('name')
+      .eq('id', leagueId)
+      .single()
+    await createNotification(
+      userId,
+      'scorer_assigned',
+      "You're a scorer 📋",
+      `You can now score matches in ${leagueRow?.name || 'the league'}`,
+      { leagueId },
+    )
+  }
 }
 
 /**

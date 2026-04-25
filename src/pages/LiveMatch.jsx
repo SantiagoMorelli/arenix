@@ -179,14 +179,16 @@ export default function LiveMatch() {
   const [scorerChecked, setScorerChecked]   = useState(false)
 
   useEffect(() => {
-    if (roleLoading || leagueLoading || canScore === false) return
+    if (roleLoading || leagueLoading) return
+    if (canScore === false) { setScorerChecked(true); return }
+    if (!profile?.id) return  // wait for profile to load before claiming/checking
     let cancelled = false
     async function checkScorer() {
       const info = await fetchMatchScorer(mid)
       if (cancelled) return
       if (!info || info.played) { setScorerChecked(true); return }
-      if (!info.scorerUserId || info.scorerUserId === profile?.id) {
-        claimMatchScorer(mid, profile?.id)
+      if (!info.scorerUserId || info.scorerUserId === profile.id) {
+        claimMatchScorer(mid, profile.id)
         setScorerChecked(true)
         return
       }

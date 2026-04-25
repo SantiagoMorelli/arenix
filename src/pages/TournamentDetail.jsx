@@ -408,7 +408,7 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage,
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: MATCHES
 // ═══════════════════════════════════════════════════════════════════════════════
-function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
+function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore, players = [] }) {
   const { groups = [], knockout = null, phase } = tournament
   const hasGroups = groups.length > 0
   const isFreePlay = !hasGroups
@@ -426,6 +426,13 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
   })
 
   const tName = id => teamName(tournament.teams, id)
+  const playerNames = id => {
+    const t = tournament.teams.find(x => x.id === id)
+    return (t?.players || []).map(pid => {
+      const p = players.find(x => x.id === pid)
+      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+    }).join(' · ')
+  }
 
   // Get matches based on active tab
   let matchesToDisplay = []
@@ -495,10 +502,12 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex-1 text-center">
                   <div className="text-[13px] font-bold text-text">{tName(m.team1)}</div>
+                  {playerNames(m.team1) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team1)}</div>}
                 </div>
                 <div className="text-[12px] font-bold text-dim px-3 py-1 bg-bg rounded-lg">VS</div>
                 <div className="flex-1 text-center">
                   <div className="text-[13px] font-bold text-text">{tName(m.team2)}</div>
+                  {playerNames(m.team2) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team2)}</div>}
                 </div>
               </div>
               {canScore && (
@@ -531,17 +540,23 @@ function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore }) {
                   {m.label}
                 </div>
                 <div className="flex items-center">
-                  <span className={`flex-1 text-[13px] ${m.winner === m.team1 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                    {tName(m.team1)}
-                  </span>
+                  <div className="flex-1">
+                    <div className={`text-[13px] ${m.winner === m.team1 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
+                      {tName(m.team1)}
+                    </div>
+                    {playerNames(m.team1) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team1)}</div>}
+                  </div>
                   <div className="flex items-center gap-1 px-3">
                     <span className={`text-[16px] font-bold ${m.winner === m.team1 ? 'text-accent' : 'text-text'}`}>{m.score1}</span>
                     <span className="text-[10px] text-dim">–</span>
                     <span className={`text-[16px] font-bold ${m.winner === m.team2 ? 'text-accent' : 'text-text'}`}>{m.score2}</span>
                   </div>
-                  <span className={`flex-1 text-right text-[13px] ${m.winner === m.team2 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                    {tName(m.team2)}
-                  </span>
+                  <div className="flex-1 text-right">
+                    <div className={`text-[13px] ${m.winner === m.team2 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
+                      {tName(m.team2)}
+                    </div>
+                    {playerNames(m.team2) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team2)}</div>}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1051,6 +1066,7 @@ export default function TournamentDetail() {
             onStartMatch={handleStartMatchClick}
             onMatchClick={handleMatchClick}
             canScore={canScore}
+            players={leaguePlayers}
           />
         )}
         {activeTab === 'positions' && (

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
@@ -33,7 +34,17 @@ const Svg = ({ children, size = 20 }) => (
 )
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
+const REMINDER_KEY = 'bv_battery_reminder_seen'
+
 function LiveMatchSetup({ live, tournament, onBack }) {
+  const [reminderSeen, setReminderSeen] = useState(
+    () => !!localStorage.getItem(REMINDER_KEY)
+  )
+
+  const dismissReminder = () => {
+    localStorage.setItem(REMINDER_KEY, '1')
+    setReminderSeen(true)
+  }
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
 
@@ -63,6 +74,25 @@ function LiveMatchSetup({ live, tournament, onBack }) {
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
+        {/* One-time battery reminder */}
+        {!reminderSeen && (
+          <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 flex gap-3 items-start">
+            <span className="text-[22px] shrink-0">🔋</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-bold text-text mb-1">Check your battery</div>
+              <div className="text-[12px] text-dim leading-relaxed">
+                Make sure your phone is charged before scoring. If your battery dies, you can export the score via QR so someone else can take over.
+              </div>
+              <button
+                onClick={dismissReminder}
+                className="mt-3 text-[12px] font-bold text-accent bg-transparent border-0 cursor-pointer p-0"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Serve Order */}
         <div className="bg-surface rounded-xl border border-line p-4">
           <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-4 text-center">

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
+import { useBattery } from '../hooks/useBattery'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
 
@@ -218,6 +219,10 @@ export default function LiveMatch() {
     t,
     setsPerMatch: tournament?.setsPerMatch || 1
   })
+
+  const battery = useBattery()
+  const [batteryBannerDismissed, setBatteryBannerDismissed] = useState(false)
+  const isBatteryLow = battery.supported && !battery.charging && battery.level < 0.20
 
   // Start game automatically if preloaded correctly
   // REMOVED AUTO START - We want the Setup Screen to show.
@@ -500,6 +505,22 @@ export default function LiveMatch() {
           Undo
         </button>
       </div>
+
+      {/* Battery warning banner — Android Chrome only, silent on iOS */}
+      {isBatteryLow && !batteryBannerDismissed && (
+        <div className="bg-error/10 border-b border-error/20 px-4 py-2.5 flex items-center gap-3 shrink-0">
+          <span className="text-[14px]">🔋</span>
+          <span className="text-[11px] font-bold text-error flex-1">
+            Battery {Math.round(battery.level * 100)}% — consider passing the phone
+          </span>
+          <button
+            onClick={() => setBatteryBannerDismissed(true)}
+            className="text-[16px] text-error/60 bg-transparent border-0 cursor-pointer leading-none"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Undo confirmation strip */}
       {live.pendingUndo && (

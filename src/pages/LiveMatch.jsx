@@ -589,6 +589,12 @@ export default function LiveMatch() {
             Battery {Math.round(battery.level * 100)}% — consider passing the phone
           </span>
           <button
+            onClick={() => setShowQRExport(true)}
+            className="text-[11px] font-bold text-white bg-error px-2.5 py-1 rounded-lg shrink-0 border-0 cursor-pointer"
+          >
+            Export
+          </button>
+          <button
             onClick={() => setBatteryBannerDismissed(true)}
             className="text-[16px] text-error/60 bg-transparent border-0 cursor-pointer leading-none"
           >

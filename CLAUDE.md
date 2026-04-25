@@ -157,14 +157,6 @@ Touch: min 44px. Side padding: 16px. Gaps: 8px.
 
 ## Rules
 
-### NEVER modify:
-
-- `src/hooks/useLiveGame.js` (match logic)
-- `src/hooks/useLocalStorage.js` (data persistence)
-- Game logic functions in App.jsx: `saveLiveResult`, `advanceKnockout`, `getAllTournamentMatches`
-- Data model shapes (tournaments, freePlays, players arrays)
-- `src/lib/i18n.js` and `src/lib/utils.js`
-
 ### ALWAYS do:
 
 - Keep all useState, useEffect, event handlers intact when restyling

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
@@ -35,9 +35,12 @@ const Svg = ({ children, size = 20 }) => (
 )
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
-function LiveMatchSetup({ live, tournament, onBack }) {
+function LiveMatchSetup({ live, tournament, mid, profileId, onBack }) {
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
+
+  const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
+  const [checking, setChecking]             = useState(false)
 
   const handleSwap1 = () => live.setT1ServeOrder([...live.t1ServeOrder].reverse())
   const handleSwap2 = () => live.setT2ServeOrder([...live.t2ServeOrder].reverse())
@@ -45,6 +48,23 @@ function LiveMatchSetup({ live, tournament, onBack }) {
   const handleSetSide = (sideStr) => {
     live.setT1InitialSide(sideStr)
     live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
+  }
+
+  const doStartGame = () => {
+    live.setPointsToWin(21)
+    live.startGame()
+  }
+
+  const handleStartMatch = async () => {
+    setChecking(true)
+    const info = await fetchMatchScorer(mid)
+    setChecking(false)
+    if (info && !info.played && info.scorerUserId && info.scorerUserId !== profileId) {
+      setConflictScorer({ name: info.scorerName || 'Someone' })
+      return
+    }
+    claimMatchScorer(mid, profileId)
+    doStartGame()
   }
 
   const canStart = live.t1ServeOrder?.length > 0 && live.t2ServeOrder?.length > 0
@@ -152,16 +172,42 @@ function LiveMatchSetup({ live, tournament, onBack }) {
         </div>
       </div>
 
-      <button 
-        onClick={() => {
-          live.setPointsToWin(21)
-          live.startGame()
-        }}
-        disabled={!canStart}
+      <button
+        onClick={handleStartMatch}
+        disabled={!canStart || checking}
         className="w-full max-w-[400px] mx-auto py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
       >
-        Start Match
+        {checking ? 'Checking...' : 'Start Match'}
       </button>
+
+      {conflictScorer && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
+          <div className="bg-surface border border-line p-6 rounded-2xl max-w-[320px] w-full text-center">
+            <div className="text-[32px] mb-3">⚠️</div>
+            <div className="text-[16px] font-bold mb-2 text-text">Already being scored</div>
+            <div className="text-[13px] text-dim mb-6">
+              <strong className="text-text">{conflictScorer.name}</strong> is already scoring this match.
+              If you continue, only the first saved result will count.
+            </div>
+            <button
+              onClick={onBack}
+              className="w-full py-3 bg-bg border border-line text-text font-bold rounded-xl mb-3 cursor-pointer"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={() => {
+                claimMatchScorer(mid, profileId)
+                setConflictScorer(null)
+                doStartGame()
+              }}
+              className="w-full py-3 bg-accent text-white font-bold rounded-xl border-0 cursor-pointer"
+            >
+              Continue Anyway
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -174,30 +220,6 @@ export default function LiveMatch() {
   const { league, loading: leagueLoading, refetch } = useLeague(id)
   const { canScore, loading: roleLoading }          = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
-
-  const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
-  const [scorerChecked, setScorerChecked]   = useState(false)
-
-  useEffect(() => {
-    if (roleLoading || leagueLoading) return
-    if (canScore === false) { setScorerChecked(true); return }
-    if (!profile?.id) return  // wait for profile to load before claiming/checking
-    let cancelled = false
-    async function checkScorer() {
-      const info = await fetchMatchScorer(mid)
-      if (cancelled) return
-      if (!info || info.played) { setScorerChecked(true); return }
-      if (!info.scorerUserId || info.scorerUserId === profile.id) {
-        claimMatchScorer(mid, profile.id)
-        setScorerChecked(true)
-        return
-      }
-      setConflictScorer({ name: info.scorerName || 'Someone' })
-      setScorerChecked(true)
-    }
-    checkScorer()
-    return () => { cancelled = true }
-  }, [mid, roleLoading, leagueLoading, canScore, profile?.id])
 
   // Get all matches flat to pass to the hook
   const allMatches = [
@@ -257,8 +279,8 @@ export default function LiveMatch() {
     navigate(`/league/${id}/tournament/${tid}`)
   }
 
-  // Show spinner while league, role, or scorer check is loading
-  if (leagueLoading || roleLoading || !scorerChecked) {
+  // Show spinner while league or role data is loading
+  if (leagueLoading || roleLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -295,36 +317,6 @@ export default function LiveMatch() {
 
   // ── Modals / Overlays ──
 
-  if (conflictScorer) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text p-6">
-        <div className="bg-surface border border-line p-6 rounded-2xl max-w-[320px] w-full text-center">
-          <div className="text-[32px] mb-3">⚠️</div>
-          <div className="text-[16px] font-bold mb-2">Already being scored</div>
-          <div className="text-[13px] text-dim mb-6">
-            <strong className="text-text">{conflictScorer.name}</strong> is already scoring this match.
-            If you continue, only the first saved result will count.
-          </div>
-          <button
-            onClick={() => navigate(`/league/${id}/tournament/${tid}`)}
-            className="w-full py-3 bg-surface border border-line text-text font-bold rounded-xl mb-3 cursor-pointer"
-          >
-            Go Back
-          </button>
-          <button
-            onClick={() => {
-              claimMatchScorer(mid, profile?.id)
-              setConflictScorer(null)
-            }}
-            className="w-full py-3 bg-accent text-white font-bold rounded-xl border-0 cursor-pointer"
-          >
-            Continue Anyway
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   if (live.showRestore) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-bg text-text p-6">
@@ -344,7 +336,7 @@ export default function LiveMatch() {
   }
 
   if (!live.gameStarted) {
-    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} />
+    return <LiveMatchSetup live={live} tournament={tournament} mid={mid} profileId={profile?.id} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} />
   }
 
   if (live.pendingEnd) {

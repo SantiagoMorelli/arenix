@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam } from '../services/tournamentService'
 import { uid } from '../lib/utils'
 import GameStats from '../components/GameStats'
+import TournamentStatsScreen from '../components/TournamentStatsScreen'
 
 // ─── Inline icons ─────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -842,6 +843,9 @@ export default function TournamentDetail() {
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
 
+  // ── Tournament Stats Overlay State ──
+  const [showTournamentStats, setShowTournamentStats] = useState(false)
+
   // ── Match Start Modal State ──
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showScoreForm, setShowScoreForm] = useState(false)
@@ -962,6 +966,15 @@ export default function TournamentDetail() {
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
 
+      {/* ── Tournament Stats Full-screen Overlay ── */}
+      {showTournamentStats && (
+        <TournamentStatsScreen
+          tournament={tournament}
+          leaguePlayers={leaguePlayers}
+          onClose={() => setShowTournamentStats(false)}
+        />
+      )}
+
       {/* ── Match Stats Full-screen Overlay ── */}
       {selectedStatsMatch && (
         <div className="absolute inset-0 z-[100] bg-bg flex flex-col overflow-hidden">
@@ -1057,6 +1070,25 @@ export default function TournamentDetail() {
         </div>
         <StatusBadge tournament={tournament} />
       </div>
+
+      {/* ── Tournament Complete Banner ── */}
+      {tournament.status === 'completed' && (
+        <button
+          onClick={() => setShowTournamentStats(true)}
+          className="mx-4 mb-3 w-[calc(100%-2rem)] min-h-[44px] rounded-xl bg-accent/15 border border-accent/40 flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-accent/20 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="text-[20px]">🏆</span>
+            <div className="text-left">
+              <div className="text-[13px] font-bold text-accent leading-tight">Tournament Complete</div>
+              <div className="text-[11px] text-dim">See full stats & awards</div>
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent flex-shrink-0">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      )}
 
       {/* ── Pill tabs ── */}
       <PillTabs

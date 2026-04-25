@@ -351,6 +351,9 @@ export default function LiveMatch() {
           <button onClick={live.restoreGame} className="w-full py-3 bg-accent text-white font-bold rounded-xl mb-3 border-0">
             Resume Match
           </button>
+          <button onClick={() => setShowQRImport(true)} className="w-full py-3 bg-surface text-dim font-bold rounded-xl border border-line mb-3">
+            📷 Scan QR instead
+          </button>
           <button onClick={live.discardSaved} className="w-full py-3 bg-error/10 text-error font-bold rounded-xl border border-error/20">
             Discard & Start New
           </button>

@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
-import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
+import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
+import { useBattery } from '../hooks/useBattery'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
+import QRExportModal from '../components/QRExportModal'
+import QRImportModal from '../components/QRImportModal'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
 const t = (key) => {
@@ -33,7 +37,17 @@ const Svg = ({ children, size = 20 }) => (
 )
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
-function LiveMatchSetup({ live, tournament, onBack }) {
+const REMINDER_KEY = 'bv_battery_reminder_seen'
+
+function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
+  const [reminderSeen, setReminderSeen] = useState(
+    () => !!localStorage.getItem(REMINDER_KEY)
+  )
+
+  const dismissReminder = () => {
+    localStorage.setItem(REMINDER_KEY, '1')
+    setReminderSeen(true)
+  }
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
 
@@ -63,6 +77,25 @@ function LiveMatchSetup({ live, tournament, onBack }) {
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
+        {/* One-time battery reminder */}
+        {!reminderSeen && (
+          <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 flex gap-3 items-start">
+            <span className="text-[22px] shrink-0">🔋</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-bold text-text mb-1">Check your battery</div>
+              <div className="text-[12px] text-dim leading-relaxed">
+                Make sure your phone is charged before scoring. If your battery dies, you can export the score via QR so someone else can take over.
+              </div>
+              <button
+                onClick={dismissReminder}
+                className="mt-3 text-[12px] font-bold text-accent bg-transparent border-0 cursor-pointer p-0"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Serve Order */}
         <div className="bg-surface rounded-xl border border-line p-4">
           <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-4 text-center">
@@ -150,13 +183,21 @@ function LiveMatchSetup({ live, tournament, onBack }) {
         </div>
       </div>
 
-      <button
-        onClick={() => { live.setPointsToWin(21); live.startGame() }}
-        disabled={!canStart}
-        className="w-full max-w-[400px] mx-auto py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-      >
-        Start Match
-      </button>
+      <div className="flex flex-col gap-2 max-w-[400px] w-full mx-auto shrink-0">
+        <button
+          onClick={() => { live.setPointsToWin(21); live.startGame() }}
+          disabled={!canStart}
+          className="w-full py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Start Match
+        </button>
+        <button
+          onClick={onScanQR}
+          className="w-full py-3 text-[13px] font-bold text-dim bg-transparent border-0 cursor-pointer active:text-text"
+        >
+          📷 Resume from QR
+        </button>
+      </div>
     </div>
   )
 }
@@ -188,6 +229,45 @@ export default function LiveMatch() {
     t,
     setsPerMatch: tournament?.setsPerMatch || 1
   })
+
+  const battery = useBattery()
+  const [batteryBannerDismissed, setBatteryBannerDismissed] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showQRExport, setShowQRExport] = useState(false)
+  const [showQRImport, setShowQRImport] = useState(false)
+  const isBatteryLow = battery.supported && !battery.charging && battery.level < 0.20
+
+  const getQRPayload = () => {
+    const s = loadSaved()
+    return {
+      team1Id: live.team1Id,
+      team2Id: live.team2Id,
+      gameStarted: true,
+      score1: live.score1,
+      score2: live.score2,
+      serveIndex: live.serveIndex,
+      side: live.side,
+      points: live.points,
+      sets: live.sets,
+      winner: live.winner,
+      pointsToWin: live.pointsToWin,
+      t1FirstServer: s?.t1FirstServer ?? 0,
+      t2FirstServer: s?.t2FirstServer ?? 0,
+      t1InitialSide: s?.t1InitialSide ?? live.t1InitialSide,
+      t1ServeOrder: live.t1ServeOrder,
+      t2ServeOrder: live.t2ServeOrder,
+      log: [],
+      history: [],
+    }
+  }
+
+  const handleQRImport = (parsedState) => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(parsedState))
+      live.restoreGame()
+    } catch {}
+    setShowQRImport(false)
+  }
 
   // Start game automatically if preloaded correctly
   // REMOVED AUTO START - We want the Setup Screen to show.
@@ -265,6 +345,10 @@ export default function LiveMatch() {
 
   // ── Modals / Overlays ──
 
+  if (showQRImport) {
+    return <QRImportModal onImport={handleQRImport} onClose={() => setShowQRImport(false)} />
+  }
+
   if (live.showRestore) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-bg text-text p-6">
@@ -275,6 +359,9 @@ export default function LiveMatch() {
           <button onClick={live.restoreGame} className="w-full py-3 bg-accent text-white font-bold rounded-xl mb-3 border-0">
             Resume Match
           </button>
+          <button onClick={() => setShowQRImport(true)} className="w-full py-3 bg-surface text-dim font-bold rounded-xl border border-line mb-3">
+            📷 Scan QR instead
+          </button>
           <button onClick={live.discardSaved} className="w-full py-3 bg-error/10 text-error font-bold rounded-xl border border-error/20">
             Discard & Start New
           </button>
@@ -284,7 +371,7 @@ export default function LiveMatch() {
   }
 
   if (!live.gameStarted) {
-    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} />
+    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} onScanQR={() => setShowQRImport(true)} />
   }
 
   if (live.pendingEnd) {
@@ -454,13 +541,21 @@ export default function LiveMatch() {
         <button onClick={live.requestEnd} className="text-[12px] font-bold text-error uppercase tracking-wider bg-transparent border-0">
           End
         </button>
-        <div className="text-center">
-          <div className="text-[14px] font-black uppercase text-accent tracking-widest">
-            Set {live.sets.length + 1}
+        <div className="flex items-center gap-1.5">
+          <div className="text-center">
+            <div className="text-[14px] font-black uppercase text-accent tracking-widest">
+              Set {live.sets.length + 1}
+            </div>
+            <div className="text-[10px] text-dim font-bold tracking-widest uppercase">
+              First to {live.pointsToWin}
+            </div>
           </div>
-          <div className="text-[10px] text-dim font-bold tracking-widest uppercase">
-            First to {live.pointsToWin}
-          </div>
+          <button
+            onClick={() => setShowMenu(v => !v)}
+            className="w-8 h-8 flex items-center justify-center text-dim text-[20px] font-black bg-transparent border-0 leading-none pb-1"
+          >
+            ···
+          </button>
         </div>
         <button 
           onClick={live.requestUndo} 
@@ -470,6 +565,43 @@ export default function LiveMatch() {
           Undo
         </button>
       </div>
+
+      {/* ⋯ overflow menu */}
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          <div className="fixed top-[57px] left-1/2 -translate-x-1/2 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[200px]">
+            <button
+              onClick={() => { setShowMenu(false); setShowQRExport(true) }}
+              className="w-full px-4 py-3.5 text-left text-[13px] font-semibold text-text flex items-center gap-3 active:bg-alt border-0 bg-transparent cursor-pointer"
+            >
+              <span>📤</span> Export game (QR)
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Battery warning banner — Android Chrome only, silent on iOS */}
+      {isBatteryLow && !batteryBannerDismissed && (
+        <div className="bg-error/10 border-b border-error/20 px-4 py-2.5 flex items-center gap-3 shrink-0">
+          <span className="text-[14px]">🔋</span>
+          <span className="text-[11px] font-bold text-error flex-1">
+            Battery {Math.round(battery.level * 100)}% — consider passing the phone
+          </span>
+          <button
+            onClick={() => setShowQRExport(true)}
+            className="text-[11px] font-bold text-white bg-error px-2.5 py-1 rounded-lg shrink-0 border-0 cursor-pointer"
+          >
+            Export
+          </button>
+          <button
+            onClick={() => setBatteryBannerDismissed(true)}
+            className="text-[16px] text-error/60 bg-transparent border-0 cursor-pointer leading-none"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Undo confirmation strip */}
       {live.pendingUndo && (
@@ -602,6 +734,11 @@ export default function LiveMatch() {
           )}
         </div>
       </div>
+
+      {/* QR Export overlay */}
+      {showQRExport && (
+        <QRExportModal payload={getQRPayload()} onClose={() => setShowQRExport(false)} />
+      )}
     </div>
   )
 }

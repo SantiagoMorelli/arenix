@@ -354,3 +354,34 @@ export async function renameTeam(teamId, newName) {
     .eq('id', teamId)
   if (error) throw error
 }
+
+/**
+ * Fetch who is currently scoring a match (if anyone).
+ * Returns null on error so callers can fail silently.
+ */
+export async function fetchMatchScorer(matchId) {
+  const { data, error } = await supabase
+    .from('matches')
+    .select('scorer_user_id, scorer_started_at, played, profiles!matches_scorer_user_id_fkey(full_name)')
+    .eq('id', matchId)
+    .single()
+  if (error) return null
+  return {
+    scorerUserId:      data.scorer_user_id,
+    scorerName:        data.profiles?.full_name || null,
+    scorerStartedAt:   data.scorer_started_at,
+    played:            data.played,
+  }
+}
+
+/**
+ * Claim scorer slot on a match. Overwrites any existing claim so the
+ * latest scorer is always the one recorded.
+ */
+export async function claimMatchScorer(matchId, userId) {
+  if (!matchId || !userId) return
+  await supabase
+    .from('matches')
+    .update({ scorer_user_id: userId, scorer_started_at: new Date().toISOString() })
+    .eq('id', matchId)
+}

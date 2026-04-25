@@ -54,6 +54,13 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
   const handleSwap1 = () => live.setT1ServeOrder(o => [...o.slice(1), o[0]])
   const handleSwap2 = () => live.setT2ServeOrder(o => [...o.slice(1), o[0]])
 
+  const handleMoveUp1 = (idx) => live.setT1ServeOrder(o => {
+    const n = [...o]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; return n
+  })
+  const handleMoveUp2 = (idx) => live.setT2ServeOrder(o => {
+    const n = [...o]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; return n
+  })
+
   const handleSetSide = (sideStr) => {
     live.setT1InitialSide(sideStr)
     live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
@@ -111,7 +118,10 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
                     <span className="text-[10px] font-bold w-4 h-4 rounded-full bg-current text-white flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
-                    <span className="text-[12px] font-bold truncate">{live.playerName(pid)}</span>
+                    <span className="text-[12px] font-bold truncate flex-1">{live.playerName(pid)}</span>
+                    {idx > 0 && (
+                      <button onClick={() => handleMoveUp1(idx)} className="text-[14px] text-dim bg-transparent border-0 cursor-pointer p-0 leading-none shrink-0">↑</button>
+                    )}
                   </div>
                 ))}
                 <button onClick={handleSwap1} className="text-[11px] font-bold text-dim bg-alt py-1.5 rounded-lg mt-1 active:bg-line">
@@ -129,7 +139,10 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
                     <span className="text-[10px] font-bold w-4 h-4 rounded-full bg-current text-white flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
-                    <span className="text-[12px] font-bold truncate">{live.playerName(pid)}</span>
+                    <span className="text-[12px] font-bold truncate flex-1">{live.playerName(pid)}</span>
+                    {idx > 0 && (
+                      <button onClick={() => handleMoveUp2(idx)} className="text-[14px] text-dim bg-transparent border-0 cursor-pointer p-0 leading-none shrink-0">↑</button>
+                    )}
                   </div>
                 ))}
                 <button onClick={handleSwap2} className="text-[11px] font-bold text-dim bg-alt py-1.5 rounded-lg mt-1 active:bg-line">

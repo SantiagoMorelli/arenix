@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
-import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam, fetchMatchScorer, claimMatchScorer } from '../services/tournamentService'
 import { uid } from '../lib/utils'
 import GameStats from '../components/GameStats'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
@@ -851,6 +851,8 @@ export default function TournamentDetail() {
   const [showScoreForm, setShowScoreForm] = useState(false)
   const [manualScore1, setManualScore1]   = useState('0')
   const [manualScore2, setManualScore2]   = useState('0')
+  const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
+  const [checkingScorer, setCheckingScorer] = useState(false)
 
   // ── Match Stats Overlay State ──
   const [selectedStatsMatch, setSelectedStatsMatch] = useState(null)
@@ -895,7 +897,15 @@ export default function TournamentDetail() {
     setShowScoreForm(false)
   }
 
-  const handlePlayLive = () => {
+  const handlePlayLive = async () => {
+    setCheckingScorer(true)
+    const info = await fetchMatchScorer(selectedMatch.id)
+    setCheckingScorer(false)
+    if (info && !info.played && info.scorerUserId && info.scorerUserId !== profile?.id) {
+      setConflictScorer({ name: info.scorerName || 'Someone' })
+      return
+    }
+    claimMatchScorer(selectedMatch.id, profile?.id)
     navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
   }
 
@@ -1174,9 +1184,10 @@ export default function TournamentDetail() {
                   })()}
                   <button
                     onClick={handlePlayLive}
-                    className="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-[14px] flex items-center justify-center gap-2 border-0 cursor-pointer shadow-[0_4px_12px_rgba(var(--c-accent),0.25)] hover:opacity-90 transition-all"
+                    disabled={checkingScorer}
+                    className="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-[14px] flex items-center justify-center gap-2 border-0 cursor-pointer shadow-[0_4px_12px_rgba(var(--c-accent),0.25)] hover:opacity-90 transition-all disabled:opacity-60"
                   >
-                    <span className="text-[18px]">🏐</span> Play Live
+                    <span className="text-[18px]">🏐</span> {checkingScorer ? 'Checking...' : 'Play Live'}
                   </button>
 
                   <button
@@ -1255,6 +1266,36 @@ export default function TournamentDetail() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Scorer Conflict Modal ── */}
+      {conflictScorer && (
+        <div className="absolute inset-0 z-[60] bg-black/60 flex items-center justify-center p-6">
+          <div className="bg-surface border border-line p-6 rounded-2xl max-w-[320px] w-full text-center">
+            <div className="text-[32px] mb-3">⚠️</div>
+            <div className="text-[16px] font-bold mb-2 text-text">Already being scored</div>
+            <div className="text-[13px] text-dim mb-6">
+              <strong className="text-text">{conflictScorer.name}</strong> is already scoring this match.
+              If you continue, only the first saved result will count.
+            </div>
+            <button
+              onClick={() => setConflictScorer(null)}
+              className="w-full py-3 bg-bg border border-line text-text font-bold rounded-xl mb-3 cursor-pointer"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={() => {
+                claimMatchScorer(selectedMatch.id, profile?.id)
+                setConflictScorer(null)
+                navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
+              }}
+              className="w-full py-3 bg-accent text-white font-bold rounded-xl border-0 cursor-pointer"
+            >
+              Continue Anyway
+            </button>
           </div>
         </div>
       )}

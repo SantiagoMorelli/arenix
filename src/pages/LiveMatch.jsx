@@ -1,10 +1,8 @@
-import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
-import { useAuth } from '../contexts/AuthContext'
 import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
-import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament, fetchMatchScorer, claimMatchScorer } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
@@ -35,12 +33,9 @@ const Svg = ({ children, size = 20 }) => (
 )
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
-function LiveMatchSetup({ live, tournament, mid, profileId, onBack }) {
+function LiveMatchSetup({ live, tournament, onBack }) {
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
-
-  const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
-  const [checking, setChecking]             = useState(false)
 
   const handleSwap1 = () => live.setT1ServeOrder([...live.t1ServeOrder].reverse())
   const handleSwap2 = () => live.setT2ServeOrder([...live.t2ServeOrder].reverse())
@@ -48,23 +43,6 @@ function LiveMatchSetup({ live, tournament, mid, profileId, onBack }) {
   const handleSetSide = (sideStr) => {
     live.setT1InitialSide(sideStr)
     live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
-  }
-
-  const doStartGame = () => {
-    live.setPointsToWin(21)
-    live.startGame()
-  }
-
-  const handleStartMatch = async () => {
-    setChecking(true)
-    const info = await fetchMatchScorer(mid)
-    setChecking(false)
-    if (info && !info.played && info.scorerUserId && info.scorerUserId !== profileId) {
-      setConflictScorer({ name: info.scorerName || 'Someone' })
-      return
-    }
-    claimMatchScorer(mid, profileId)
-    doStartGame()
   }
 
   const canStart = live.t1ServeOrder?.length > 0 && live.t2ServeOrder?.length > 0
@@ -173,41 +151,12 @@ function LiveMatchSetup({ live, tournament, mid, profileId, onBack }) {
       </div>
 
       <button
-        onClick={handleStartMatch}
-        disabled={!canStart || checking}
+        onClick={() => { live.setPointsToWin(21); live.startGame() }}
+        disabled={!canStart}
         className="w-full max-w-[400px] mx-auto py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
       >
-        {checking ? 'Checking...' : 'Start Match'}
+        Start Match
       </button>
-
-      {conflictScorer && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
-          <div className="bg-surface border border-line p-6 rounded-2xl max-w-[320px] w-full text-center">
-            <div className="text-[32px] mb-3">⚠️</div>
-            <div className="text-[16px] font-bold mb-2 text-text">Already being scored</div>
-            <div className="text-[13px] text-dim mb-6">
-              <strong className="text-text">{conflictScorer.name}</strong> is already scoring this match.
-              If you continue, only the first saved result will count.
-            </div>
-            <button
-              onClick={onBack}
-              className="w-full py-3 bg-bg border border-line text-text font-bold rounded-xl mb-3 cursor-pointer"
-            >
-              Go Back
-            </button>
-            <button
-              onClick={() => {
-                claimMatchScorer(mid, profileId)
-                setConflictScorer(null)
-                doStartGame()
-              }}
-              className="w-full py-3 bg-accent text-white font-bold rounded-xl border-0 cursor-pointer"
-            >
-              Continue Anyway
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -216,7 +165,6 @@ export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
 
-  const { profile }                                  = useAuth()
   const { league, loading: leagueLoading, refetch } = useLeague(id)
   const { canScore, loading: roleLoading }          = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
@@ -336,7 +284,7 @@ export default function LiveMatch() {
   }
 
   if (!live.gameStarted) {
-    return <LiveMatchSetup live={live} tournament={tournament} mid={mid} profileId={profile?.id} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} />
+    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} />
   }
 
   if (live.pendingEnd) {

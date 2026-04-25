@@ -289,11 +289,19 @@ function StandingsTable({ rows }) {
 }
 
 // ─── Knockout results (simple list per round) ─────────────────────────────────
-function KnockoutResults({ tournament, onMatchClick }) {
+function KnockoutResults({ tournament, onMatchClick, players = [] }) {
   const rounds = (tournament.knockout?.rounds || [])
     .filter(r => r.matches.some(m => m.team1 && m.team2))
 
   if (!rounds.length) return null
+
+  const pNames = id => {
+    const t = tournament.teams.find(x => x.id === id)
+    return (t?.players || []).map(pid => {
+      const p = players.find(x => x.id === pid)
+      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+    }).join(' · ')
+  }
 
   return (
     <div className="mt-5">
@@ -312,6 +320,8 @@ function KnockoutResults({ tournament, onMatchClick }) {
             .map(m => {
               const t1 = teamName(tournament.teams, m.team1)
               const t2 = teamName(tournament.teams, m.team2)
+              const p1 = pNames(m.team1)
+              const p2 = pNames(m.team2)
               return (
                 <div
                   key={m.id}
@@ -322,15 +332,17 @@ function KnockoutResults({ tournament, onMatchClick }) {
                       : 'bg-gradient-to-r from-surface to-alt border-accent/40'
                   }`}
                 >
-                  <span className={`flex-1 text-[13px] ${m.played && m.winner === m.team1 ? 'font-bold text-accent' : 'font-medium text-text'}`}>
-                    {t1}
-                  </span>
-                  <span className="px-3 text-[14px] font-bold text-text">
+                  <div className="flex-1">
+                    <div className={`text-[13px] ${m.played && m.winner === m.team1 ? 'font-bold text-accent' : 'font-medium text-text'}`}>{t1}</div>
+                    {p1 && <div className="text-[10px] text-dim mt-0.5">{p1}</div>}
+                  </div>
+                  <span className="px-3 text-[14px] font-bold text-text flex-shrink-0">
                     {m.played ? `${m.score1} – ${m.score2}` : 'VS'}
                   </span>
-                  <span className={`flex-1 text-right text-[13px] ${m.played && m.winner === m.team2 ? 'font-bold text-accent' : 'font-medium text-text'}`}>
-                    {t2}
-                  </span>
+                  <div className="flex-1 text-right">
+                    <div className={`text-[13px] ${m.played && m.winner === m.team2 ? 'font-bold text-accent' : 'font-medium text-text'}`}>{t2}</div>
+                    {p2 && <div className="text-[10px] text-dim mt-0.5">{p2}</div>}
+                  </div>
                 </div>
               )
             })}
@@ -384,7 +396,7 @@ function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage,
 
       {/* Knockout results appear once the group stage is over */}
       {(phase === 'knockout' || phase === 'completed') && (
-        <KnockoutResults tournament={tournament} onMatchClick={onMatchClick} />
+        <KnockoutResults tournament={tournament} onMatchClick={onMatchClick} players={players} />
       )}
 
       {/* Advance button — only for admins */}
@@ -991,22 +1003,30 @@ export default function TournamentDetail() {
                 </div>
                 
                 <div className="bg-surface border border-line rounded-2xl p-6 w-full max-w-[280px]">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className={`text-[15px] ${selectedStatsMatch.winner === selectedStatsMatch.team1 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                      {teamName(tournament.teams, selectedStatsMatch.team1)}
-                    </span>
-                    <span className={`text-[24px] font-black ${selectedStatsMatch.winner === selectedStatsMatch.team1 ? 'text-accent' : 'text-text'}`}>
-                      {selectedStatsMatch.score1}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className={`text-[15px] ${selectedStatsMatch.winner === selectedStatsMatch.team2 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                      {teamName(tournament.teams, selectedStatsMatch.team2)}
-                    </span>
-                    <span className={`text-[24px] font-black ${selectedStatsMatch.winner === selectedStatsMatch.team2 ? 'text-accent' : 'text-text'}`}>
-                      {selectedStatsMatch.score2}
-                    </span>
-                  </div>
+                  {[
+                    { teamId: selectedStatsMatch.team1, score: selectedStatsMatch.score1 },
+                    { teamId: selectedStatsMatch.team2, score: selectedStatsMatch.score2 },
+                  ].map(({ teamId, score }, idx) => {
+                    const isWinner = selectedStatsMatch.winner === teamId
+                    const t = tournament.teams.find(x => x.id === teamId)
+                    const names = (t?.players || []).map(pid => {
+                      const p = leaguePlayers.find(x => x.id === pid)
+                      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+                    }).join(' · ')
+                    return (
+                      <div key={teamId} className={`flex justify-between items-start ${idx === 0 ? 'mb-4' : ''}`}>
+                        <div className="flex-1 min-w-0 pr-3">
+                          <div className={`text-[15px] ${isWinner ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
+                            {teamName(tournament.teams, teamId)}
+                          </div>
+                          {names && <div className="text-[10px] text-dim mt-0.5">{names}</div>}
+                        </div>
+                        <span className={`text-[24px] font-black flex-shrink-0 ${isWinner ? 'text-accent' : 'text-text'}`}>
+                          {score}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
                 
                 <button
@@ -1093,27 +1113,41 @@ export default function TournamentDetail() {
 
             {/* Modal Body */}
             <div className="p-5">
-              <div className="flex justify-between items-center mb-6">
-                <span className="flex-1 text-center text-[14px] font-bold text-text truncate">
-                  {teamName(tournament.teams, selectedMatch.team1)}
-                </span>
-                <span className="text-[11px] font-bold text-dim px-3">VS</span>
-                <span className="flex-1 text-center text-[14px] font-bold text-text truncate">
-                  {teamName(tournament.teams, selectedMatch.team2)}
-                </span>
-              </div>
-
               {!showScoreForm ? (
                 // Option Selection
                 <div className="flex flex-col gap-3">
-                  <button 
+                  {(() => {
+                    const getNames = id => {
+                      const t = tournament.teams.find(x => x.id === id)
+                      return (t?.players || []).map(pid => {
+                        const p = leaguePlayers.find(x => x.id === pid)
+                        return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+                      }).join(' · ')
+                    }
+                    const n1 = getNames(selectedMatch.team1)
+                    const n2 = getNames(selectedMatch.team2)
+                    return (
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 text-center pr-1">
+                          <div className="text-[14px] font-bold text-text">{teamName(tournament.teams, selectedMatch.team1)}</div>
+                          {n1 && <div className="text-[10px] text-dim mt-0.5">{n1}</div>}
+                        </div>
+                        <span className="text-[11px] font-bold text-dim px-3 pt-0.5 flex-shrink-0">VS</span>
+                        <div className="flex-1 text-center pl-1">
+                          <div className="text-[14px] font-bold text-text">{teamName(tournament.teams, selectedMatch.team2)}</div>
+                          {n2 && <div className="text-[10px] text-dim mt-0.5">{n2}</div>}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  <button
                     onClick={handlePlayLive}
                     className="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-[14px] flex items-center justify-center gap-2 border-0 cursor-pointer shadow-[0_4px_12px_rgba(var(--c-accent),0.25)] hover:opacity-90 transition-all"
                   >
                     <span className="text-[18px]">🏐</span> Play Live
                   </button>
-                  
-                  <button 
+
+                  <button
                     onClick={() => setShowScoreForm(true)}
                     className="w-full py-3.5 rounded-xl bg-alt text-text font-semibold text-[14px] flex items-center justify-center gap-2 border border-line cursor-pointer hover:bg-bg transition-colors"
                   >
@@ -1123,38 +1157,48 @@ export default function TournamentDetail() {
               ) : (
                 // Score Entry Form
                 <div className="flex flex-col gap-4">
-                  <div className="flex gap-3 items-center">
-                    <div className="flex-1">
-                      <div className="text-[12px] font-semibold mb-1 text-dim text-center">
-                        {teamName(tournament.teams, selectedMatch.team1)}
+                  {(() => {
+                    const getNames = id => {
+                      const t = tournament.teams.find(x => x.id === id)
+                      return (t?.players || []).map(pid => {
+                        const p = leaguePlayers.find(x => x.id === pid)
+                        return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
+                      }).join(' · ')
+                    }
+                    const n1 = getNames(selectedMatch.team1)
+                    const n2 = getNames(selectedMatch.team2)
+                    return (
+                      <div className="flex gap-3 items-start">
+                        <div className="flex-1">
+                          <div className="text-[12px] font-semibold text-dim text-center truncate">{teamName(tournament.teams, selectedMatch.team1)}</div>
+                          {n1 && <div className="text-[10px] text-dim text-center mb-1">{n1}</div>}
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={manualScore1}
+                            onChange={e => setManualScore1(e.target.value)}
+                            placeholder="0"
+                            className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
+                          />
+                        </div>
+                        <div className="font-display text-[28px] text-dim pt-[30px] flex-shrink-0">—</div>
+                        <div className="flex-1">
+                          <div className="text-[12px] font-semibold text-dim text-center truncate">{teamName(tournament.teams, selectedMatch.team2)}</div>
+                          {n2 && <div className="text-[10px] text-dim text-center mb-1">{n2}</div>}
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={manualScore2}
+                            onChange={e => setManualScore2(e.target.value)}
+                            placeholder="0"
+                            className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={manualScore1}
-                        onChange={e => setManualScore1(e.target.value)}
-                        placeholder="0"
-                        className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
-                      />
-                    </div>
-                    <div className="font-display text-[28px] text-dim pt-[22px]">—</div>
-                    <div className="flex-1">
-                      <div className="text-[12px] font-semibold mb-1 text-dim text-center">
-                        {teamName(tournament.teams, selectedMatch.team2)}
-                      </div>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={manualScore2}
-                        onChange={e => setManualScore2(e.target.value)}
-                        placeholder="0"
-                        className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  
+                    )
+                  })()}
                   <div className="text-[11px] text-center text-dim mt-1">
                     {(manualScore1 !== '' && manualScore1 === manualScore2) 
                       ? <span className="text-error font-bold">Matches cannot end in a tie.</span>

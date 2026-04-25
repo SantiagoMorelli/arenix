@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
-import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
+import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
 import { useBattery } from '../hooks/useBattery'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
+import QRExportModal from '../components/QRExportModal'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
 const t = (key) => {
@@ -222,7 +223,33 @@ export default function LiveMatch() {
 
   const battery = useBattery()
   const [batteryBannerDismissed, setBatteryBannerDismissed] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showQRExport, setShowQRExport] = useState(false)
   const isBatteryLow = battery.supported && !battery.charging && battery.level < 0.20
+
+  const getQRPayload = () => {
+    const s = loadSaved()
+    return {
+      team1Id: live.team1Id,
+      team2Id: live.team2Id,
+      gameStarted: true,
+      score1: live.score1,
+      score2: live.score2,
+      serveIndex: live.serveIndex,
+      side: live.side,
+      points: live.points,
+      sets: live.sets,
+      winner: live.winner,
+      pointsToWin: live.pointsToWin,
+      t1FirstServer: s?.t1FirstServer ?? 0,
+      t2FirstServer: s?.t2FirstServer ?? 0,
+      t1InitialSide: s?.t1InitialSide ?? live.t1InitialSide,
+      t1ServeOrder: live.t1ServeOrder,
+      t2ServeOrder: live.t2ServeOrder,
+      log: [],
+      history: [],
+    }
+  }
 
   // Start game automatically if preloaded correctly
   // REMOVED AUTO START - We want the Setup Screen to show.
@@ -489,13 +516,21 @@ export default function LiveMatch() {
         <button onClick={live.requestEnd} className="text-[12px] font-bold text-error uppercase tracking-wider bg-transparent border-0">
           End
         </button>
-        <div className="text-center">
-          <div className="text-[14px] font-black uppercase text-accent tracking-widest">
-            Set {live.sets.length + 1}
+        <div className="flex items-center gap-1.5">
+          <div className="text-center">
+            <div className="text-[14px] font-black uppercase text-accent tracking-widest">
+              Set {live.sets.length + 1}
+            </div>
+            <div className="text-[10px] text-dim font-bold tracking-widest uppercase">
+              First to {live.pointsToWin}
+            </div>
           </div>
-          <div className="text-[10px] text-dim font-bold tracking-widest uppercase">
-            First to {live.pointsToWin}
-          </div>
+          <button
+            onClick={() => setShowMenu(v => !v)}
+            className="w-8 h-8 flex items-center justify-center text-dim text-[20px] font-black bg-transparent border-0 leading-none pb-1"
+          >
+            ···
+          </button>
         </div>
         <button 
           onClick={live.requestUndo} 
@@ -505,6 +540,21 @@ export default function LiveMatch() {
           Undo
         </button>
       </div>
+
+      {/* ⋯ overflow menu */}
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          <div className="fixed top-[57px] left-1/2 -translate-x-1/2 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[200px]">
+            <button
+              onClick={() => { setShowMenu(false); setShowQRExport(true) }}
+              className="w-full px-4 py-3.5 text-left text-[13px] font-semibold text-text flex items-center gap-3 active:bg-alt border-0 bg-transparent cursor-pointer"
+            >
+              <span>📤</span> Export game (QR)
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Battery warning banner — Android Chrome only, silent on iOS */}
       {isBatteryLow && !batteryBannerDismissed && (
@@ -653,6 +703,11 @@ export default function LiveMatch() {
           )}
         </div>
       </div>
+
+      {/* QR Export overlay */}
+      {showQRExport && (
+        <QRExportModal payload={getQRPayload()} onClose={() => setShowQRExport(false)} />
+      )}
     </div>
   )
 }

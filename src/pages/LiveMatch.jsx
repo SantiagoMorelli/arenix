@@ -51,8 +51,8 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
 
-  const handleSwap1 = () => live.setT1ServeOrder([...live.t1ServeOrder].reverse())
-  const handleSwap2 = () => live.setT2ServeOrder([...live.t2ServeOrder].reverse())
+  const handleSwap1 = () => live.setT1ServeOrder(o => [...o.slice(1), o[0]])
+  const handleSwap2 = () => live.setT2ServeOrder(o => [...o.slice(1), o[0]])
 
   const handleSetSide = (sideStr) => {
     live.setT1InitialSide(sideStr)

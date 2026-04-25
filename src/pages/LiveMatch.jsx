@@ -7,6 +7,7 @@ import { useBattery } from '../hooks/useBattery'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
 import QRExportModal from '../components/QRExportModal'
+import QRImportModal from '../components/QRImportModal'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
 const t = (key) => {
@@ -225,6 +226,7 @@ export default function LiveMatch() {
   const [batteryBannerDismissed, setBatteryBannerDismissed] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showQRExport, setShowQRExport] = useState(false)
+  const [showQRImport, setShowQRImport] = useState(false)
   const isBatteryLow = battery.supported && !battery.charging && battery.level < 0.20
 
   const getQRPayload = () => {
@@ -249,6 +251,14 @@ export default function LiveMatch() {
       log: [],
       history: [],
     }
+  }
+
+  const handleQRImport = (parsedState) => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(parsedState))
+      live.restoreGame()
+    } catch {}
+    setShowQRImport(false)
   }
 
   // Start game automatically if preloaded correctly
@@ -326,6 +336,10 @@ export default function LiveMatch() {
   const t2Name = teamName(tournament.teams, live.team2Id)
 
   // ── Modals / Overlays ──
+
+  if (showQRImport) {
+    return <QRImportModal onImport={handleQRImport} onClose={() => setShowQRImport(false)} />
+  }
 
   if (live.showRestore) {
     return (

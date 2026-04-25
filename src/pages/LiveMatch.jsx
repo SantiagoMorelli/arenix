@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
+import { useAuth } from '../contexts/AuthContext'
 import { useLiveGame, SAVE_KEY } from '../hooks/useLiveGame'
-import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament, fetchMatchScorer, claimMatchScorer } from '../services/tournamentService'
 import GameStats from '../components/GameStats'
 
 // Mock translation function for useLiveGame (since legacy app passes it down)
@@ -169,9 +170,32 @@ export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
 
+  const { profile }                                  = useAuth()
   const { league, loading: leagueLoading, refetch } = useLeague(id)
   const { canScore, loading: roleLoading }          = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
+
+  const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
+  const [scorerChecked, setScorerChecked]   = useState(false)
+
+  useEffect(() => {
+    if (roleLoading || leagueLoading || canScore === false) return
+    let cancelled = false
+    async function checkScorer() {
+      const info = await fetchMatchScorer(mid)
+      if (cancelled) return
+      if (!info || info.played) { setScorerChecked(true); return }
+      if (!info.scorerUserId || info.scorerUserId === profile?.id) {
+        claimMatchScorer(mid, profile?.id)
+        setScorerChecked(true)
+        return
+      }
+      setConflictScorer({ name: info.scorerName || 'Someone' })
+      setScorerChecked(true)
+    }
+    checkScorer()
+    return () => { cancelled = true }
+  }, [mid, roleLoading, leagueLoading, canScore, profile?.id])
 
   // Get all matches flat to pass to the hook
   const allMatches = [
@@ -231,8 +255,8 @@ export default function LiveMatch() {
     navigate(`/league/${id}/tournament/${tid}`)
   }
 
-  // Show spinner while league or role data is loading
-  if (leagueLoading || roleLoading) {
+  // Show spinner while league, role, or scorer check is loading
+  if (leagueLoading || roleLoading || !scorerChecked) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -268,6 +292,36 @@ export default function LiveMatch() {
   const t2Name = teamName(tournament.teams, live.team2Id)
 
   // ── Modals / Overlays ──
+
+  if (conflictScorer) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text p-6">
+        <div className="bg-surface border border-line p-6 rounded-2xl max-w-[320px] w-full text-center">
+          <div className="text-[32px] mb-3">⚠️</div>
+          <div className="text-[16px] font-bold mb-2">Already being scored</div>
+          <div className="text-[13px] text-dim mb-6">
+            <strong className="text-text">{conflictScorer.name}</strong> is already scoring this match.
+            If you continue, only the first saved result will count.
+          </div>
+          <button
+            onClick={() => navigate(`/league/${id}/tournament/${tid}`)}
+            className="w-full py-3 bg-surface border border-line text-text font-bold rounded-xl mb-3 cursor-pointer"
+          >
+            Go Back
+          </button>
+          <button
+            onClick={() => {
+              claimMatchScorer(mid, profile?.id)
+              setConflictScorer(null)
+            }}
+            className="w-full py-3 bg-accent text-white font-bold rounded-xl border-0 cursor-pointer"
+          >
+            Continue Anyway
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (live.showRestore) {
     return (

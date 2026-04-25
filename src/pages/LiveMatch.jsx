@@ -39,7 +39,7 @@ const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 const REMINDER_KEY = 'bv_battery_reminder_seen'
 
-function LiveMatchSetup({ live, tournament, onBack }) {
+function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
   const [reminderSeen, setReminderSeen] = useState(
     () => !!localStorage.getItem(REMINDER_KEY)
   )
@@ -183,13 +183,21 @@ function LiveMatchSetup({ live, tournament, onBack }) {
         </div>
       </div>
 
-      <button
-        onClick={() => { live.setPointsToWin(21); live.startGame() }}
-        disabled={!canStart}
-        className="w-full max-w-[400px] mx-auto py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-      >
-        Start Match
-      </button>
+      <div className="flex flex-col gap-2 max-w-[400px] w-full mx-auto shrink-0">
+        <button
+          onClick={() => { live.setPointsToWin(21); live.startGame() }}
+          disabled={!canStart}
+          className="w-full py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Start Match
+        </button>
+        <button
+          onClick={onScanQR}
+          className="w-full py-3 text-[13px] font-bold text-dim bg-transparent border-0 cursor-pointer active:text-text"
+        >
+          📷 Resume from QR
+        </button>
+      </div>
     </div>
   )
 }
@@ -363,7 +371,7 @@ export default function LiveMatch() {
   }
 
   if (!live.gameStarted) {
-    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} />
+    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} onScanQR={() => setShowQRImport(true)} />
   }
 
   if (live.pendingEnd) {

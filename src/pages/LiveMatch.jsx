@@ -396,6 +396,15 @@ export default function LiveMatch() {
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
 
+  const getTeamPlayerNames = (teamId) => {
+    const team = tournament.teams?.find(tm => tm.id === teamId)
+    if (!team) return ""
+    const ids = team.players?.length > 0
+      ? team.players
+      : [team.player1, team.player2].filter(Boolean)
+    return ids.map(pid => (league.players || []).find(p => p.id === pid)?.name || "?").join(", ")
+  }
+
   // ── Modals / Overlays ──
 
   if (showQRImport) {
@@ -696,8 +705,11 @@ export default function LiveMatch() {
               <div className="absolute top-4 w-4 h-4 bg-accent rounded-full shadow-[0_0_10px_rgba(var(--c-accent),0.8)] animate-pulse" />
             )}
             
-            <div className="text-[16px] font-bold text-text uppercase tracking-widest text-center px-4 max-w-full truncate mb-2">
+            <div className="text-[16px] font-bold text-text uppercase tracking-widest text-center px-4 max-w-full truncate">
               {live.side.t1 === 'left' ? t1Name : t2Name}
+            </div>
+            <div className="text-[11px] text-dim text-center px-4 max-w-full mb-2 leading-tight">
+              {getTeamPlayerNames(live.side.t1 === 'left' ? live.team1Id : live.team2Id)}
             </div>
             <div className={`text-[80px] sm:text-[110px] font-black leading-none tracking-tighter drop-shadow-sm ${currentSrv.team === (live.side.t1 === 'left' ? 1 : 2) ? 'text-accent' : 'text-dim'}`}>
               {live.side.t1 === 'left' ? live.score1 : live.score2}
@@ -730,8 +742,11 @@ export default function LiveMatch() {
               <div className="absolute top-4 w-4 h-4 bg-accent rounded-full shadow-[0_0_10px_rgba(var(--c-accent),0.8)] animate-pulse" />
             )}
             
-            <div className="text-[16px] font-bold text-text uppercase tracking-widest text-center px-4 max-w-full truncate mb-2">
+            <div className="text-[16px] font-bold text-text uppercase tracking-widest text-center px-4 max-w-full truncate">
               {live.side.t2 === 'right' ? t2Name : t1Name}
+            </div>
+            <div className="text-[11px] text-dim text-center px-4 max-w-full mb-2 leading-tight">
+              {getTeamPlayerNames(live.side.t2 === 'right' ? live.team2Id : live.team1Id)}
             </div>
             <div className={`text-[80px] sm:text-[110px] font-black leading-none tracking-tighter drop-shadow-sm ${currentSrv.team === (live.side.t2 === 'right' ? 2 : 1) ? 'text-accent' : 'text-dim'}`}>
               {live.side.t2 === 'right' ? live.score2 : live.score1}

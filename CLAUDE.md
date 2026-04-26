@@ -3,9 +3,9 @@
 ## Tech Stack
 
 - **Frontend:** React 19 + Vite 8 (standard web app, NOT React Native)
-- **Styling:** Inline styles + `G` palette in `src/components/ui.jsx` → migrating to Tailwind CSS
-- **Data:** localStorage via `useLocalStorage` hook (no Supabase yet)
-- **Routing:** No React Router — all navigation via state in App.jsx
+- **Styling:** Tailwind CSS (`ui-new.jsx` for shared components)
+- **Data:** Supabase (real-time DB + auth)
+- **Routing:** React Router v6 — routes defined in `AppRouter.jsx`
 - **Font:** DM Sans + Bebas Neue (Google Fonts)
 - **Target:** Mobile-first PWA (mostly used on phones via browser)
 
@@ -13,121 +13,100 @@
 
 ```
 src/
-├── App.jsx                          ← Main app, all routing logic, state management
-├── main.jsx                         ← Entry point
-├── assets/                          ← Images (hero.png, etc.)
-├── components/
-│   ├── ui.jsx                       ← Shared palette (G), Card, Btn, Badge, Input, Select, Modal
-│   ├── PlayersSection.jsx           ← Player list + add/edit
-│   ├── TournamentsSection.jsx       ← Tournament list + create modal
-│   ├── TournamentTeamsSection.jsx   ← Teams management within tournament
-│   ├── TournamentMatchesSection.jsx ← Schedule/matches within tournament
-│   ├── GroupStageSection.jsx        ← Group stage bracket
-│   ├── KnockoutStageSection.jsx     ← Knockout bracket
-│   ├── LiveScoreSection.jsx         ← Live match orchestrator (uses useLiveGame)
-│   ├── GameSetupScreen.jsx          ← Pre-match setup (serve order, sides)
-│   ├── ScoreBoard.jsx               ← Score display during match
-│   ├── PointButtons.jsx             ← +1 team buttons
-│   ├── PointLog.jsx                 ← Match history log
-│   ├── GameStats.jsx                ← Post-match stats (winner, points by type, etc.)
-│   ├── InformalWizard.jsx           ← Informal/ad-hoc match wizard
-│   ├── FreePlaysSection.jsx         ← Free play list + create
-│   ├── FreePlayTeamsSection.jsx     ← Teams within free play
-│   ├── FreePlayGamesSection.jsx     ← Games list within free play
-│   └── FreePlayGameSetup.jsx        ← Free play match setup
+├── AppRouter.jsx                        ← React Router setup, all routes
+├── main.jsx                             ← Entry point
+├── assets/                              ← Images (hero.png, etc.)
+├── contexts/
+│   └── AuthContext.jsx                  ← Supabase auth context
 ├── hooks/
-│   ├── useLiveGame.js               ← Core match logic (374 lines) — serve rotation, scoring, undo, sets
-│   └── useLocalStorage.js           ← localStorage wrapper
-└── lib/
-    ├── i18n.js                      ← Translation keys (English only)
-    └── utils.js                     ← uid(), now(), LEVELS
+│   ├── useLiveGame.js                   ← Core match logic — serve rotation, scoring, undo, sets
+│   ├── useLeague.js                     ← League data fetching
+│   ├── useLeagueRole.js                 ← Role/permission check per league
+│   ├── useBattery.js                    ← Battery level detection
+│   └── useLocalStorage.js              ← localStorage wrapper
+├── layouts/
+│   ├── MainLayout.jsx                   ← Root layout (nav, auth gate)
+│   └── LeagueLayout.jsx                 ← Layout for /league/:id routes
+├── lib/
+│   ├── i18n.js                          ← Translation keys (English only)
+│   ├── utils.js                         ← uid(), now(), LEVELS
+│   └── supabase.js                      ← Supabase client
+├── pages/
+│   ├── Home.jsx                         ← / — dashboard (league card, free play, recent)
+│   ├── LeagueDetail.jsx                 ← /league/:id — rankings, players, tournaments tabs
+│   ├── TournamentDetail.jsx             ← /league/:id/tournament/:tid
+│   ├── TournamentSetupWizard.jsx        ← Tournament creation wizard
+│   ├── LiveMatch.jsx                    ← /league/:id/tournament/:tid/match/:mid ← MAIN LIVE MATCH
+│   ├── Profile.jsx                      ← /profile
+│   ├── EditProfile.jsx                  ← /profile/edit
+│   ├── Settings.jsx                     ← /settings
+│   ├── Login.jsx                        ← /login
+│   ├── Signup.jsx                       ← /signup
+│   └── JoinLeague.jsx                   ← /join/:code
+└── components/
+    ├── ui-new.jsx                       ← Shared Tailwind components
+    ├── GameStats.jsx                    ← Post-match stats (used by LiveMatch + TournamentDetail)
+    ├── LeaguePlayersTab.jsx             ← Players tab inside LeagueDetail
+    ├── TournamentStatsScreen.jsx        ← Tournament statistics overlay
+    ├── NotificationPanel.jsx            ← Bell dropdown
+    ├── NotificationToast.jsx            ← Toast notifications
+    ├── ProtectedRoute.jsx               ← Auth guard wrapper
+    ├── QRExportModal.jsx                ← QR code export for match handoff
+    └── QRImportModal.jsx                ← QR code import
 ```
 
-## Current Navigation (state-based in App.jsx)
+## ORPHANED FILES — DO NOT TOUCH
+
+These files exist on disk but are **not imported anywhere** in the active codebase.
+They are leftovers from the pre-router architecture. Do not edit them.
+
+- `src/components/LiveScoreSection.jsx`
+- `src/components/ScoreBoard.jsx`
+- `src/components/GameSetupScreen.jsx`
+- `src/components/PointButtons.jsx`
+- `src/components/PointLog.jsx`
+
+## Current Navigation (React Router)
 
 ```
-Global tabs (GLOBAL_NAV):
-  "tournaments" → TournamentsSection
-  "freeplay"    → FreePlaysSection
-  "players"     → PlayersSection
-
-Inside tournament (TOUR_NAV, activated by activeTournamentId):
-  "tour_live"    → LiveScoreSection
-  "tour_matches" → TournamentMatchesSection
-  "tour_teams"   → TournamentTeamsSection
-  "tour_players" → PlayersSection (contextual)
-
-Inside free play (FP_NAV, activated by activeFreePlayId):
-  "fp_live"    → LiveScoreSection or FreePlayGameSetup
-  "fp_games"   → FreePlayGamesSection
-  "fp_teams"   → FreePlayTeamsSection
-  "fp_players" → PlayersSection (contextual)
-```
-
-## Target Navigation (new — with React Router)
-
-```
-/ → Home (NEW screen)
-    Header: 🔔 Bell (notifications) + ⚙️ Gear (settings)
-    Bottom nav: Home | Profile
-    Shows: League card, Free Play button, Recent activity
-
-/league/:id → League Detail (NEW — wraps existing tournament concept)
-    Bottom nav: Rankings | Players | Tournaments | Settings
-
-/league/:id/tournament/:tid → Tournament Detail
-    NO bottom nav, back arrow → League
-    Setup wizard: Players → Teams → Schedule
-    Live view tabs: Standings | Matches | Players
-
-/league/:id/tournament/:tid/match/:mid → Live Match
-    NO bottom nav, back arrow → Tournament
-    Flow: GameSetupScreen → LiveScoreSection → GameStats
-
-/free-play → Free Play (RESTYLE existing)
-    NO bottom nav, back arrow → Home
-
-/profile → Profile (NEW)
-    Tabs: Stats | Leagues | Matches
-    Bottom nav: Home | Profile
-
-/settings → Settings (NEW, pushed from gear icon)
-    Sections: Appearance | Notifications | Account
+/                                       → Home.jsx
+/login                                  → Login.jsx
+/signup                                 → Signup.jsx
+/join/:code                             → JoinLeague.jsx
+/profile                                → Profile.jsx
+/profile/edit                           → EditProfile.jsx
+/settings                               → Settings.jsx
+/league/:id                             → LeagueDetail.jsx  (inside LeagueLayout)
+/league/:id/tournament/new              → TournamentSetupWizard.jsx
+/league/:id/tournament/:tid             → TournamentDetail.jsx
+/league/:id/tournament/:tid/match/:mid  → LiveMatch.jsx
 ```
 
 -----
 
-## Screen Status (What Exists vs What’s New)
+## Screen Status
 
-### EXISTS — Restyle only (keep all logic):
+### ACTIVE — edit these:
 
-- `LiveScoreSection.jsx` — Live match orchestrator
-- `GameSetupScreen.jsx` — Serve order, sides, first serve
-- `ScoreBoard.jsx` — Score display
-- `PointButtons.jsx` — +1 buttons
-- `PointLog.jsx` — Match history
-- `GameStats.jsx` — Post-match stats
-- `PlayersSection.jsx` — Player management
-- `TournamentsSection.jsx` — Tournament list
-- `TournamentTeamsSection.jsx` — Team management
-- `TournamentMatchesSection.jsx` — Match schedule
-- `GroupStageSection.jsx` — Group brackets
-- `KnockoutStageSection.jsx` — Knockout brackets
-- `FreePlaysSection.jsx` — Free play list
-- `FreePlayTeamsSection.jsx` — Free play teams
-- `FreePlayGamesSection.jsx` — Free play games
-- `FreePlayGameSetup.jsx` — Free play match setup
-- `InformalWizard.jsx` — Ad-hoc match wizard
+- `pages/LiveMatch.jsx` — live match scoreboard (the real one, routed)
+- `pages/TournamentDetail.jsx` — tournament view (standings, matches, players)
+- `pages/LeagueDetail.jsx` — league view
+- `pages/TournamentSetupWizard.jsx` — create tournament flow
+- `pages/Home.jsx` — dashboard
+- `pages/Profile.jsx` — player profile
+- `pages/Settings.jsx` — app settings
+- `components/GameStats.jsx` — post-match stats screen
+- `components/LeaguePlayersTab.jsx` — player list in league
+- `components/NotificationPanel.jsx` — bell dropdown
+- `hooks/useLiveGame.js` — all match logic lives here
 
-### NEW — Build from scratch:
+### ORPHANED — do not edit:
 
-- Home screen (dashboard with league card, free play, recent)
-- League Detail screen (rankings, players, tournaments tabs)
-- Tournament Setup wizard (invite players, auto/manual teams, schedule)
-- Profile screen (stats, leagues, match history)
-- Settings screen (theme, notifications, account)
-- Notification panel (bell dropdown)
-- Shared UI components (new Tailwind-based replacements for ui.jsx)
+- `components/LiveScoreSection.jsx` — replaced by `pages/LiveMatch.jsx`
+- `components/ScoreBoard.jsx` — was used by LiveScoreSection only
+- `components/GameSetupScreen.jsx` — was used by LiveScoreSection only
+- `components/PointButtons.jsx` — was used by LiveScoreSection only
+- `components/PointLog.jsx` — was used by LiveScoreSection only
 
 -----
 

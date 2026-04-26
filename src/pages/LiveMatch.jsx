@@ -9,18 +9,9 @@ import { createNotification, createNotificationsForLeagueMembers } from '../serv
 import GameStats from '../components/GameStats'
 import QRExportModal from '../components/QRExportModal'
 import QRImportModal from '../components/QRImportModal'
+import { TR } from '../lib/i18n'
 
-// Mock translation function for useLiveGame (since legacy app passes it down)
-const t = (key) => {
-  const dict = {
-    ptAce: 'Ace', ptAceDesc: 'Direct point from serve',
-    ptSpike: 'Spike', ptSpikeDesc: 'Point from attack',
-    ptBlock: 'Block', ptBlockDesc: 'Point from block',
-    ptTip: 'Tip/Drop', ptTipDesc: 'Point from soft play',
-    ptError: 'Error', ptErrorDesc: 'Opponent error'
-  }
-  return dict[key] || key
-}
+const t = (key) => TR[key] ?? key
 
 function teamName(teams, id) {
   return teams.find(t => t.id === id)?.name || '?'

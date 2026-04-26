@@ -145,33 +145,46 @@ const GameStats = ({
             <div className="text-[10px] font-bold text-[#7A8EA0] uppercase tracking-wide mb-0.5">
               {t("winner")}
             </div>
-            <div className={`text-[20px] font-extrabold mb-2 ${winnerIsTeam1 ? "text-accent" : "text-free"}`}>
+            <div className={`text-[20px] font-extrabold mb-1 ${winnerIsTeam1 ? "text-accent" : "text-free"}`}>
               {tName(winnerIsTeam1 ? team1Id : team2Id)}
             </div>
-            {/* Sets score */}
-            <div className="flex justify-center gap-4 mb-3">
-              <div className="text-center">
-                <div className="text-[11px] text-[#7A8EA0] mb-1">Sets</div>
-                <div className="flex gap-1.5 items-center">
-                  <span className={`text-[20px] font-extrabold ${winnerIsTeam1 ? "text-accent" : "text-[#7A8EA0]"}`}>{t1Sets}</span>
-                  <span className="text-[12px] text-[#7A8EA0]">-</span>
-                  <span className={`text-[20px] font-extrabold ${!winnerIsTeam1 ? "text-free" : "text-[#7A8EA0]"}`}>{t2Sets}</span>
-                </div>
-              </div>
+            <div className="text-[12px] text-[#7A8EA0] mb-3">
+              {teamPlayerIds(winnerIsTeam1 ? team1Id : team2Id)
+                .map(pid => playerName(pid).split(" ")[0])
+                .join(" · ")}
             </div>
-            {/* Per-set scores */}
-            <div className="flex justify-center gap-1.5">
-              {sets.map((s, i) => (
-                <div key={i} className="bg-white/5 rounded-[8px] px-2.5 py-[5px] text-center">
-                  <div className="text-[9px] text-[#7A8EA0] mb-1">Set {i + 1}</div>
-                  <div className="flex gap-[3px] items-center justify-center">
-                    <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-[#7A8EA0]"}`}>{s.s1}</span>
-                    <span className="text-[9px] text-[#7A8EA0]">-</span>
-                    <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-[#7A8EA0]"}`}>{s.s2}</span>
+            {sets.length === 1 ? (
+              <div className="flex gap-3 items-center justify-center mb-2">
+                <span className={`text-[32px] font-extrabold ${sets[0].winner === 1 ? "text-accent" : "text-[#7A8EA0]"}`}>{sets[0].s1}</span>
+                <span className="text-[18px] text-[#7A8EA0]">–</span>
+                <span className={`text-[32px] font-extrabold ${sets[0].winner === 2 ? "text-free" : "text-[#7A8EA0]"}`}>{sets[0].s2}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-center gap-4 mb-3">
+                  <div className="text-center">
+                    <div className="text-[11px] text-[#7A8EA0] mb-1">Sets</div>
+                    <div className="flex gap-1.5 items-center">
+                      <span className={`text-[20px] font-extrabold ${winnerIsTeam1 ? "text-accent" : "text-[#7A8EA0]"}`}>{t1Sets}</span>
+                      <span className="text-[12px] text-[#7A8EA0]">-</span>
+                      <span className={`text-[20px] font-extrabold ${!winnerIsTeam1 ? "text-free" : "text-[#7A8EA0]"}`}>{t2Sets}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex justify-center gap-1.5">
+                  {sets.map((s, i) => (
+                    <div key={i} className="bg-white/5 rounded-[8px] px-2.5 py-[5px] text-center">
+                      <div className="text-[9px] text-[#7A8EA0] mb-1">Set {i + 1}</div>
+                      <div className="flex gap-[3px] items-center justify-center">
+                        <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-[#7A8EA0]"}`}>{s.s1}</span>
+                        <span className="text-[9px] text-[#7A8EA0]">-</span>
+                        <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-[#7A8EA0]"}`}>{s.s2}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Total points */}
@@ -381,7 +394,7 @@ const GameStats = ({
                   <div className="text-[9px] text-dim">🏐 {playerName(entry.serverPlayerId)}</div>
                 </div>
                 <span className={`text-[9px] font-semibold ${teamColor} ${teamBg} px-1.5 py-0.5 rounded-[4px] flex-shrink-0`}>
-                  {tName(isTeam1 ? team1Id : team2Id).split(" ")[0]}
+                  {tName(isTeam1 ? team1Id : team2Id)}
                 </span>
               </div>
             );

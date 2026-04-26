@@ -1,5 +1,25 @@
 import { supabase } from '../lib/supabase'
 
+const NOTIF_CATEGORY = {
+  match_result:        'match_reminders',
+  scorer_assigned:     'match_reminders',
+  tournament_started:  'tournament_updates',
+  tournament_finished: 'tournament_updates',
+  league_welcome:      'league_invites',
+  member_joined:       'league_invites',
+  role_admin:          'league_invites',
+  profile_linked:      'league_invites',
+  profile_unlinked:    'league_invites',
+}
+
+/** Returns true if the notification type is allowed by the user's prefs object. */
+export function isNotifAllowed(type, prefs) {
+  if (!prefs) return true
+  const category = NOTIF_CATEGORY[type]
+  if (!category) return true
+  return prefs[category] !== false
+}
+
 export const NOTIF_META = {
   league_welcome:      { emoji: '🏐', iconBg: 'bg-accent/15 border border-accent/25' },
   profile_linked:      { emoji: '🤝', iconBg: 'bg-free/15 border border-free/25' },

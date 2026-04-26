@@ -69,13 +69,22 @@ function SettingsRow({ icon, iconColor = 'text-dim', label, right, border = true
   )
 }
 
+const DEFAULT_NOTIF_PREFS = { match_reminders: true, tournament_updates: true, league_invites: true }
+
 // ─── Settings page ────────────────────────────────────────────────────────────
 export default function Settings() {
   const navigate = useNavigate()
-  const { signOut, profile, isSuperAdmin } = useAuth()
+  const { signOut, profile, isSuperAdmin, session, updateProfile } = useAuth()
   const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);
   const [allUsers, setAllUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
+
+  const notifPrefs = { ...DEFAULT_NOTIF_PREFS, ...(profile?.notification_prefs || {}) }
+
+  const toggleNotifPref = async (key) => {
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] }
+    await updateProfile({ notification_prefs: next })
+  }
 
   // Fetch users if superadmin
   useEffect(() => {
@@ -110,6 +119,44 @@ export default function Settings() {
     if (next) document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
   };
+
+  // ── Delete Account ──
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteText, setDeleteText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    if (deleteText !== 'DELETE') return
+    setDeleting(true)
+    try {
+      const { supabase } = await import('../lib/supabase')
+      await supabase.rpc('delete_own_account')
+      await signOut()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      console.error('Delete account failed:', err)
+      setDeleting(false)
+    }
+  }
+
+  // ── Change Password ──
+  const [showChangePwd, setShowChangePwd] = useState(false)
+  const [pwdForm, setPwdForm] = useState({ newPwd: '', confirmPwd: '', error: '', success: false, loading: false })
+
+  const handleChangePwd = async () => {
+    const { newPwd, confirmPwd } = pwdForm
+    if (newPwd.length < 6) return setPwdForm(f => ({ ...f, error: 'Password must be at least 6 characters.' }))
+    if (newPwd !== confirmPwd) return setPwdForm(f => ({ ...f, error: 'Passwords do not match.' }))
+    setPwdForm(f => ({ ...f, loading: true, error: '' }))
+    const { supabase } = await import('../lib/supabase')
+    const { error } = await supabase.auth.updateUser({ password: newPwd })
+    if (error) {
+      setPwdForm(f => ({ ...f, loading: false, error: error.message }))
+    } else {
+      setPwdForm({ newPwd: '', confirmPwd: '', error: '', success: true, loading: false })
+      setTimeout(() => setShowChangePwd(false), 1500)
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
@@ -148,19 +195,19 @@ export default function Settings() {
               icon={<BellIcon />}
               iconColor="text-free"
               label="Match Reminders"
-              right={<Toggle on={true} colorOn="bg-free" />}
+              right={<Toggle on={notifPrefs.match_reminders} colorOn="bg-free" onClick={() => toggleNotifPref('match_reminders')} />}
             />
             <SettingsRow
               icon={<TrophyIcon />}
               iconColor="text-free"
               label="Tournament Updates"
-              right={<Toggle on={true} colorOn="bg-free" />}
+              right={<Toggle on={notifPrefs.tournament_updates} colorOn="bg-free" onClick={() => toggleNotifPref('tournament_updates')} />}
             />
             <SettingsRow
               icon={<StarIcon />}
               iconColor="text-free"
               label="League Invites"
-              right={<Toggle on={false} colorOn="bg-free" />}
+              right={<Toggle on={notifPrefs.league_invites} colorOn="bg-free" onClick={() => toggleNotifPref('league_invites')} />}
               border={false}
             />
           </div>
@@ -177,13 +224,14 @@ export default function Settings() {
             <SettingsRow
               icon={<MailIcon />}
               label="Email"
-              right={<span className="text-[11px] text-dim truncate max-w-[140px]">{profile?.full_name || '—'}</span>}
+              right={<span className="text-[11px] text-dim truncate max-w-[140px]">{profile?.email || session?.user?.email || '—'}</span>}
             />
             <SettingsRow
               icon={<LockIcon />}
               label="Change Password"
               right={<span className="text-dim"><ArrowIcon /></span>}
               border={false}
+              onClick={() => { setPwdForm({ newPwd: '', confirmPwd: '', error: '', success: false, loading: false }); setShowChangePwd(true) }}
             />
           </div>
 
@@ -211,6 +259,7 @@ export default function Settings() {
               label="Delete Account"
               right={<span className="text-error"><ArrowIcon /></span>}
               border={false}
+              onClick={() => { setDeleteText(''); setShowDeleteConfirm(true) }}
             />
           </div>
 
@@ -251,6 +300,77 @@ export default function Settings() {
 
         </div>
       </main>
+
+      {/* ── Delete Account modal ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative z-10 w-full bg-surface rounded-t-[24px] p-5 pb-8 shadow-[0_-8px_40px_rgba(0,0,0,0.3)]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[16px] font-bold text-error">Delete Account</span>
+              <button onClick={() => setShowDeleteConfirm(false)} className="text-dim text-[20px] bg-transparent border-0 cursor-pointer leading-none">×</button>
+            </div>
+            <p className="text-[13px] text-dim mb-4 leading-relaxed">
+              This will permanently delete your account and all your data. This action cannot be undone.
+              Type <span className="font-bold text-error">DELETE</span> to confirm.
+            </p>
+            <div className="flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="Type DELETE to confirm"
+                value={deleteText}
+                onChange={e => setDeleteText(e.target.value)}
+                className="w-full bg-alt border border-line rounded-xl px-4 py-3 text-[13px] text-text placeholder-dim outline-none focus:border-error"
+              />
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteText !== 'DELETE' || deleting}
+                className="w-full bg-error text-white font-bold text-[14px] rounded-xl py-3 min-h-[44px] disabled:opacity-40 cursor-pointer border-0"
+              >
+                {deleting ? 'Deleting…' : 'Permanently Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Change Password modal ── */}
+      {showChangePwd && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowChangePwd(false)} />
+          <div className="relative z-10 w-full bg-surface rounded-t-[24px] p-5 pb-8 shadow-[0_-8px_40px_rgba(0,0,0,0.3)]">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[16px] font-bold text-text">Change Password</span>
+              <button onClick={() => setShowChangePwd(false)} className="text-dim text-[20px] bg-transparent border-0 cursor-pointer leading-none">×</button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <input
+                type="password"
+                placeholder="New password"
+                value={pwdForm.newPwd}
+                onChange={e => setPwdForm(f => ({ ...f, newPwd: e.target.value, error: '' }))}
+                className="w-full bg-alt border border-line rounded-xl px-4 py-3 text-[13px] text-text placeholder-dim outline-none focus:border-accent"
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={pwdForm.confirmPwd}
+                onChange={e => setPwdForm(f => ({ ...f, confirmPwd: e.target.value, error: '' }))}
+                className="w-full bg-alt border border-line rounded-xl px-4 py-3 text-[13px] text-text placeholder-dim outline-none focus:border-accent"
+              />
+              {pwdForm.error && <span className="text-[12px] text-error">{pwdForm.error}</span>}
+              {pwdForm.success && <span className="text-[12px] text-success">Password updated successfully.</span>}
+              <button
+                onClick={handleChangePwd}
+                disabled={pwdForm.loading || pwdForm.success}
+                className="w-full bg-accent text-white font-bold text-[14px] rounded-xl py-3 min-h-[44px] disabled:opacity-50 cursor-pointer border-0 mt-1"
+              >
+                {pwdForm.loading ? 'Updating…' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
@@ -596,7 +596,8 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
 export default function LeagueDetail() {
   const navigate             = useNavigate()
   const { id }               = useParams()
-  const [activeTab, setActiveTab] = useState('rankings')
+  const location             = useLocation()
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'rankings')
 
   const { league, loading, error, refetch } = useLeague(id)
   const { isAdmin, isSuperAdmin }            = useLeagueRole(id)

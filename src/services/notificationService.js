@@ -88,6 +88,34 @@ export async function createNotificationsForLeagueMembers(
   if (insertError) console.error('createNotificationsForLeagueMembers insert:', insertError)
 }
 
+export function getNotificationTarget(notif) {
+  const { leagueId, tournamentId, matchId } = notif.data || {}
+
+  switch (notif.type) {
+    case 'league_welcome':
+    case 'scorer_assigned':
+      return leagueId ? { path: `/league/${leagueId}` } : null
+    case 'profile_linked':
+    case 'profile_unlinked':
+    case 'member_joined':
+      return leagueId ? { path: `/league/${leagueId}`, state: { tab: 'players' } } : null
+    case 'role_admin':
+      return leagueId ? { path: `/league/${leagueId}`, state: { tab: 'settings' } } : null
+    case 'tournament_started':
+      if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}` }
+      return leagueId ? { path: `/league/${leagueId}` } : null
+    case 'tournament_finished':
+      if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}`, state: { tab: 'standings' } }
+      return leagueId ? { path: `/league/${leagueId}` } : null
+    case 'match_result':
+      if (leagueId && tournamentId && matchId) return { path: `/league/${leagueId}/tournament/${tournamentId}/match/${matchId}` }
+      if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}` }
+      return leagueId ? { path: `/league/${leagueId}` } : null
+    default:
+      return null
+  }
+}
+
 /**
  * Subscribe to new notifications for a user via Supabase Realtime.
  * Returns an unsubscribe function.

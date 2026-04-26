@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { NOTIF_META } from '../services/notificationService'
+import { useNavigate } from 'react-router-dom'
+import { NOTIF_META, getNotificationTarget } from '../services/notificationService'
 
 export default function NotificationToast({ notification, onDismiss }) {
+  const navigate = useNavigate()
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -24,7 +26,11 @@ export default function NotificationToast({ notification, onDismiss }) {
     >
       {notification && (
         <div
-          onClick={onDismiss}
+          onClick={() => {
+            const target = getNotificationTarget(notification)
+            onDismiss()
+            if (target) navigate(target.path, target.state ? { state: target.state } : undefined)
+          }}
           className="bg-surface border border-line rounded-2xl px-3 py-2.5 flex gap-2.5 items-center shadow-[0_8px_32px_rgba(0,0,0,0.35)] cursor-pointer"
         >
           <div className={`w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center text-[16px] ${meta.iconBg}`}>

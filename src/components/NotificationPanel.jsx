@@ -1,4 +1,5 @@
-import { NOTIF_META, formatRelativeTime, markRead } from '../services/notificationService'
+import { useNavigate } from 'react-router-dom'
+import { NOTIF_META, formatRelativeTime, markRead, getNotificationTarget } from '../services/notificationService'
 
 const BellEmptyIcon = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
@@ -8,11 +9,18 @@ const BellEmptyIcon = () => (
   </svg>
 )
 
-export default function NotificationPanel({ isOpen, onClose, notifications = [], onMarkAllRead }) {
+export default function NotificationPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onRead }) {
+  const navigate = useNavigate()
   if (!isOpen) return null
 
   async function handleTap(notif) {
-    if (!notif.read) await markRead(notif.id)
+    if (!notif.read) {
+      await markRead(notif.id)
+      onRead?.(notif.id)
+    }
+    const target = getNotificationTarget(notif)
+    onClose()
+    if (target) navigate(target.path, target.state ? { state: target.state } : undefined)
   }
 
   return (

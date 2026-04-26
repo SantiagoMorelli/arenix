@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
@@ -836,7 +836,8 @@ function PlayersPositionsTable({ tournament, leaguePlayers }) {
 export default function TournamentDetail() {
   const navigate     = useNavigate()
   const { id, tid }  = useParams()
-  const [activeTab, setActiveTab] = useState('standings')
+  const location     = useLocation()
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'standings')
 
   const { league, loading, refetch } = useLeague(id)
   const { canScore, canManage, isAdmin } = useLeagueRole(id)

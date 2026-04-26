@@ -10,6 +10,7 @@ import {
   getMyNotifications,
   markAllRead,
   subscribeToNotifications,
+  isNotifAllowed,
 } from '../services/notificationService'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -162,7 +163,9 @@ export default function Home() {
     if (profile?.id) {
       unsubscribe = subscribeToNotifications(profile.id, newNotif => {
         setNotifications(prev => [newNotif, ...prev])
-        setToastNotif(newNotif)
+        if (isNotifAllowed(newNotif.type, profile?.notification_prefs)) {
+          setToastNotif(newNotif)
+        }
       })
     }
     return () => { if (unsubscribe) unsubscribe() }
@@ -271,7 +274,8 @@ export default function Home() {
     else if (tab === 'profile') navigate('/profile')
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const visibleNotifications = notifications.filter(n => isNotifAllowed(n.type, profile?.notification_prefs))
+  const unreadCount = visibleNotifications.filter(n => !n.read).length
 
   async function handleMarkAllRead() {
     await markAllRead()
@@ -302,7 +306,7 @@ export default function Home() {
       <NotificationPanel
         isOpen={showNotifs}
         onClose={() => setShowNotifs(false)}
-        notifications={notifications}
+        notifications={visibleNotifications}
         onMarkAllRead={handleMarkAllRead}
         onRead={handleRead}
       />

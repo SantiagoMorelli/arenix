@@ -148,7 +148,11 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     if (!pendingPoint) return;
     const teamNum = pendingPoint.teamNum;
     setPendingPoint(null);
-    setPendingPlayerSelect({ teamNum, ptId });
+    if (ptId === "ace") {
+      resolvePoint(teamNum, ptId, currentServer().playerId);
+    } else {
+      setPendingPlayerSelect({ teamNum, ptId });
+    }
   };
 
   const confirmPlayer = (playerId) => {
@@ -364,6 +368,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     pendingEnd,
     // Derived helpers
     serveRotation, currentServer,
+    serverTeam: currentServer().team,
     playerName, tName, POINT_TYPES,
     // Actions
     addPoint, confirmPointType, confirmPlayer, confirmSideChange,

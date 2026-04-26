@@ -613,18 +613,32 @@ export default function LeagueDetail() {
   }
 
   async function handleUpdatePlayer(playerId, updates) {
+    const leagueName = league?.name || 'a league'
+    const leagueId   = league?.id
+    // Capture current userId before the update (needed for unlink notification)
+    const currentUserId = (league?.players || []).find(p => p.id === playerId)?.userId ?? null
+
     try {
       await updatePlayer(playerId, updates)
+
       if (updates.userId) {
-        const leagueName = league?.name || 'a league'
         await createNotification(
           updates.userId,
           'profile_linked',
           'You were added to a league 🤝',
           `Your profile was linked in ${leagueName}`,
-          { leagueId: league?.id },
+          { leagueId },
+        )
+      } else if ('userId' in updates && updates.userId === null && currentUserId) {
+        await createNotification(
+          currentUserId,
+          'profile_unlinked',
+          'Profile unlinked 🔓',
+          `Your profile was unlinked from ${leagueName}`,
+          { leagueId },
         )
       }
+
       refetch()
     } catch (err) {
       alert(err.message || 'Failed to update player.')

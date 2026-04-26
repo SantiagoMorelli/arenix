@@ -79,11 +79,22 @@ export default function Settings() {
   const [allUsers, setAllUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
 
-  const notifPrefs = { ...DEFAULT_NOTIF_PREFS, ...(profile?.notification_prefs || {}) }
+  const [notifPrefs, setNotifPrefs] = useState(() => ({
+    ...DEFAULT_NOTIF_PREFS,
+    ...(profile?.notification_prefs || {}),
+  }))
 
-  const toggleNotifPref = async (key) => {
+  // Sync once the profile loads (or changes from another device)
+  useEffect(() => {
+    if (profile?.notification_prefs) {
+      setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...profile.notification_prefs })
+    }
+  }, [profile?.notification_prefs])
+
+  const toggleNotifPref = (key) => {
     const next = { ...notifPrefs, [key]: !notifPrefs[key] }
-    await updateProfile({ notification_prefs: next })
+    setNotifPrefs(next) // immediate visual update
+    updateProfile({ notification_prefs: next }) // persist async, no await needed
   }
 
   // Fetch users if superadmin

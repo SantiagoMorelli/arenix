@@ -5,6 +5,12 @@ import { getMyLeagues, getLeagueById, createLeague } from '../services/leagueSer
 import { getFreePlays } from '../services/freePlayService'
 import { BottomNav, IconButton, SectionLabel, AppBadge } from '../components/ui-new'
 import NotificationPanel from '../components/NotificationPanel'
+import NotificationToast from '../components/NotificationToast'
+import {
+  getMyNotifications,
+  markAllRead,
+  subscribeToNotifications,
+} from '../services/notificationService'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -115,13 +121,15 @@ export default function Home() {
   const { profile, isSuperAdmin, canCreateLeague } = useAuth()
   const canCreate = isSuperAdmin || canCreateLeague
 
-  const [leagues,    setLeagues]    = useState([])
+  const [leagues,       setLeagues]       = useState([])
   const [recentFreePlay, setRecentFreePlay] = useState(null)
-  const [loading,    setLoading]    = useState(true)
-  const [showNotifs, setShowNotifs] = useState(false)
-  const [showCreate, setShowCreate] = useState(false)
-  const [newName,    setNewName]    = useState('')
-  const [creating,   setCreating]   = useState(false)
+  const [loading,       setLoading]       = useState(true)
+  const [showNotifs,    setShowNotifs]    = useState(false)
+  const [showCreate,    setShowCreate]    = useState(false)
+  const [newName,       setNewName]       = useState('')
+  const [creating,      setCreating]      = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [toastNotif,    setToastNotif]    = useState(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -147,7 +155,18 @@ export default function Home() {
       }
     }
     fetchData()
-  }, [])
+
+    getMyNotifications().then(setNotifications)
+
+    let unsubscribe
+    if (profile?.id) {
+      unsubscribe = subscribeToNotifications(profile.id, newNotif => {
+        setNotifications(prev => [newNotif, ...prev])
+        setToastNotif(newNotif)
+      })
+    }
+    return () => { if (unsubscribe) unsubscribe() }
+  }, [profile?.id])
 
   const league        = leagues[0] || null
   const tournaments   = league?.tournaments || []
@@ -252,6 +271,13 @@ export default function Home() {
     else if (tab === 'profile') navigate('/profile')
   }
 
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  async function handleMarkAllRead() {
+    await markAllRead()
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
   const displayName = profile?.full_name?.split(' ')[0] || 'Player'
 
   if (loading) {
@@ -265,8 +291,16 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
 
+      {/* Toast banner for incoming notifications */}
+      <NotificationToast notification={toastNotif} onDismiss={() => setToastNotif(null)} />
+
       {/* Notification panel overlay */}
-      <NotificationPanel isOpen={showNotifs} onClose={() => setShowNotifs(false)} />
+      <NotificationPanel
+        isOpen={showNotifs}
+        onClose={() => setShowNotifs(false)}
+        notifications={notifications}
+        onMarkAllRead={handleMarkAllRead}
+      />
 
       {/* ── Scrollable content ── */}
       <main className="flex-1 overflow-y-auto">
@@ -279,7 +313,7 @@ export default function Home() {
               <div className="text-[22px] font-bold text-text leading-tight">{displayName} 🏐</div>
             </div>
             <div className="flex gap-2 text-dim">
-              <IconButton badge={3} onClick={() => setShowNotifs(v => !v)}>
+              <IconButton badge={unreadCount > 0 ? unreadCount : undefined} onClick={() => setShowNotifs(v => !v)}>
                 <BellIcon />
               </IconButton>
               {canCreate && (

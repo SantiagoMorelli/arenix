@@ -7,6 +7,7 @@ import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService
 import { deleteLeague, leaveLeague } from '../services/leagueService'
 import { buildInviteLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
+import { createNotification } from '../services/notificationService'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -614,6 +615,16 @@ export default function LeagueDetail() {
   async function handleUpdatePlayer(playerId, updates) {
     try {
       await updatePlayer(playerId, updates)
+      if (updates.userId) {
+        const leagueName = league?.name || 'a league'
+        await createNotification(
+          updates.userId,
+          'profile_linked',
+          'You were added to a league 🤝',
+          `Your profile was linked in ${leagueName}`,
+          { leagueId: league?.id },
+        )
+      }
       refetch()
     } catch (err) {
       alert(err.message || 'Failed to update player.')

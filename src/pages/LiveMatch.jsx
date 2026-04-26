@@ -5,6 +5,7 @@ import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
 import { useBattery } from '../hooks/useBattery'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
+import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import GameStats from '../components/GameStats'
 import QRExportModal from '../components/QRExportModal'
 import QRImportModal from '../components/QRImportModal'
@@ -299,6 +300,32 @@ export default function LiveMatch() {
 
     try {
       await supabaseSaveMatchResult(matchId, finalScore1, finalScore2, winnerTeamId, log, sets)
+
+      // Notify players of match result
+      const leaguePlayers = league?.players || []
+      const team1 = tournament.teams?.find(t => t.id === live.team1Id)
+      const team2 = tournament.teams?.find(t => t.id === live.team2Id)
+      const t1Name = team1?.name || 'Team 1'
+      const t2Name = team2?.name || 'Team 2'
+      const allPlayerIds = [...(team1?.players || []), ...(team2?.players || [])]
+      const uniqueUserIds = [...new Set(
+        allPlayerIds.map(pid => leaguePlayers.find(p => p.id === pid)?.userId).filter(Boolean)
+      )]
+      await Promise.all(
+        uniqueUserIds.map(userId => {
+          const myPlayer = leaguePlayers.find(p => p.userId === userId)
+          const myTeam = (team1?.players || []).includes(myPlayer?.id) ? team1 : team2
+          const won = myTeam?.id === winnerTeamId
+          return createNotification(
+            userId,
+            'match_result',
+            won ? 'You won! 🎉' : 'Match result 📋',
+            `${t1Name} ${finalScore1} – ${finalScore2} ${t2Name}`,
+            { matchId, tournamentId: tid, leagueId: id },
+          )
+        })
+      )
+
       if (tournament?.knockout) {
         await advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
 
@@ -310,6 +337,13 @@ export default function LiveMatch() {
           const match = tournament.knockout.rounds.find(r => r.id === 'final').matches.find(m => m.id === matchId)
           const runnerUpId = match.team1 === winnerTeamId ? match.team2 : match.team1
           await completeTournament(tid, winnerTeamId, runnerUpId)
+          await createNotificationsForLeagueMembers(
+            id,
+            'tournament_finished',
+            '🏆 Tournament finished!',
+            `${tournament.name} has ended`,
+            { leagueId: id, tournamentId: tid },
+          )
         }
       }
     } catch (err) {

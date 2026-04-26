@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getLeagueByInviteCode, joinLeague } from '../services/inviteService'
+import { createNotification } from '../services/notificationService'
+import { supabase } from '../lib/supabase'
 
 const Svg = ({ children, size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24"
@@ -36,6 +38,16 @@ export default function JoinLeague() {
         setMessage("You're already a member of this league!")
       } else {
         setMessage('You joined successfully!')
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await createNotification(
+            user.id,
+            'league_welcome',
+            'Welcome to the league! 🏐',
+            `You joined ${league.name} · Season ${league.season}`,
+            { leagueId: league.id },
+          )
+        }
       }
       setStatus('done')
     } catch (err) {

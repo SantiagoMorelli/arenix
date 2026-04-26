@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { createTournament } from '../services/tournamentService'
+import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import { uid, now, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 
 const STEPS = ['Players', 'Teams', 'Schedule']
@@ -274,6 +275,14 @@ export default function TournamentSetupWizard() {
       }
 
       const tournament = await createTournament(id, { name: name.trim(), date, teamSize, setsPerMatch, teams, groups, matches })
+
+      await createNotificationsForLeagueMembers(
+        id,
+        'tournament_started',
+        '🏐 Tournament started!',
+        `${name.trim()} is now live`,
+        { leagueId: id, tournamentId: tournament.id },
+      )
 
       navigate(`/league/${id}/tournament/${tournament.id}`)
     } catch (err) {

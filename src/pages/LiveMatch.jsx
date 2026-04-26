@@ -249,6 +249,7 @@ export default function LiveMatch() {
   const [showMenu, setShowMenu] = useState(false)
   const [showQRExport, setShowQRExport] = useState(false)
   const [showQRImport, setShowQRImport] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const isBatteryLow = battery.supported && !battery.charging && battery.level < 0.20
 
   const getQRPayload = () => {
@@ -293,6 +294,9 @@ export default function LiveMatch() {
 
   // Handle Match Ending logic (now manual via GameStats)
   const handleSaveResult = async (matchId, s1_sets, s2_sets, winnerTeamId, log, sets) => {
+    if (isSaving) return
+    setIsSaving(true)
+
     const isOneSet = tournament.setsPerMatch === 1
 
     const finalScore1 = isOneSet ? (live.sets[0]?.s1 ?? live.score1) : s1_sets
@@ -348,6 +352,8 @@ export default function LiveMatch() {
       }
     } catch (err) {
       console.error('Failed to save match result:', err)
+      setIsSaving(false)
+      return
     }
 
     try { localStorage.removeItem(SAVE_KEY) } catch { /* ignored */ }
@@ -534,7 +540,7 @@ export default function LiveMatch() {
           sets={live.sets} t1Sets={setWins1} t2Sets={setWins2}
           log={live.log}
           teams={tournament.teams} players={league.players || []}
-          onSaveResult={handleSaveResult} activeTourMatchId={mid}
+          onSaveResult={handleSaveResult} activeTourMatchId={mid} isSaving={isSaving}
           t={t}
         />
       </div>

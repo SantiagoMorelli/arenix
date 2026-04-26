@@ -7,6 +7,7 @@ const GameStats = ({
   log,
   teams, players,
   onSaveResult, activeTourMatchId,
+  isSaving,
   reset,
   t,
 }) => {
@@ -338,10 +339,16 @@ const GameStats = ({
         const finalS2 = sets.reduce((acc, s) => acc + (s.winner === 2 ? 1 : 0), 0);
         return (
           <button
-            onClick={() => onSaveResult(activeTourMatchId, finalS1, finalS2, winnerTeamId, log, sets)}
-            className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-success text-white border-0 cursor-pointer mb-2.5"
+            onClick={() => !isSaving && onSaveResult(activeTourMatchId, finalS1, finalS2, winnerTeamId, log, sets)}
+            disabled={isSaving}
+            className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-success text-white border-0 cursor-pointer mb-2.5 disabled:opacity-70 flex items-center justify-center gap-2"
           >
-            ✓ Guardar resultado en fixture
+            {isSaving ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                Saving…
+              </>
+            ) : '✓ Save result'}
           </button>
         );
       })()}

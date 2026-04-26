@@ -854,6 +854,7 @@ export default function TournamentDetail() {
   const [manualScore2, setManualScore2]   = useState('0')
   const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
   const [checkingScorer, setCheckingScorer] = useState(false)
+  const [savingScore, setSavingScore] = useState(false)
 
   // ── Match Stats Overlay State ──
   const [selectedStatsMatch, setSelectedStatsMatch] = useState(null)
@@ -911,12 +912,14 @@ export default function TournamentDetail() {
   }
 
   const handleSaveManualScore = async () => {
+    if (savingScore) return
     const s1 = parseInt(manualScore1, 10)
     const s2 = parseInt(manualScore2, 10)
 
     if (isNaN(s1) || isNaN(s2) || s1 === s2) return
 
     const winnerId = s1 > s2 ? selectedMatch.team1 : selectedMatch.team2
+    setSavingScore(true)
 
     try {
       await supabaseSaveMatchResult(selectedMatch.id, s1, s2, winnerId)
@@ -972,6 +975,8 @@ export default function TournamentDetail() {
       refetch()
     } catch (err) {
       console.error('Failed to save match result:', err)
+    } finally {
+      setSavingScore(false)
     }
   }
 
@@ -1292,12 +1297,17 @@ export default function TournamentDetail() {
                     >
                       Back
                     </button>
-                    <button 
+                    <button
                       onClick={handleSaveManualScore}
-                      disabled={!manualScore1 || !manualScore2 || parseInt(manualScore1) === parseInt(manualScore2)}
-                      className="flex-1 py-3 rounded-xl bg-accent text-white font-bold text-[13px] border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={savingScore || !manualScore1 || !manualScore2 || parseInt(manualScore1) === parseInt(manualScore2)}
+                      className="flex-1 py-3 rounded-xl bg-accent text-white font-bold text-[13px] border-0 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      Save Result
+                      {savingScore ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                          Saving…
+                        </>
+                      ) : 'Save Result'}
                     </button>
                   </div>
                 </div>

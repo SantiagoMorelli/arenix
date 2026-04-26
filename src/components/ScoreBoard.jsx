@@ -17,6 +17,15 @@ const ScoreBoard = ({
   const tName      = id => getTeam(id)?.name || "?";
   const playerName = id => getPlayer(id)?.name || "?";
 
+  const getTeamPlayerNames = (teamId) => {
+    const team = getTeam(teamId);
+    if (!team) return "";
+    const ids = team.players?.length > 0
+      ? team.players
+      : [team.player1, team.player2].filter(Boolean);
+    return ids.map(playerName).join(", ");
+  };
+
   const cols = {
     1: { teamId: team1Id, teamNum: 1, score: score1, sets: t1Sets },
     2: { teamId: team2Id, teamNum: 2, score: score2, sets: t2Sets },
@@ -32,6 +41,9 @@ const ScoreBoard = ({
       <div className="text-center">
         <div className="text-[12px] font-bold text-[#E8ECF1] mb-1">
           {tName(col.teamId)}
+        </div>
+        <div className="text-[10px] text-[#7A8EA0] mt-0.5 leading-tight">
+          {getTeamPlayerNames(col.teamId)}
         </div>
         <div className={`font-display text-[72px] leading-none my-1 ${
           isServing

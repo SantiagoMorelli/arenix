@@ -464,7 +464,7 @@ export default function LiveMatch() {
           <div className="text-[13px] text-dim font-medium uppercase tracking-widest">Select action</div>
         </div>
         <div className="flex flex-col gap-3 flex-1">
-          {live.POINT_TYPES.map(pt => (
+          {live.POINT_TYPES.filter(pt => pt.id !== "ace" || live.pendingPoint?.teamNum === live.serverTeam).map(pt => (
             <button
               key={pt.id}
               onClick={() => live.confirmPointType(pt.id)}

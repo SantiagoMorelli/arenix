@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
 
 const GameStats = ({
   winner,
@@ -29,6 +30,8 @@ const GameStats = ({
   };
 
   const pointLog = log.filter(e => e.team);
+  const matchDuration = formatDuration(getMatchDuration(pointLog));
+  const longestRally  = formatDuration(getLongestRally(pointLog));
 
   const statFor = (tn) => {
     const pts = pointLog.filter(e => e.team === tn);
@@ -293,6 +296,33 @@ const GameStats = ({
               })}
             </div>
           </div>
+
+          {/* Timing */}
+          {(matchDuration || longestRally) && (
+            <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
+              <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">
+                Timing
+              </div>
+              <div className="flex gap-2">
+                {matchDuration && (
+                  <div className="flex-1 rounded-[10px] px-2.5 py-2.5 text-center bg-alt">
+                    <div className="text-[20px] font-extrabold text-text leading-none mb-1">
+                      {matchDuration}
+                    </div>
+                    <div className="text-[9px] text-dim uppercase">Match duration</div>
+                  </div>
+                )}
+                {longestRally && (
+                  <div className="flex-1 rounded-[10px] px-2.5 py-2.5 text-center bg-alt">
+                    <div className="text-[20px] font-extrabold text-text leading-none mb-1">
+                      {longestRally}
+                    </div>
+                    <div className="text-[9px] text-dim uppercase">Longest rally</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,26 @@ function computeMatchRecords(allMatches) {
     }
   }
 
-  return { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback }
+  let longestGame = null, longestGameDuration = 0
+  let longestRallyRecord = null, longestRallyDuration = 0
+
+  for (const m of played) {
+    if (!m.log?.length) continue
+
+    const dur = getMatchDuration(m.log)
+    if (dur != null && dur > longestGameDuration) {
+      longestGameDuration = dur
+      longestGame = { match: m, duration: dur }
+    }
+
+    const rally = getLongestRally(m.log)
+    if (rally != null && rally > longestRallyDuration) {
+      longestRallyDuration = rally
+      longestRallyRecord = { match: m, duration: rally }
+    }
+  }
+
+  return { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback, longestGame, longestRally: longestRallyRecord }
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -325,7 +345,7 @@ function MatchRecords({ records, tournament }) {
 
   const tName = id => tournament.teams.find(t => t.id === id)?.name || '?'
 
-  const { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback } = records
+  const { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback, longestGame, longestRally } = records
 
   return (
     <div className="px-4 grid grid-cols-2 gap-3">
@@ -355,6 +375,22 @@ function MatchRecords({ records, tournament }) {
           title="Best Comeback"
           line1={`${tName(biggestComeback.team)} came back`}
           line2={`Down ${biggestComeback.deficit} pts · ${biggestComeback.match.label}`}
+        />
+      )}
+      {longestGame && (
+        <RecordCard
+          icon="⏱️"
+          title="Longest Game"
+          line1={`${tName(longestGame.match.team1)} vs ${tName(longestGame.match.team2)}`}
+          line2={`${formatDuration(longestGame.duration)} · ${longestGame.match.label}`}
+        />
+      )}
+      {longestRally && (
+        <RecordCard
+          icon="🏐"
+          title="Longest Rally"
+          line1={formatDuration(longestRally.duration)}
+          line2={`${tName(longestRally.match.team1)} vs ${tName(longestRally.match.team2)} · ${longestRally.match.label}`}
         />
       )}
     </div>

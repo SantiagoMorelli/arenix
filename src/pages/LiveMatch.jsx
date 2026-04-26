@@ -551,6 +551,11 @@ export default function LiveMatch() {
           teams={tournament.teams} players={league.players || []}
           onSaveResult={handleSaveResult} activeTourMatchId={mid} isSaving={isSaving}
           t={t}
+          hasHistory={live.history.length > 0}
+          onRequestUndo={live.requestUndo}
+          pendingUndo={live.pendingUndo}
+          onConfirmUndo={live.confirmUndo}
+          onCancelUndo={live.cancelUndo}
         />
       </div>
     )

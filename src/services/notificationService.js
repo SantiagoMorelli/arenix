@@ -108,8 +108,7 @@ export function getNotificationTarget(notif) {
       if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}`, state: { tab: 'standings' } }
       return leagueId ? { path: `/league/${leagueId}` } : null
     case 'match_result':
-      if (leagueId && tournamentId && matchId) return { path: `/league/${leagueId}/tournament/${tournamentId}/match/${matchId}` }
-      if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}` }
+      if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}`, state: { tab: 'standings' } }
       return leagueId ? { path: `/league/${leagueId}` } : null
     default:
       return null

@@ -129,6 +129,30 @@ export function advanceKnockout(knockout, teams) {
   return { ...knockout, rounds };
 }
 
+export function formatDuration(ms) {
+  if (ms == null || ms < 0) return null;
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+export function getMatchDuration(log) {
+  const pts = log.filter(e => e.team && e.timestamp);
+  if (pts.length < 2) return null;
+  return pts[pts.length - 1].timestamp - pts[0].timestamp;
+}
+
+export function getLongestRally(log) {
+  const pts = log.filter(e => e.team && e.timestamp);
+  if (pts.length < 2) return null;
+  let max = 0;
+  for (let i = 1; i < pts.length; i++) {
+    max = Math.max(max, pts[i].timestamp - pts[i - 1].timestamp);
+  }
+  return max;
+}
+
 export function saveMatchResult(tour, matchId, score1, score2, winnerTeamId, log = null, sets = null) {
   const updated = { ...tour };
 

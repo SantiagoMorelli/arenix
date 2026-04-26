@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 export const NOTIF_META = {
   league_welcome:      { emoji: '🏐', iconBg: 'bg-accent/15 border border-accent/25' },
   profile_linked:      { emoji: '🤝', iconBg: 'bg-free/15 border border-free/25' },
+  profile_unlinked:    { emoji: '🔓', iconBg: 'bg-alt border border-line' },
   role_admin:          { emoji: '🛡️', iconBg: 'bg-accent/15 border border-accent/25' },
   scorer_assigned:     { emoji: '📋', iconBg: 'bg-alt border border-line' },
   tournament_started:  { emoji: '🏐', iconBg: 'bg-success/15 border border-success/25' },

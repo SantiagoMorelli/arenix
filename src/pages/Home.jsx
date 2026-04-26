@@ -278,6 +278,10 @@ export default function Home() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
+  function handleRead(id) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  }
+
   const displayName = profile?.full_name?.split(' ')[0] || 'Player'
 
   if (loading) {
@@ -300,6 +304,7 @@ export default function Home() {
         onClose={() => setShowNotifs(false)}
         notifications={notifications}
         onMarkAllRead={handleMarkAllRead}
+        onRead={handleRead}
       />
 
       {/* ── Scrollable content ── */}

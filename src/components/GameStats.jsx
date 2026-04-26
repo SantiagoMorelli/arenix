@@ -11,6 +11,11 @@ const GameStats = ({
   isSaving,
   reset,
   t,
+  hasHistory,
+  onRequestUndo,
+  pendingUndo,
+  onConfirmUndo,
+  onCancelUndo,
 }) => {
   const [tab, setTab] = useState("overview");
 
@@ -87,6 +92,28 @@ const GameStats = ({
 
   return (
     <div>
+
+      {/* ── Undo confirmation strip ── */}
+      {pendingUndo && (
+        <div className="bg-error text-white px-4 py-2.5 flex items-center justify-between text-[13px] font-bold rounded-xl mb-3">
+          <span>Undo last point?</span>
+          <div className="flex gap-4">
+            <button onClick={onCancelUndo} className="bg-transparent border-0 text-white/70 cursor-pointer">Cancel</button>
+            <button onClick={onConfirmUndo} className="bg-white text-error px-3 py-1 rounded cursor-pointer">Yes</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Back arrow (undo) ── */}
+      {hasHistory && !pendingUndo && (
+        <button
+          onClick={onRequestUndo}
+          className="flex items-center gap-1.5 text-dim text-[13px] font-semibold mb-3 bg-transparent border-0 cursor-pointer px-0 py-1"
+        >
+          <span className="text-[18px] leading-none">←</span>
+          <span>Undo last point</span>
+        </button>
+      )}
 
       {/* ── Pill tabs ── */}
       <div className="flex bg-alt rounded-[10px] p-[3px] mb-3">

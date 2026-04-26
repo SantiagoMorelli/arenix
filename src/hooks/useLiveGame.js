@@ -215,7 +215,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
   };
 
   const applyPoint = ({ newS1, newS2, newPoints, newServeIndex, newSide, logEntry }) => {
-    setHistory(prev => [...prev, { score1, score2, serveIndex, side: { ...side }, points, log: [...log] }]);
+    setHistory(prev => [...prev, { score1, score2, serveIndex, side: { ...side }, points, log: [...log], sets: [...sets] }]);
     setScore1(newS1); setScore2(newS2);
     setServeIndex(newServeIndex);
     setSide(newSide);
@@ -279,6 +279,8 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
     setScore1(prev.score1); setScore2(prev.score2);
     setServeIndex(prev.serveIndex); setSide(prev.side);
     setPoints(prev.points); setLog(prev.log);
+    if (prev.sets !== undefined) setSets(prev.sets);
+    setWinner(null);
     setHistory(h => h.slice(0, -1));
     setPendingUndo(false);
   };

@@ -332,10 +332,14 @@ export default function FreePlaySession() {
   const [showMenu,      setShowMenu]      = useState(false)
   const [showModal,     setShowModal]     = useState(false)
   const [showTeamModal, setShowTeamModal] = useState(false)
-  const [editingTeam,   setEditingTeam]   = useState(null)   // null = create, object = edit
+  const [editingTeam,   setEditingTeam]   = useState(null)
   const [confirmEnd,    setConfirmEnd]    = useState(false)
   const [copied,        setCopied]        = useState(false)
   const [removingId,    setRemovingId]    = useState(null)
+  const [team1Id,       setTeam1Id]       = useState('')
+  const [team2Id,       setTeam2Id]       = useState('')
+  const [setsPerMatch,  setSetsPerMatch]  = useState(1)
+  const [startingMatch, setStartingMatch] = useState(false)
 
   const isFinished = session?.status === 'finished'
 
@@ -356,6 +360,28 @@ export default function FreePlaySession() {
     setRemovingId(playerId)
     try { await removePlayer(playerId) }
     finally { setRemovingId(null) }
+  }
+
+  const handleStartMatch = async () => {
+    if (!team1Id || !team2Id || team1Id === team2Id) return
+    setStartingMatch(true)
+    try {
+      const game = await startGame(team1Id, team2Id, setsPerMatch)
+      navigate(`/free-play/${id}/match`, { state: { gameId: game.id } })
+    } catch (err) {
+      console.error(err)
+      setStartingMatch(false)
+    }
+  }
+
+  const teamName = (tid) => session?.teams.find(t => t.id === tid)?.name || '?'
+  const playedGames   = session?.games.filter(g => g.played)  || []
+  const pendingGame   = session?.games.find(g => !g.played)   || null
+
+  function formatShort(val) {
+    if (!val) return ''
+    try { return new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+    catch { return '' }
   }
 
   // ── Loading / error states ───────────────────────────────────────────────
@@ -534,9 +560,136 @@ export default function FreePlaySession() {
           )}
         </div>
 
-        {/* Matches / Rankings — coming in future steps */}
+        {/* ── Start Match section ────────────────────────────────────────────── */}
+        {!isFinished && (
+          <div className="mt-8">
+            <SectionLabel color="free">Start a Match</SectionLabel>
+
+            {/* Resume banner — unplayed game already exists */}
+            {pendingGame ? (
+              <div className="bg-free/10 border border-free/30 rounded-xl p-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-bold text-free">Match in progress</div>
+                  <div className="text-[11px] text-dim mt-0.5">
+                    {teamName(pendingGame.team1Id)} vs {teamName(pendingGame.team2Id)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate(`/free-play/${id}/match`, { state: { gameId: pendingGame.id } })}
+                  className="shrink-0 px-4 py-2 rounded-xl bg-free text-white text-[13px] font-bold border-0 cursor-pointer active:scale-[0.97] transition-transform"
+                >
+                  Resume →
+                </button>
+              </div>
+            ) : session.teams.length < 2 ? (
+              <div className="text-[13px] text-dim">Create at least 2 teams to start a match.</div>
+            ) : (
+              <div className="bg-surface border border-line rounded-xl p-4 flex flex-col gap-4">
+                {/* Team selectors */}
+                <div className="flex gap-3">
+                  <div className="flex-1 flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-dim uppercase tracking-wide">Team A</label>
+                    <select
+                      value={team1Id}
+                      onChange={e => setTeam1Id(e.target.value)}
+                      className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[13px] text-text focus:outline-none focus:border-free appearance-none"
+                    >
+                      <option value="">Pick team…</option>
+                      {session.teams.map(t => (
+                        <option key={t.id} value={t.id} disabled={t.id === team2Id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end pb-2.5 text-[13px] font-black text-dim shrink-0">VS</div>
+                  <div className="flex-1 flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-dim uppercase tracking-wide">Team B</label>
+                    <select
+                      value={team2Id}
+                      onChange={e => setTeam2Id(e.target.value)}
+                      className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[13px] text-text focus:outline-none focus:border-free appearance-none"
+                    >
+                      <option value="">Pick team…</option>
+                      {session.teams.map(t => (
+                        <option key={t.id} value={t.id} disabled={t.id === team1Id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Sets per match */}
+                <div>
+                  <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">Sets per match</div>
+                  <div className="flex gap-2">
+                    {[1, 3].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setSetsPerMatch(n)}
+                        className={`flex-1 py-2.5 rounded-xl border-2 text-[13px] font-bold transition-all cursor-pointer
+                          ${setsPerMatch === n ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-dim'}`}
+                      >
+                        {n === 1 ? '1 Set' : 'Best of 3'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <AppButton
+                  variant="free"
+                  onClick={handleStartMatch}
+                  disabled={!team1Id || !team2Id || team1Id === team2Id || startingMatch}
+                >
+                  {startingMatch ? 'Starting…' : '🏐 Start Match'}
+                </AppButton>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Past Matches section ────────────────────────────────────────────── */}
+        {playedGames.length > 0 && (
+          <div className="mt-8">
+            <SectionLabel color="free">
+              Past Matches ({playedGames.length})
+            </SectionLabel>
+            <div className="flex flex-col gap-2">
+              {[...playedGames].reverse().map(g => {
+                const t1 = teamName(g.team1Id)
+                const t2 = teamName(g.team2Id)
+                const won1 = (g.sets || []).filter(s => s.winner === 1).length
+                const won2 = (g.sets || []).filter(s => s.winner === 2).length
+                const hasWinner = !!g.winnerId
+                return (
+                  <div key={g.id} className="bg-surface border border-line rounded-xl px-4 py-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[13px] font-bold truncate ${g.winnerId === g.team1Id ? 'text-text' : 'text-dim'}`}>{t1}</span>
+                        <span className="text-[13px] font-black text-text shrink-0">
+                          {g.setsPerMatch > 1 ? `${won1}–${won2}` : `${g.score1 ?? 0}–${g.score2 ?? 0}`}
+                        </span>
+                        <span className={`text-[13px] font-bold truncate ${g.winnerId === g.team2Id ? 'text-text' : 'text-dim'}`}>{t2}</span>
+                      </div>
+                      {g.setsPerMatch > 1 && (
+                        <div className="text-[10px] text-dim mt-0.5">
+                          {(g.sets || []).map((s, i) => `Set ${i + 1}: ${s.s1}–${s.s2}`).join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                    {hasWinner && (
+                      <AppBadge
+                        text={g.winnerId === g.team1Id ? t1.split(' ')[0] : t2.split(' ')[0]}
+                        variant="free"
+                      />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Rankings — coming in next step */}
         <div className="mt-8 bg-surface border border-line rounded-xl p-4 text-center">
-          <div className="text-[13px] text-dim">Matches &amp; Rankings — coming next</div>
+          <div className="text-[13px] text-dim">Rankings — coming next</div>
         </div>
 
       </div>

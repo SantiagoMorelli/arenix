@@ -61,6 +61,16 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
         <div className="w-10" />
       </div>
 
+      {/* ── DEBUG PANEL (remove once fixed) ── */}
+      <div className="bg-error/10 border border-error/30 rounded-xl p-3 mb-2 text-[11px] font-mono text-error break-all max-w-[400px] w-full mx-auto">
+        <div><b>t1Id:</b> {team1Id || '(empty)'}</div>
+        <div><b>t2Id:</b> {team2Id || '(empty)'}</div>
+        <div><b>teams count:</b> {teams.length}</div>
+        <div><b>teams:</b> {JSON.stringify(teams.map(t => ({ id: t.id.slice(0,8), name: t.name, players: t.players?.length })))}</div>
+        <div><b>t1ServeOrder:</b> {JSON.stringify(live.t1ServeOrder)}</div>
+        <div><b>t2ServeOrder:</b> {JSON.stringify(live.t2ServeOrder)}</div>
+      </div>
+
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
 
         {/* Teams preview */}

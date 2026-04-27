@@ -68,6 +68,7 @@ function MatchSetup({ live, teams, team1Id, team2Id, routeState, onBack }) {
           t2Id: team2Id || '(empty)',
           routeState,
           sessionError,
+          queryErrors: session?._queryErrors,
           sessionId: session?.id,
           sessionStatus: session?.status,
           teamsCount: teams.length,

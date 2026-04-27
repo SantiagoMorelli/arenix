@@ -326,7 +326,7 @@ export default function FreePlaySession() {
     session, loading, error,
     addPlayer, removePlayer,
     createTeam, updateTeam, deleteTeam,
-    finishSession, inviteLink,
+    startGame, finishSession, inviteLink,
   } = useFreePlay(id)
 
   const [showMenu,      setShowMenu]      = useState(false)

@@ -161,7 +161,6 @@ export async function createFreePlayGame(freePlayId, team1Id, team2Id, setsPerMa
       score1:        0,
       score2:        0,
       played:        false,
-      sets_per_match: setsPerMatch,
     })
     .select()
     .single()

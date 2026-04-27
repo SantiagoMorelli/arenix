@@ -24,10 +24,10 @@ const Svg = ({ children, size = 20 }) => (
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 // ─── Setup screen ─────────────────────────────────────────────────────────────
-function MatchSetup({ live, teams, onBack }) {
+function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
   const tName = (tid) => teams.find(t => t.id === tid)?.name || '?'
-  const t1Name = tName(live.team1Id)
-  const t2Name = tName(live.team2Id)
+  const t1Name = tName(team1Id)
+  const t2Name = tName(team2Id)
 
   const handleMoveUp1 = (idx) => live.setT1ServeOrder(o => {
     const n = [...o]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; return n
@@ -204,11 +204,11 @@ export default function FreePlayLiveMatch() {
   const location      = useLocation()
   const gameId        = location.state?.gameId
 
-  const setsPerMatch = location.state?.setsPerMatch ?? 1
+  const setsPerMatch  = location.state?.setsPerMatch  ?? 1
+  const stateTeam1Id  = location.state?.team1Id  || ''
+  const stateTeam2Id  = location.state?.team2Id  || ''
 
   const { session, loading } = useFreePlay(id)
-
-  const gameRecord = session?.games.find(g => g.id === gameId) || null
 
   // Shape data for useLiveGame
   const teams   = (session?.teams   || []).map(t => ({ id: t.id, name: t.name, players: t.playerIds }))
@@ -225,16 +225,23 @@ export default function FreePlayLiveMatch() {
     saveKey:           FP_SAVE_KEY,
   })
 
-  // Pre-load teams + serve orders from the game record once session is ready
-  const initialized = useRef(false)
+  // Set team IDs immediately from route state (no DB round-trip needed)
+  const teamIdsSet = useRef(false)
   useEffect(() => {
-    if (!session || !gameRecord || initialized.current) return
-    initialized.current = true
-    live.setTeam1Id(gameRecord.team1Id)
-    live.setTeam2Id(gameRecord.team2Id)
-    live.setActiveTourMatchId(gameRecord.id)
-    const t1 = session.teams.find(t => t.id === gameRecord.team1Id)
-    const t2 = session.teams.find(t => t.id === gameRecord.team2Id)
+    if (teamIdsSet.current || !stateTeam1Id || !stateTeam2Id) return
+    teamIdsSet.current = true
+    live.setTeam1Id(stateTeam1Id)
+    live.setTeam2Id(stateTeam2Id)
+    if (gameId) live.setActiveTourMatchId(gameId)
+  }, [stateTeam1Id, stateTeam2Id])
+
+  // Load serve orders once session (and therefore team rosters) arrives
+  const serveOrderSet = useRef(false)
+  useEffect(() => {
+    if (!session || serveOrderSet.current) return
+    serveOrderSet.current = true
+    const t1 = session.teams.find(t => t.id === stateTeam1Id)
+    const t2 = session.teams.find(t => t.id === stateTeam2Id)
     if (t1?.playerIds?.length) live.setT1ServeOrder(t1.playerIds)
     if (t2?.playerIds?.length) live.setT2ServeOrder(t2.playerIds)
   }, [session])
@@ -265,6 +272,8 @@ export default function FreePlayLiveMatch() {
       <MatchSetup
         live={live}
         teams={teams}
+        team1Id={stateTeam1Id}
+        team2Id={stateTeam2Id}
         onBack={() => navigate(`/free-play/${id}`)}
       />
     )

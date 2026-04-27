@@ -369,7 +369,7 @@ export default function FreePlaySession() {
     setStartError('')
     try {
       const game = await startGame(team1Id, team2Id, setsPerMatch)
-      navigate(`/free-play/${id}/match`, { state: { gameId: game.id, setsPerMatch } })
+      navigate(`/free-play/${id}/match`, { state: { gameId: game.id, setsPerMatch, team1Id, team2Id } })
     } catch (err) {
       console.error(err)
       setStartError(err?.message || JSON.stringify(err) || 'Unknown error')

@@ -43,6 +43,13 @@ function countryFlag(country) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function playerAvatarStyle(seed) {
+  let h = 0
+  const str = String(seed)
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff
+  return { backgroundColor: `oklch(0.38 0.13 ${h % 360})` }
+}
+
 function getTournamentStatus(t) {
   if (t.status === 'completed') return { label: 'Completed', variant: 'dim' }
   if (['group', 'knockout', 'freeplay'].includes(t.phase)) return { label: 'In Progress', variant: 'success' }
@@ -677,6 +684,8 @@ export default function LeagueDetail() {
 
   const rankedPlayers = [...(league.players || [])].sort((a, b) => (b.points || 0) - (a.points || 0))
   const tournaments   = [...(league.tournaments || [])].reverse()
+  const myPlayer      = rankedPlayers.find(p => p.userId === profile?.id)
+  const myRank        = myPlayer ? rankedPlayers.indexOf(myPlayer) + 1 : null
 
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
@@ -702,29 +711,70 @@ export default function LeagueDetail() {
           {/* ════ Rankings tab ════ */}
           {activeTab === 'rankings' && (
             <>
-              <SectionLabel color="accent">Top Rankings</SectionLabel>
-              {rankedPlayers.length > 0 ? (
-                <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-[18px]">
-                  {rankedPlayers.slice(0, 5).map((player, i) => {
-                    const label = player.displayName || player.name
-                    return (
-                    <div
-                      key={player.id}
-                      className={`flex items-center px-3.5 py-2.5 ${i < rankedPlayers.length - 1 ? 'border-b border-line' : ''}`}
-                    >
-                      <span className={`w-[22px] text-[13px] font-bold flex-shrink-0 ${i < 3 ? 'text-accent' : 'text-dim'}`}>
-                        {i + 1}
-                      </span>
-                      <div className="w-7 h-7 rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text mr-2.5 flex-shrink-0">
-                        {label[0]}
+              {/* YOUR POSITION hero card — only shown if current user has a linked player */}
+              {myRank && (
+                <div className="bg-gradient-to-br from-surface to-alt rounded-[14px] border border-line mt-2 mb-4 p-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex-1">
+                      <div className="text-[11px] font-bold text-accent tracking-[1.2px] uppercase mb-1">Your Position</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-display text-[40px] leading-none text-accent">#{myRank}</span>
+                        <span className="text-[12px] text-dim">of {rankedPlayers.length} · {myPlayer.points ?? 0} ELO</span>
                       </div>
-                      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                        <span className="text-[13px] font-medium text-text truncate">{label}</span>
-                        {countryFlag(player.country) && <span className="text-[14px] leading-none flex-shrink-0">{countryFlag(player.country)}</span>}
-                      </div>
-                      <span className="text-[12px] font-semibold text-dim ml-2">{player.points ?? 0}</span>
                     </div>
-                  )})}
+                    <div className="w-20 h-[60px] flex-shrink-0">
+                      <svg width="100%" height="100%" viewBox="0 0 80 60">
+                        <polyline
+                          points="0,50 15,42 30,44 45,30 60,28 80,18"
+                          stroke="#F5A623" strokeWidth="2" fill="none" strokeLinecap="round"
+                        />
+                        <polyline
+                          points="0,50 15,42 30,44 45,30 60,28 80,18 80,60 0,60"
+                          fill="rgba(245,166,35,0.15)" stroke="none"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <SectionLabel color="accent">Top Players</SectionLabel>
+
+              {rankedPlayers.length > 0 ? (
+                <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-4">
+                  {rankedPlayers.slice(0, 8).map((player, i, arr) => {
+                    const isMe  = player.userId === profile?.id
+                    const label = player.displayName || player.name
+                    const wl    = (player.wins != null || player.losses != null)
+                      ? `${player.wins ?? 0}W - ${player.losses ?? 0}L`
+                      : null
+                    return (
+                      <div
+                        key={player.id}
+                        className={`flex items-center px-3.5 py-[11px] ${i < arr.length - 1 ? 'border-b border-line' : ''} ${isMe ? 'bg-accent/10' : ''}`}
+                      >
+                        <span className={`font-display w-7 text-[18px] leading-none flex-shrink-0 ${i < 3 ? 'text-accent' : 'text-dim'}`}>
+                          {i + 1}
+                        </span>
+                        <div
+                          className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0"
+                          style={playerAvatarStyle(player.id || player.name)}
+                        >
+                          {label[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0 ml-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[13px] truncate ${isMe ? 'font-bold text-text' : 'font-medium text-text'}`}>
+                              {label}
+                            </span>
+                            {isMe && <span className="text-[10px] font-bold text-accent flex-shrink-0">YOU</span>}
+                          </div>
+                          {wl && <div className="text-[10px] text-dim mt-0.5">{wl}</div>}
+                        </div>
+                        <span className="font-display text-[18px] text-text leading-none ml-2">{player.points ?? 0}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-[13px] text-dim text-center py-6 mb-4">No players yet</div>

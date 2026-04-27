@@ -113,11 +113,36 @@ Use **Lucide React** (`lucide-react`). The prototype uses Feather-style icons; L
 - **Tournaments:** "+ New" link top-right. List of tournament cards with status pill (In Progress / Upcoming / Completed).
 - **Settings:** key/value rows (League name, Season, Location, Points system, Visibility) + Danger zone (Leave league).
 
-### 2a. League → Players (Admin)
+### 2a. League → Players
 
-The Players tab is an admin surface for managing the league roster.
+This tab has **two views** depending on the viewer's role in the league:
 
-**Player data shape** — extend the player record with:
+- **Member view** (read-only) — default for regular league members
+- **Admin view** — for league admins; adds management affordances on top of the member view
+
+#### Member view (read-only roster)
+
+- Search field showing `Search {N} players…` (no plus button)
+- **No** linked/guest legend
+- **No** "TAP TO MANAGE" hint
+- List rows show: avatar, name, `ELO {elo}` (no level, no link-status dot, no chevron)
+- Rows are **not interactive** — no tap target, no detail sheet, no actions
+
+#### Admin view
+
+Adds, on top of the member view:
+- Plus button next to search (invite/add player)
+- Linked/guest legend strip with the "TAP TO MANAGE" hint
+- Link-status dot on each avatar (green solid = linked, hollow = guest)
+- Level shown in the meta line: `ELO {elo} · {level}`
+- Right chevron on each row
+- Whole row is tap-to-open → opens the player detail sheet
+
+The prototype exposes a **Role** tweak (Admin / Member) in the Tweaks panel to switch between the two views.
+
+#### Player data shape
+
+Extend the player record with:
 ```js
 {
   id, name, short, initials, elo, hue,    // existing
@@ -128,6 +153,10 @@ The Players tab is an admin surface for managing the league roster.
   email:    string | null,                 // populated only when linked
 }
 ```
+
+#### Admin-only UI
+
+The remaining sections describe the surfaces that only appear in the admin view.
 
 **List row** (visual unchanged from base spec):
 - Avatar with **link-status dot** overlay at bottom-right (11px circle, 2px surface border):

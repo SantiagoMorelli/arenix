@@ -63,10 +63,12 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
 
       {/* ── DEBUG PANEL (remove once fixed) ── */}
       <div className="bg-error/10 border border-error/30 rounded-xl p-3 mb-2 text-[11px] font-mono text-error break-all max-w-[400px] w-full mx-auto">
-        <div><b>t1Id:</b> {team1Id || '(empty)'}</div>
-        <div><b>t2Id:</b> {team2Id || '(empty)'}</div>
+        <div><b>t1Id prop:</b> {team1Id || '(empty)'}</div>
+        <div><b>t2Id prop:</b> {team2Id || '(empty)'}</div>
         <div><b>teams count:</b> {teams.length}</div>
-        <div><b>teams:</b> {JSON.stringify(teams.map(t => ({ id: t.id.slice(0,8), name: t.name, players: t.players?.length })))}</div>
+        {teams.map(t => (
+          <div key={t.id}><b>team:</b> {t.name} | players: {JSON.stringify(t.players)}</div>
+        ))}
         <div><b>t1ServeOrder:</b> {JSON.stringify(live.t1ServeOrder)}</div>
         <div><b>t2ServeOrder:</b> {JSON.stringify(live.t2ServeOrder)}</div>
       </div>
@@ -257,6 +259,9 @@ export default function FreePlayLiveMatch() {
   }, [session])
 
   // ── Guards ───────────────────────────────────────────────────────────────
+  // DEBUG — remove once fixed
+  console.log('[FPLiveMatch] location.state=', location.state, 'session=', session, 'loading=', loading)
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">

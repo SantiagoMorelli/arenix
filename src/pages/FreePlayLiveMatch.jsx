@@ -24,7 +24,7 @@ const Svg = ({ children, size = 20 }) => (
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 // ─── Setup screen ─────────────────────────────────────────────────────────────
-function MatchSetup({ live, teams, team1Id, team2Id, routeState, onBack }) {
+function MatchSetup({ live, teams, team1Id, team2Id, routeState, queryErrors, onBack }) {
   const tName = (tid) => teams.find(t => t.id === tid)?.name || '?'
   const t1Name = tName(team1Id)
   const t2Name = tName(team2Id)
@@ -68,7 +68,7 @@ function MatchSetup({ live, teams, team1Id, team2Id, routeState, onBack }) {
           t2Id: team2Id || '(empty)',
           routeState,
           sessionError,
-          queryErrors: session?._queryErrors,
+          queryErrors,
           sessionId: session?.id,
           sessionStatus: session?.status,
           teamsCount: teams.length,
@@ -293,6 +293,7 @@ export default function FreePlayLiveMatch() {
         team1Id={stateTeam1Id}
         team2Id={stateTeam2Id}
         routeState={location.state}
+        queryErrors={session?._queryErrors}
         onBack={() => navigate(`/free-play/${id}`)}
       />
     )

@@ -50,7 +50,7 @@ const BADGE_VARIANTS = {
 export function AppBadge({ text, variant = 'dim' }) {
   return (
     <span
-      className={`inline-block text-[10px] font-bold px-2 py-[3px] rounded-md ${BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.dim}`}
+      className={`inline-block text-[10px] font-bold uppercase tracking-[0.5px] px-2 py-[3px] rounded-md ${BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.dim}`}
     >
       {text}
     </span>

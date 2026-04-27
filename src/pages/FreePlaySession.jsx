@@ -11,9 +11,11 @@ const Svg = ({ children, size = 20 }) => (
     {children}
   </svg>
 )
-const BackIcon  = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
-const LinkIcon  = () => <Svg size={16}><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></Svg>
+const BackIcon   = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
+const LinkIcon   = () => <Svg size={16}><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></Svg>
 const SearchIcon = () => <Svg size={16}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></Svg>
+const PencilIcon = () => <Svg size={16}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></Svg>
+const TrashIcon  = () => <Svg size={16}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></Svg>
 
 // ─── Add Player Modal ─────────────────────────────────────────────────────────
 function AddPlayerModal({ session, onAdd, onClose }) {
@@ -168,18 +170,172 @@ function PlayerChip({ player, onRemove, readonly }) {
   )
 }
 
+// ─── Team modal (create + edit) ───────────────────────────────────────────────
+function TeamModal({ session, team, onSave, onClose }) {
+  const isEdit = !!team
+  const [name,      setName]      = useState(team?.name || '')
+  const [selected,  setSelected]  = useState(new Set(team?.playerIds || []))
+  const [saving,    setSaving]    = useState(false)
+
+  const toggle = (pid) =>
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(pid) ? next.delete(pid) : next.add(pid)
+      return next
+    })
+
+  const handleSave = async () => {
+    if (!name.trim()) return
+    setSaving(true)
+    try { await onSave(name.trim(), [...selected]) }
+    finally { setSaving(false) }
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-[440px] bg-surface rounded-t-2xl flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[16px] font-black text-text uppercase tracking-widest">
+              {isEdit ? 'Edit Team' : 'New Team'}
+            </div>
+            <button onClick={onClose} className="text-dim text-[22px] leading-none bg-transparent border-0 cursor-pointer">×</button>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-dim uppercase tracking-wide">Team name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Team Sunset"
+              autoFocus
+              className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim focus:outline-none focus:border-free"
+            />
+          </div>
+        </div>
+
+        {/* Player multi-select */}
+        <div className="flex-1 overflow-y-auto px-6 pb-2">
+          <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-3">
+            Players ({selected.size} selected)
+          </div>
+          {session.players.length === 0 ? (
+            <div className="text-[13px] text-dim py-4 text-center">Add players to the session first</div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {session.players.map(p => {
+                const on = selected.has(p.id)
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => toggle(p.id)}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border-2 text-left transition-all cursor-pointer
+                      ${on ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-text'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all
+                      ${on ? 'border-free bg-free' : 'border-line bg-transparent'}`}>
+                      {on && <span className="text-white text-[11px] font-black leading-none">✓</span>}
+                    </div>
+                    <span className="text-[14px] font-semibold flex-1">{p.name}</span>
+                    {p.isGuest && <AppBadge text="Guest" variant="dim" />}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Save */}
+        <div className="px-6 py-4 shrink-0 border-t border-line">
+          <AppButton variant="free" onClick={handleSave} disabled={!name.trim() || saving}>
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Team'}
+          </AppButton>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Team card ────────────────────────────────────────────────────────────────
+function TeamCard({ team, players, onEdit, onDelete, readonly }) {
+  const [confirmDel, setConfirmDel] = useState(false)
+
+  const teamPlayers = team.playerIds
+    .map(pid => players.find(p => p.id === pid))
+    .filter(Boolean)
+
+  return (
+    <div className="bg-surface border border-line rounded-xl p-3">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="text-[14px] font-bold text-text flex-1 min-w-0 truncate">{team.name}</div>
+        {!readonly && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={onEdit}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-dim hover:text-accent hover:bg-accent/10 transition-colors bg-transparent border-0 cursor-pointer"
+            >
+              <PencilIcon />
+            </button>
+            <button
+              onClick={() => setConfirmDel(true)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-dim hover:text-error hover:bg-error/10 transition-colors bg-transparent border-0 cursor-pointer"
+            >
+              <TrashIcon />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {teamPlayers.length === 0 ? (
+        <div className="text-[12px] text-dim">No players assigned</div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {teamPlayers.map(p => (
+            <span key={p.id} className="text-[11px] font-semibold bg-bg border border-line rounded-full px-2.5 py-1 text-dim">
+              {p.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Inline delete confirmation */}
+      {confirmDel && (
+        <div className="mt-3 pt-3 border-t border-line flex items-center justify-between">
+          <span className="text-[12px] text-error font-semibold">Delete this team?</span>
+          <div className="flex gap-3">
+            <button onClick={() => setConfirmDel(false)} className="text-[12px] text-dim font-semibold bg-transparent border-0 cursor-pointer">
+              Cancel
+            </button>
+            <button onClick={onDelete} className="text-[12px] text-white bg-error font-bold px-3 py-1 rounded-lg border-0 cursor-pointer">
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FreePlaySession() {
   const navigate = useNavigate()
   const { id }   = useParams()
 
-  const { session, loading, error, addPlayer, removePlayer, finishSession, inviteLink } = useFreePlay(id)
+  const {
+    session, loading, error,
+    addPlayer, removePlayer,
+    createTeam, updateTeam, deleteTeam,
+    finishSession, inviteLink,
+  } = useFreePlay(id)
 
-  const [showMenu,    setShowMenu]    = useState(false)
-  const [showModal,   setShowModal]   = useState(false)
-  const [confirmEnd,  setConfirmEnd]  = useState(false)
-  const [copied,      setCopied]      = useState(false)
-  const [removingId,  setRemovingId]  = useState(null)
+  const [showMenu,      setShowMenu]      = useState(false)
+  const [showModal,     setShowModal]     = useState(false)
+  const [showTeamModal, setShowTeamModal] = useState(false)
+  const [editingTeam,   setEditingTeam]   = useState(null)   // null = create, object = edit
+  const [confirmEnd,    setConfirmEnd]    = useState(false)
+  const [copied,        setCopied]        = useState(false)
+  const [removingId,    setRemovingId]    = useState(null)
 
   const isFinished = session?.status === 'finished'
 
@@ -344,9 +500,43 @@ export default function FreePlaySession() {
           )}
         </div>
 
-        {/* Teams / Matches / Rankings — coming in future steps */}
+        {/* ── Teams section ──────────────────────────────────────────────────── */}
+        <div className="mt-8">
+          <SectionLabel color="free">
+            Teams ({session.teams.length})
+          </SectionLabel>
+
+          {session.teams.length === 0 ? (
+            <div className="text-[13px] text-dim mb-4">No teams yet — create one below.</div>
+          ) : (
+            <div className="flex flex-col gap-3 mb-4">
+              {session.teams.map(team => (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  players={session.players}
+                  readonly={isFinished}
+                  onEdit={() => { setEditingTeam(team); setShowTeamModal(true) }}
+                  onDelete={() => deleteTeam(team.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {!isFinished && (
+            <AppButton
+              variant="outline"
+              onClick={() => { setEditingTeam(null); setShowTeamModal(true) }}
+              className="border-free/40 text-free hover:bg-free/5"
+            >
+              + New Team
+            </AppButton>
+          )}
+        </div>
+
+        {/* Matches / Rankings — coming in future steps */}
         <div className="mt-8 bg-surface border border-line rounded-xl p-4 text-center">
-          <div className="text-[13px] text-dim">Teams, Matches &amp; Rankings — coming next</div>
+          <div className="text-[13px] text-dim">Matches &amp; Rankings — coming next</div>
         </div>
 
       </div>
@@ -357,6 +547,19 @@ export default function FreePlaySession() {
           session={session}
           onAdd={addPlayer}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {/* ── Team create / edit modal ─────────────────────────────────────────── */}
+      {showTeamModal && (
+        <TeamModal
+          session={session}
+          team={editingTeam}
+          onSave={editingTeam
+            ? (name, playerIds) => updateTeam(editingTeam.id, { name, playerIds })
+            : (name, playerIds) => createTeam(name, playerIds)
+          }
+          onClose={() => setShowTeamModal(false)}
         />
       )}
 

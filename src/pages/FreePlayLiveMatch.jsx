@@ -66,11 +66,14 @@ function MatchSetup({ live, teams, team1Id, team2Id, routeState, onBack }) {
         <pre className="whitespace-pre-wrap">{JSON.stringify({
           t1Id: team1Id || '(empty)',
           t2Id: team2Id || '(empty)',
-          routeState: routeState,
+          routeState,
+          sessionError,
+          sessionId: session?.id,
+          sessionStatus: session?.status,
           teamsCount: teams.length,
+          playersCount: session?.players?.length,
+          gamesCount: session?.games?.length,
           teams: teams.map(t => ({ id: t.id?.slice(0,8), name: t.name, players: t.players })),
-          t1Order: live.t1ServeOrder,
-          t2Order: live.t2ServeOrder,
         }, null, 2)}</pre>
       </div>
 
@@ -221,7 +224,7 @@ export default function FreePlayLiveMatch() {
   const stateTeam1Id  = location.state?.team1Id  || ''
   const stateTeam2Id  = location.state?.team2Id  || ''
 
-  const { session, loading } = useFreePlay(id)
+  const { session, loading, error: sessionError } = useFreePlay(id)
 
   // Shape data for useLiveGame
   const teams   = (session?.teams   || []).map(t => ({ id: t.id, name: t.name, players: t.playerIds }))

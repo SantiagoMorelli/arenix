@@ -367,7 +367,7 @@ export default function FreePlaySession() {
     setStartingMatch(true)
     try {
       const game = await startGame(team1Id, team2Id, setsPerMatch)
-      navigate(`/free-play/${id}/match`, { state: { gameId: game.id } })
+      navigate(`/free-play/${id}/match`, { state: { gameId: game.id, setsPerMatch } })
     } catch (err) {
       console.error(err)
       setStartingMatch(false)

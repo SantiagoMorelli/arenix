@@ -204,6 +204,8 @@ export default function FreePlayLiveMatch() {
   const location      = useLocation()
   const gameId        = location.state?.gameId
 
+  const setsPerMatch = location.state?.setsPerMatch ?? 1
+
   const { session, loading } = useFreePlay(id)
 
   const gameRecord = session?.games.find(g => g.id === gameId) || null
@@ -219,7 +221,7 @@ export default function FreePlayLiveMatch() {
     tournamentMatches: [],
     preloadMatchId:    null,
     t,
-    setsPerMatch:      gameRecord?.setsPerMatch ?? 1,
+    setsPerMatch,
     saveKey:           FP_SAVE_KEY,
   })
 

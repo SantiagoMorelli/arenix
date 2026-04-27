@@ -33,15 +33,10 @@ import TournamentDetail    from './pages/TournamentDetail'
 import TournamentSetupWizard from './pages/TournamentSetupWizard'
 import LiveMatch           from './pages/LiveMatch'
 import JoinLeague          from './pages/JoinLeague'
-
-function Placeholder({ title }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-2">
-      <div className="text-[18px] font-bold">{title}</div>
-      <div className="text-[13px] text-dim">Coming soon</div>
-    </div>
-  )
-}
+import FreePlayList        from './pages/FreePlayList'
+import FreePlaySession     from './pages/FreePlaySession'
+import FreePlayLiveMatch   from './pages/FreePlayLiveMatch'
+import FreePlayJoin        from './pages/FreePlayJoin'
 
 export default function AppRouter() {
   return (
@@ -60,7 +55,10 @@ export default function AppRouter() {
       {/* ── Protected: pushed screens (no bottom nav) ── */}
       <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/edit-profile"  element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-      <Route path="/free-play" element={<ProtectedRoute><Placeholder title="Free Play" /></ProtectedRoute>} />
+      <Route path="/free-play"            element={<ProtectedRoute><FreePlayList /></ProtectedRoute>} />
+      <Route path="/free-play/:id"        element={<ProtectedRoute><FreePlaySession /></ProtectedRoute>} />
+      <Route path="/free-play/:id/match"  element={<ProtectedRoute><FreePlayLiveMatch /></ProtectedRoute>} />
+      <Route path="/free-play/:id/join"   element={<FreePlayJoin />} />
 
       {/* ── Protected: join league via invite code ── */}
       <Route path="/join/:code" element={<ProtectedRoute><JoinLeague /></ProtectedRoute>} />

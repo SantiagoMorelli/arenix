@@ -1,17 +1,17 @@
 // Seeded realistic volleyball data
 const PLAYERS = [
-  { id: 'p1', name: 'Carlos Mendez',  short: 'Carlos M.', initials: 'CM', elo: 1628, hue: 28 },
-  { id: 'p2', name: 'Ana Portela',    short: 'Ana P.',    initials: 'AP', elo: 1594, hue: 340 },
-  { id: 'p3', name: 'Santi Alvarez',  short: 'Santi A.',  initials: 'SA', elo: 1572, hue: 200 },
-  { id: 'p4', name: 'Diego Ramirez',  short: 'Diego R.',  initials: 'DR', elo: 1554, hue: 150 },
-  { id: 'p5', name: 'Luis Karam',     short: 'Luis K.',   initials: 'LK', elo: 1510, hue: 48 },
-  { id: 'p6', name: 'Maria Silva',    short: 'Maria S.',  initials: 'MS', elo: 1492, hue: 292 },
-  { id: 'p7', name: 'Pedro Lombardi', short: 'Pedro L.',  initials: 'PL', elo: 1470, hue: 12 },
-  { id: 'p8', name: 'Sofia Vitale',   short: 'Sofia V.',  initials: 'SV', elo: 1448, hue: 316 },
-  { id: 'p9', name: 'Marco Torres',   short: 'Marco T.',  initials: 'MT', elo: 1420, hue: 88 },
-  { id: 'p10', name: 'Julia Rocha',   short: 'Julia R.',  initials: 'JR', elo: 1396, hue: 250 },
-  { id: 'p11', name: 'Alex Wen',      short: 'Alex W.',   initials: 'AW', elo: 1372, hue: 170 },
-  { id: 'p12', name: 'Bruno Ibarra',  short: 'Bruno I.',  initials: 'BI', elo: 1340, hue: 60 },
+  { id: 'p1',  name: 'Carlos Mendez',  short: 'Carlos M.', initials: 'CM', elo: 1628, hue: 28,  nickname: 'Carlitos', gender: 'M', level: 'Advanced',     linked: true,  email: 'carlos.m@arenix.app' },
+  { id: 'p2',  name: 'Ana Portela',    short: 'Ana P.',    initials: 'AP', elo: 1594, hue: 340, nickname: 'Anita',    gender: 'F', level: 'Advanced',     linked: true,  email: 'ana.p@arenix.app' },
+  { id: 'p3',  name: 'Santi Alvarez',  short: 'Santi A.',  initials: 'SA', elo: 1572, hue: 200, nickname: 'Santi',    gender: 'M', level: 'Advanced',     linked: true,  email: 'santi@arenix.app' },
+  { id: 'p4',  name: 'Diego Ramirez',  short: 'Diego R.',  initials: 'DR', elo: 1554, hue: 150, nickname: 'Diegui',   gender: 'M', level: 'Intermediate', linked: true,  email: 'diego.r@arenix.app' },
+  { id: 'p5',  name: 'Luis Karam',     short: 'Luis K.',   initials: 'LK', elo: 1510, hue: 48,  nickname: 'Lucho',    gender: 'M', level: 'Intermediate', linked: false, email: null },
+  { id: 'p6',  name: 'Maria Silva',    short: 'Maria S.',  initials: 'MS', elo: 1492, hue: 292, nickname: 'Mari',     gender: 'F', level: 'Intermediate', linked: true,  email: 'maria.s@arenix.app' },
+  { id: 'p7',  name: 'Pedro Lombardi', short: 'Pedro L.',  initials: 'PL', elo: 1470, hue: 12,  nickname: 'Peter',    gender: 'M', level: 'Intermediate', linked: false, email: null },
+  { id: 'p8',  name: 'Sofia Vitale',   short: 'Sofia V.',  initials: 'SV', elo: 1448, hue: 316, nickname: 'Sofi',     gender: 'F', level: 'Intermediate', linked: true,  email: 'sofia.v@arenix.app' },
+  { id: 'p9',  name: 'Marco Torres',   short: 'Marco T.',  initials: 'MT', elo: 1420, hue: 88,  nickname: 'Marquito', gender: 'M', level: 'Beginner',     linked: true,  email: 'marco.t@arenix.app' },
+  { id: 'p10', name: 'Julia Rocha',    short: 'Julia R.',  initials: 'JR', elo: 1396, hue: 250, nickname: 'Juli',     gender: 'F', level: 'Beginner',     linked: false, email: null },
+  { id: 'p11', name: 'Alex Wen',       short: 'Alex W.',   initials: 'AW', elo: 1372, hue: 170, nickname: 'Wenny',    gender: 'X', level: 'Beginner',     linked: true,  email: 'alex.w@arenix.app' },
+  { id: 'p12', name: 'Bruno Ibarra',   short: 'Bruno I.',  initials: 'BI', elo: 1340, hue: 60,  nickname: 'Bruno',    gender: 'M', level: 'Beginner',     linked: false, email: null },
 ];
 
 const TEAMS = [

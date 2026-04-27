@@ -109,9 +109,75 @@ Use **Lucide React** (`lucide-react`). The prototype uses Feather-style icons; L
 ### 2. League Detail
 **Tabs (bottom nav style):** Rankings · Players · Tournaments · Settings (gear).
 - **Rankings:** big "Your position" card with Bebas #3, ELO sub, ↑ trend, sparkline SVG. Then ranked list (top 8) — row: rank #, avatar, name (current user highlighted in accent-soft bg with "YOU" tag), W-L sub, ELO right.
-- **Players:** search field + plus button. List: avatar, name, ELO, chevron right.
+- **Players (Admin view):** see section 2a below.
 - **Tournaments:** "+ New" link top-right. List of tournament cards with status pill (In Progress / Upcoming / Completed).
 - **Settings:** key/value rows (League name, Season, Location, Points system, Visibility) + Danger zone (Leave league).
+
+### 2a. League → Players (Admin)
+
+The Players tab is an admin surface for managing the league roster.
+
+**Player data shape** — extend the player record with:
+```js
+{
+  id, name, short, initials, elo, hue,    // existing
+  nickname: string,                        // optional, displayed in detail sheet
+  gender:   'F' | 'M' | 'X',               // F=Female, M=Male, X=Other
+  level:    'Beginner' | 'Intermediate' | 'Advanced',
+  linked:   boolean,                       // true if attached to a real user account
+  email:    string | null,                 // populated only when linked
+}
+```
+
+**List row** (visual unchanged from base spec):
+- Avatar with **link-status dot** overlay at bottom-right (11px circle, 2px surface border):
+  - **Linked** → solid `ok` green fill, with an `ok` 1px outline ring
+  - **Guest** → hollow (surface fill, `dim` 1px outline ring)
+- Name (13px 600) + meta line `ELO {elo} · {level}` (10px dim)
+- Right chevron
+- Whole row is tap-to-open; uses `.tap` feedback
+
+**Above the list:** small legend strip (10px dim type) showing `{N} linked · {N} guest` with matching dot swatches, and right-aligned "TAP TO MANAGE" hint (uppercase 10px 600).
+
+**Player detail sheet** (bottom sheet, opens on row tap):
+- Header strip: 56px avatar with 16px link-status dot, name (17px 700), and meta line
+  - Linked → check icon + "Linked" (ok green) + " · {email}"
+  - Guest  → "Guest player · no account" (dim)
+- Close button top-right (32px circle, alt bg, X icon)
+- **Detail rows** (key/value list, 12px 14px padding, label flex-basis 96px uppercase 11px 600 dim, value right-aligned 13px text):
+  - Full name
+  - Nickname (or `—`)
+  - Gender (rendered as Female / Male / Other)
+  - Level (rendered as accent-soft pill, 12px 700, accent text)
+  - ELO (Bebas Neue 16px)
+- **Action row:**
+  - Primary `Btn` "Edit details" with edit icon (full-width when no Unlink, half-width otherwise)
+  - Ghost `Btn` "Unlink" with X icon — **only when `linked === true`**
+- **Destructive button** (full-width below): transparent bg, `err`-40% border, `err` text, 13px 700 — "Remove from league"
+
+**Edit mode** (toggled by Edit details):
+- Same sheet, replaces detail rows with a form card:
+  - Full name — text input
+  - Nickname — text input, placeholder "Optional"
+  - Gender — 3-up segmented buttons (Female / Male / Other), selected: accent border + accentSoft bg + accent text
+  - Level — 3-up segmented buttons (Beginner / Intermediate / Advanced), selected: filled accent bg + white text
+- Action row: Cancel (ghost) | Save (primary, check icon)
+- Inputs: 10px 12px padding, 8px radius, line border, bg fill, 13px
+
+**Confirmation sheet** (replaces detail sheet for destructive actions):
+- 48px circle icon at top-center, `err`-12% bg, `err` X icon
+- Title (17px 700 centered): "Remove player?" or "Unlink account?"
+- Body copy (12px dim centered, 1.5 line-height):
+  - Remove: *"This removes **{name}** from the league. Match history is preserved."*
+  - Unlink: *"The user account stays, but **{name}** becomes a guest profile you control."*
+- Action row: Cancel (ghost) | Confirm button — solid `err` bg, white text, 13px 700, label "Remove" / "Unlink"
+- On confirm: dismiss sheet + show Toast ("Player removed" / "Account unlinked", 1.8s)
+
+**State management notes:**
+- The list maintains its own `players` state seeded from the API; mutations are optimistic.
+- `Remove` filters the player out of the list (preserving match history server-side).
+- `Unlink` flips `linked → false` and clears `email`; the player record stays.
+- `Save` (edit) PATCHes `{name, nickname, gender, level}`.
 
 ### 3. Tournament Detail
 **Tabs (segmented underline):** Standings · Matches · Players.
@@ -177,6 +243,10 @@ Build these once in `src/components/ui/` and reuse:
 | `PageHeader` | `title`, `sub?`, `onBack?`, `rightSlot?`, `badge?`, `badgeColor?` | top header with back + title + optional live badge |
 | `BottomNav` | `items`, `active`, `onChange` | tab bar |
 | `Sheet` | `open`, `onClose` | bottom sheet with slide-up animation, drag handle, scrim |
+| `PlayerDetailSheet` | `player`, `onClose`, `onSave`, `onUnlink`, `onRemove` | admin player detail/edit sheet (League → Players); toggles between view and edit modes |
+| `ConfirmSheet` | `confirm: {kind:'remove'\|'unlink', player}`, `onCancel`, `onConfirm` | destructive confirmation sheet with err-tinted icon, contextual copy, and red confirm button |
+| `DetailRow` | `label`, `value`, `last?` | label/value row used inside detail sheets — uppercase 11px label (96px basis), right-aligned value |
+| `Field` | `label` | form field wrapper with uppercase 10px label above the control |
 | `Toast` | `message` | floating pill at bottom |
 
 ## Animations

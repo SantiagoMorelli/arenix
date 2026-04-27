@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues, getLeagueById, createLeague } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
-import { BottomNav, IconButton, SectionLabel, AppBadge } from '../components/ui-new'
+import { BottomNav, IconButton, AppBadge } from '../components/ui-new'
 import NotificationPanel from '../components/NotificationPanel'
 import NotificationToast from '../components/NotificationToast'
 import {
@@ -13,84 +13,74 @@ import {
   isNotifAllowed,
 } from '../services/notificationService'
 
-// ─── Inline SVG icons ────────────────────────────────────────────────────────
+// ─── Icons ───────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
-  <svg
-    width={size} height={size} viewBox="0 0 24 24"
+  <svg width={size} height={size} viewBox="0 0 24 24"
     fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-  >
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     {children}
   </svg>
 )
 
-const BellIcon = () => (
-  <Svg>
-    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 01-3.46 0" />
-  </Svg>
-)
+const BellIcon    = ({ size = 18 }) => <Svg size={size}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></Svg>
+const GearIcon    = ({ size = 18 }) => <Svg size={size}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></Svg>
+const HomeIcon    = ({ size = 20 }) => <Svg size={size}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Svg>
+const StarIcon    = ({ size = 20 }) => <Svg size={size}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Svg>
+const TrophyIcon  = ({ size = 18 }) => <Svg size={size}><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 19.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 19.24 17 22"/><path d="M18 2H6v7a6 6 0 1012 0V2z"/></Svg>
+const BallIcon    = ({ size = 18 }) => <Svg size={size}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20"/><path d="M2 12a14.5 14.5 0 0120 0"/></Svg>
+const PlusIcon    = ({ size = 22 }) => <Svg size={size}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Svg>
 
-const GearIcon = () => (
-  <Svg>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-  </Svg>
-)
-
-const HomeIcon = () => (
-  <Svg>
-    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-    <polyline points="9 22 9 12 15 12 15 22" />
-  </Svg>
-)
-
-const StarIcon = () => (
-  <Svg>
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </Svg>
-)
-
-const TrophyIcon = ({ size = 18 }) => (
-  <Svg size={size}>
-    <path d="M6 9H4.5a2.5 2.5 0 010-5H6" />
-    <path d="M18 9h1.5a2.5 2.5 0 000-5H18" />
-    <path d="M4 22h16" />
-    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 19.24 7 22" />
-    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 19.24 17 22" />
-    <path d="M18 2H6v7a6 6 0 1012 0V2z" />
-  </Svg>
-)
-
-const PlayIcon = ({ size = 22 }) => (
-  <svg
-    width={size} height={size} viewBox="0 0 24 24"
-    fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+const LightningIcon = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24"
+    fill="currentColor" stroke="none">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
   </svg>
 )
 
-const PlusIcon = ({ size = 18 }) => (
-  <Svg size={size}>
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5"  y1="12" x2="19" y2="12" />
-  </Svg>
-)
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+function hueFromString(str) {
+  if (!str) return 200
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff
+  return h % 360
+}
+
+function UserAvatar({ name, userId, size = 40 }) {
+  const initials = (name || '?')
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase() || '')
+    .join('')
+  const hue = hueFromString(userId || name || '')
+  const bg  = `oklch(0.55 0.15 ${hue})`
+  const r   = Math.round(size * 0.32)
+  return (
+    <div style={{
+      width: size, height: size,
+      borderRadius: r,
+      background: bg,
+      color: '#fff',
+      fontSize: Math.round(size * 0.38),
+      fontWeight: 700,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      letterSpacing: '-0.5px',
+    }}>
+      {initials}
+    </div>
+  )
+}
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
-
 function formatShortDate(dateVal) {
-  if (!dateVal) return '';
+  if (!dateVal) return ''
   if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
-    const [y, m, day] = dateVal.split('-');
-    return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const [y, m, day] = dateVal.split('-')
+    return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const d = new Date(dateVal)
+  if (isNaN(d.getTime())) return dateVal
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function getAllMatches(tour) {
@@ -122,15 +112,15 @@ export default function Home() {
   const { profile, isSuperAdmin, canCreateLeague } = useAuth()
   const canCreate = isSuperAdmin || canCreateLeague
 
-  const [leagues,       setLeagues]       = useState([])
+  const [leagues,        setLeagues]        = useState([])
   const [recentFreePlay, setRecentFreePlay] = useState(null)
-  const [loading,       setLoading]       = useState(true)
-  const [showNotifs,    setShowNotifs]    = useState(false)
-  const [showCreate,    setShowCreate]    = useState(false)
-  const [newName,       setNewName]       = useState('')
-  const [creating,      setCreating]      = useState(false)
-  const [notifications, setNotifications] = useState([])
-  const [toastNotif,    setToastNotif]    = useState(null)
+  const [loading,        setLoading]        = useState(true)
+  const [showNotifs,     setShowNotifs]     = useState(false)
+  const [showCreate,     setShowCreate]     = useState(false)
+  const [newName,        setNewName]        = useState('')
+  const [creating,       setCreating]       = useState(false)
+  const [notifications,  setNotifications]  = useState([])
+  const [toastNotif,     setToastNotif]     = useState(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -143,9 +133,7 @@ export default function Home() {
             getFreePlays(activeLeagueId)
           ])
           setLeagues([fullLeague, ...shallowLeagues.slice(1)])
-          if (freePlays.length > 0) {
-            setRecentFreePlay(freePlays[0])
-          }
+          if (freePlays.length > 0) setRecentFreePlay(freePlays[0])
         } else {
           setLeagues([])
         }
@@ -175,10 +163,10 @@ export default function Home() {
   const tournaments   = league?.tournaments || []
   const leaguePlayers = league?.players     || []
 
-  let myRank = '-'
-  let myWins = 0
-  let myLosses = 0
-  let myMatches = 0
+  let myRank        = null
+  let myWins        = 0
+  let myLosses      = 0
+  let myMatches     = 0
   let myTournaments = 0
 
   if (profile && leaguePlayers.length > 0) {
@@ -186,12 +174,11 @@ export default function Home() {
     if (myPlayerRecord) {
       const sortedPlayers = [...leaguePlayers].sort((a, b) => (b.points || 0) - (a.points || 0))
       const rankIndex = sortedPlayers.findIndex(p => p.id === myPlayerRecord.id)
-      if (rankIndex >= 0) myRank = `#${rankIndex + 1} Rank`
+      if (rankIndex >= 0) myRank = rankIndex + 1
 
       tournaments.forEach(tour => {
         const allMatches = getAllMatches(tour).filter(m => m.played)
         let playedInThisTournament = false
-
         allMatches.forEach(m => {
           const inTeam1 = tour.teams?.find(t => t.id === m.team1)?.players?.includes(myPlayerRecord.id)
           const inTeam2 = tour.teams?.find(t => t.id === m.team2)?.players?.includes(myPlayerRecord.id)
@@ -203,32 +190,33 @@ export default function Home() {
             else myLosses++
           }
         })
-
         if (playedInThisTournament) myTournaments++
       })
     }
   }
 
   const leagueStats = [
-    { value: String(myTournaments), label: 'Tournaments' },
-    { value: String(myMatches),     label: 'Matches'     },
-    { value: `${myWins}W-${myLosses}L`,  label: 'Record'      },
+    { value: String(myTournaments),        label: 'Tourneys' },
+    { value: String(myMatches),            label: 'Matches'  },
+    { value: `${myWins}W-${myLosses}L`,   label: 'Record'   },
   ]
 
+  // Recent activity rows
   const recentActivity = []
-  
+
   if (tournaments.length > 0) {
     const lastTour = tournaments[tournaments.length - 1]
+    const isLive   = lastTour.status !== 'completed'
     recentActivity.push({
-      id:           'tour-' + lastTour.id,
-      title:        lastTour.name,
-      sub:          `Tournament · ${formatShortDate(lastTour.date || lastTour.created_at)} · ${phaseLabel(lastTour)}`,
-      badge:        lastTour.status === 'completed' ? 'Done' : 'LIVE',
-      badgeVariant: lastTour.status === 'completed' ? 'dim' : 'success',
-      iconBg:       'bg-accent/15',
-      iconColor:    'text-accent',
-      Icon:         TrophyIcon,
-      onClick:      () => navigate(`/league/${league.id}/tournament/${lastTour.id}`)
+      id:     'tour-' + lastTour.id,
+      title:  lastTour.name,
+      sub:    `${phaseLabel(lastTour)} · ${formatShortDate(lastTour.date || lastTour.created_at)}`,
+      badge:  isLive ? 'LIVE' : 'Done',
+      kind:   isLive ? 'live' : 'done',
+      Icon:   TrophyIcon,
+      iconBg: 'bg-accent/15',
+      iconColor: 'text-accent',
+      onClick: () => navigate(`/league/${league.id}/tournament/${lastTour.id}`),
     })
   }
 
@@ -242,15 +230,15 @@ export default function Home() {
     )).length
 
     recentActivity.push({
-      id:           'fp-' + recentFreePlay.id,
-      title:        recentFreePlay.name || 'Free Play',
-      sub:          `Free Play · ${formatShortDate(recentFreePlay.created_at)} · ${fpPlayersCount} players`,
-      badge:        'Done',
-      badgeVariant: 'dim',
-      iconBg:       'bg-free/15',
-      iconColor:    'text-free',
-      Icon:         PlayIcon,
-      onClick:      () => navigate('/free-play')
+      id:        'fp-' + recentFreePlay.id,
+      title:     recentFreePlay.name || 'Free Play',
+      sub:       `${formatShortDate(recentFreePlay.created_at)} · ${fpPlayersCount} players`,
+      badge:     'Done',
+      kind:      'done',
+      Icon:      BallIcon,
+      iconBg:    'bg-free/15',
+      iconColor: 'text-free',
+      onClick:   () => navigate('/free-play'),
     })
   }
 
@@ -259,11 +247,11 @@ export default function Home() {
     if (!newName.trim()) return
     setCreating(true)
     try {
-      const league = await createLeague({ name: newName.trim() })
-      setLeagues(prev => [...prev, league])
+      const lg = await createLeague({ name: newName.trim() })
+      setLeagues(prev => [...prev, lg])
       setShowCreate(false)
       setNewName('')
-      navigate(`/league/${league.id}`)
+      navigate(`/league/${lg.id}`)
     } finally {
       setCreating(false)
     }
@@ -275,7 +263,7 @@ export default function Home() {
   }
 
   const visibleNotifications = notifications.filter(n => isNotifAllowed(n.type, profile?.notification_prefs))
-  const unreadCount = visibleNotifications.filter(n => !n.read).length
+  const unreadCount           = visibleNotifications.filter(n => !n.read).length
 
   async function handleMarkAllRead() {
     await markAllRead()
@@ -299,10 +287,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
 
-      {/* Toast banner for incoming notifications */}
       <NotificationToast notification={toastNotif} onDismiss={() => setToastNotif(null)} />
-
-      {/* Notification panel overlay */}
       <NotificationPanel
         isOpen={showNotifs}
         onClose={() => setShowNotifs(false)}
@@ -311,23 +296,26 @@ export default function Home() {
         onRead={handleRead}
       />
 
-      {/* ── Scrollable content ── */}
+      {/* ── Scrollable body ── */}
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 pb-6">
 
           {/* ── Header ── */}
-          <div className="flex justify-between items-center py-3 mb-1">
-            <div>
-              <div className="text-[13px] text-dim font-medium">Welcome back</div>
-              <div className="text-[22px] font-bold text-text leading-tight">{displayName} 🏐</div>
+          <div style={{ padding: '14px 0 18px' }} className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <UserAvatar name={profile?.full_name} userId={profile?.id} size={40} />
+              <div>
+                <div className="text-[12px] text-dim">Welcome back</div>
+                <div className="text-[18px] font-bold text-text leading-tight">{displayName}</div>
+              </div>
             </div>
-            <div className="flex gap-2 text-dim">
+            <div className="flex gap-2">
               <IconButton badge={unreadCount > 0 ? unreadCount : undefined} onClick={() => setShowNotifs(v => !v)}>
                 <BellIcon />
               </IconButton>
               {canCreate && (
                 <IconButton onClick={() => setShowCreate(true)}>
-                  <PlusIcon />
+                  <PlusIcon size={18} />
                 </IconButton>
               )}
               <IconButton onClick={() => navigate('/settings')}>
@@ -336,41 +324,73 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── League card ── */}
+          {/* ── League hero card ── */}
           {league ? (
             <div
               onClick={() => navigate(`/league/${league.id}`)}
-              className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-accent/40 cursor-pointer active:opacity-80 transition-opacity"
+              className="rounded-[14px] mb-3.5 border cursor-pointer active:opacity-80 transition-opacity overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, var(--c-surface), var(--c-alt))',
+                borderColor: 'color-mix(in srgb, var(--c-accent) 40%, transparent)',
+                padding: '18px 18px 14px',
+              }}
             >
-              <div className="flex justify-between items-start mb-3.5">
+              {/* Top row: league name + rank */}
+              <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-[10px] text-accent font-bold tracking-[1.5px] uppercase mb-1">
+                  <div className="text-[10px] font-bold tracking-[1.2px] uppercase text-accent mb-1.5">
                     My League
                   </div>
-                  <div className="text-[17px] font-bold text-text">{league.name}</div>
-                  <div className="text-[12px] text-dim mt-0.5">
-                    Season {league.season} · {leaguePlayers.length} players
+                  <div className="font-display text-[30px] leading-none text-text mb-1">
+                    {league.name}
+                  </div>
+                  <div className="text-[12px] text-dim">
+                    {league.season ? `Season ${league.season}` : 'Season 2026'} · {leaguePlayers.length} players
                   </div>
                 </div>
-                {myRank !== '-' && (
-                  <div className="bg-accent/15 rounded-lg px-3 py-1.5 text-[11px] font-bold text-accent shrink-0">
-                    {myRank}
+                {myRank !== null && (
+                  <div
+                    className="rounded-[10px] text-center shrink-0"
+                    style={{
+                      background: 'color-mix(in srgb, var(--c-accent) 15%, transparent)',
+                      color: 'var(--c-accent)',
+                      padding: '8px 12px',
+                    }}
+                  >
+                    <div className="text-[9px] font-bold tracking-[1px] uppercase">Rank</div>
+                    <div className="font-display text-[26px] leading-none">#{myRank}</div>
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+
+              {/* Stat tiles */}
+              <div className="flex gap-2 mt-4">
                 {leagueStats.map(s => (
-                  <div key={s.label} className="flex-1 bg-bg rounded-[10px] py-2 px-1.5 text-center">
-                    <div className="text-[15px] font-bold text-text">{s.value}</div>
-                    <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
+                  <div
+                    key={s.label}
+                    className="flex-1 rounded-[10px] text-center"
+                    style={{ background: 'var(--c-bg)', padding: '10px 4px' }}
+                  >
+                    <div className="font-display text-[20px] leading-none text-text">{s.value}</div>
+                    <div className="text-[9px] text-dim mt-0.5 tracking-[0.3px]">{s.label}</div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-surface to-alt rounded-2xl p-[18px] mb-3.5 border border-dashed border-accent/40 text-center">
+            /* No league state */
+            <div
+              className="rounded-[14px] mb-3.5 border border-dashed text-center"
+              style={{
+                background: 'linear-gradient(135deg, var(--c-surface), var(--c-alt))',
+                borderColor: 'color-mix(in srgb, var(--c-accent) 40%, transparent)',
+                padding: '18px',
+              }}
+            >
               <div className="text-[16px] font-bold text-text mb-1">No leagues yet</div>
-              <div className="text-[13px] text-dim mb-4">Join a league via invite link{canCreate ? ' or create a new one' : ''}.</div>
+              <div className="text-[13px] text-dim mb-4">
+                Join a league via invite link{canCreate ? ' or create a new one' : ''}.
+              </div>
               {canCreate && (
                 <button
                   onClick={() => setShowCreate(true)}
@@ -382,43 +402,48 @@ export default function Home() {
             </div>
           )}
 
-          {/* ── Free Play button ── */}
-          <div
+          {/* ── Free Play CTA ── */}
+          <button
             onClick={() => navigate('/free-play')}
-            className="bg-gradient-to-br from-free/15 to-surface rounded-2xl p-4 mb-[18px] border border-free/30 flex items-center gap-3.5 cursor-pointer active:opacity-80 transition-opacity"
+            className="w-full text-left rounded-[14px] mb-5 border cursor-pointer active:opacity-80 transition-opacity"
+            style={{
+              background: 'linear-gradient(135deg, color-mix(in srgb, var(--c-free) 15%, transparent), var(--c-surface))',
+              borderColor: 'color-mix(in srgb, var(--c-free) 30%, transparent)',
+              padding: '16px',
+              display: 'flex', alignItems: 'center', gap: '14px',
+            }}
           >
-            <div className="w-12 h-12 rounded-[14px] bg-free/15 flex items-center justify-center text-free flex-shrink-0">
-              <PlayIcon />
+            <div
+              className="rounded-[14px] flex items-center justify-center text-free shrink-0"
+              style={{
+                width: 52, height: 52,
+                background: 'color-mix(in srgb, var(--c-free) 15%, transparent)',
+              }}
+            >
+              <LightningIcon size={24} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[15px] font-bold text-text">Free Play</div>
-              <div className="text-[11px] text-dim">Quick match · Any players · No league</div>
+              <div className="text-[11px] text-dim mt-0.5">Quick match · Any players · No league</div>
             </div>
-            <span className="text-free flex-shrink-0">
-              <PlusIcon />
+            <span className="text-free shrink-0">
+              <PlusIcon size={22} />
             </span>
+          </button>
+
+          {/* ── Recent section header ── */}
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="text-[11px] font-bold tracking-[1.2px] uppercase text-dim">Recent</div>
+            <button className="text-[11px] font-semibold text-accent active:opacity-70 transition-opacity">
+              See all
+            </button>
           </div>
 
-          {/* ── Recent activity ── */}
-          <SectionLabel color="dim">Recent</SectionLabel>
-
+          {/* ── Activity rows ── */}
           {recentActivity.length > 0 ? (
             <div className="flex flex-col gap-2">
               {recentActivity.map(item => (
-                <div
-                  key={item.id}
-                  onClick={item.onClick}
-                  className="bg-surface rounded-xl px-3.5 py-3 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
-                >
-                  <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${item.iconBg} ${item.iconColor}`}>
-                    <item.Icon />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-text truncate">{item.title}</div>
-                    <div className="text-[11px] text-dim truncate">{item.sub}</div>
-                  </div>
-                  <AppBadge text={item.badge} variant={item.badgeVariant} />
-                </div>
+                <ActivityRow key={item.id} item={item} />
               ))}
             </div>
           ) : (
@@ -430,17 +455,13 @@ export default function Home() {
         </div>
       </main>
 
-      {/* ── Bottom navigation ── */}
-      <BottomNav
-        items={NAV_ITEMS}
-        active="home"
-        onChange={handleNavChange}
-      />
+      {/* ── Bottom nav ── */}
+      <BottomNav items={NAV_ITEMS} active="home" onChange={handleNavChange} />
 
       {/* ── Create League modal ── */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 bg-bg/90 backdrop-blur-sm flex items-end justify-center p-4">
-          <div className="bg-surface border border-line rounded-2xl w-full max-w-[420px] p-5">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-4">
+          <div className="bg-surface border border-line rounded-[14px] w-full max-w-[420px] p-5">
             <div className="text-[17px] font-bold text-text mb-4">New League</div>
             <form onSubmit={handleCreateLeague} className="flex flex-col gap-3">
               <input
@@ -469,6 +490,33 @@ export default function Home() {
         </div>
       )}
 
+    </div>
+  )
+}
+
+// ─── Activity row ─────────────────────────────────────────────────────────────
+function ActivityRow({ item }) {
+  const badgeVariant =
+    item.kind === 'live' ? 'success' :
+    item.kind === 'won'  ? 'accent'  : 'dim'
+
+  return (
+    <div
+      onClick={item.onClick}
+      className="bg-surface rounded-[14px] border border-line cursor-pointer active:opacity-80 transition-opacity"
+      style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}
+    >
+      <div
+        className={`rounded-[10px] flex items-center justify-center shrink-0 ${item.iconBg} ${item.iconColor}`}
+        style={{ width: 38, height: 38 }}
+      >
+        <item.Icon size={18} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-semibold text-text truncate">{item.title}</div>
+        <div className="text-[11px] text-dim mt-0.5 truncate">{item.sub}</div>
+      </div>
+      <AppBadge text={item.badge} variant={badgeVariant} />
     </div>
   )
 }

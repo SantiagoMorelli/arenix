@@ -33,7 +33,10 @@ export async function getFreePlay(id) {
     supabase.from('free_play_games').select('*').eq('free_play_id', id).order('created_at', { ascending: true }),
   ])
 
-  if (fpRes.error) throw fpRes.error
+  if (fpRes.error)      throw fpRes.error
+  if (teamsRes.error)   throw new Error('teams: ' + teamsRes.error.message)
+  if (playersRes.error) throw new Error('players: ' + playersRes.error.message)
+  if (gamesRes.error)   throw new Error('games: ' + gamesRes.error.message)
 
   return {
     ...fpRes.data,

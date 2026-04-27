@@ -340,6 +340,7 @@ export default function FreePlaySession() {
   const [team2Id,       setTeam2Id]       = useState('')
   const [setsPerMatch,  setSetsPerMatch]  = useState(1)
   const [startingMatch, setStartingMatch] = useState(false)
+  const [startError,    setStartError]    = useState('')
 
   const isFinished = session?.status === 'finished'
 
@@ -365,11 +366,13 @@ export default function FreePlaySession() {
   const handleStartMatch = async () => {
     if (!team1Id || !team2Id || team1Id === team2Id) return
     setStartingMatch(true)
+    setStartError('')
     try {
       const game = await startGame(team1Id, team2Id, setsPerMatch)
       navigate(`/free-play/${id}/match`, { state: { gameId: game.id, setsPerMatch } })
     } catch (err) {
       console.error(err)
+      setStartError(err?.message || JSON.stringify(err) || 'Unknown error')
       setStartingMatch(false)
     }
   }
@@ -640,6 +643,11 @@ export default function FreePlaySession() {
                 >
                   {startingMatch ? 'Starting…' : '🏐 Start Match'}
                 </AppButton>
+                {startError && (
+                  <div className="mt-2 p-3 rounded-xl bg-error/10 border border-error/30 text-error text-[12px] font-mono break-all">
+                    {startError}
+                  </div>
+                )}
               </div>
             )}
           </div>

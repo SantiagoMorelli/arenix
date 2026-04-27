@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { uid } from "../lib/utils";
 
-export const SAVE_KEY = "bv_live_game";
+export const SAVE_KEY    = "bv_live_game";
+export const FP_SAVE_KEY = "fp_live_game";
 
 export const loadSaved = () => {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
 };
 
-export function useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch = 1 }) {
+export const loadSavedFrom = (key) => {
+  try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+};
+
+export function useLiveGame({ teams, players, informalMode, tournamentMatches, preloadMatchId, t, setsPerMatch = 1, saveKey = SAVE_KEY }) {
   // ── Restore-prompt state ─────────────────────────────────────────────────
-  const [showRestore, setShowRestore] = useState(() => !!loadSaved());
+  const [showRestore, setShowRestore] = useState(() => !!loadSavedFrom(saveKey));
 
   // ── Setup state ──────────────────────────────────────────────────────────
   const [team1Id, setTeam1Id] = useState("");
@@ -72,7 +77,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
       score1, score2, serveIndex, side, points,
       log, sets, winner, pointsToWin, history,
     };
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot)); } catch {}
+    try { localStorage.setItem(saveKey, JSON.stringify(snapshot)); } catch {}
   }, [gameStarted, score1, score2, serveIndex, side, points, log, sets, winner, pointsToWin, history]);
 
   // ── Scroll log to bottom ─────────────────────────────────────────────────
@@ -255,7 +260,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
 
   // ── Reset ─────────────────────────────────────────────────────────────────
   const reset = () => {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
+    try { localStorage.removeItem(saveKey); } catch {}
     setTeam1Id(""); setTeam2Id(""); setGameStarted(false);
     setScore1(0); setScore2(0); setServeIndex(0); setPoints(0);
     setSide({ t1: "left", t2: "right" }); setLog([]); setSets([]);
@@ -311,7 +316,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
 
   // ── Restore / discard saved game ──────────────────────────────────────────
   const restoreGame = () => {
-    const s = loadSaved();
+    const s = loadSavedFrom(saveKey);
     if (!s) return;
     setTeam1Id(s.team1Id); setTeam2Id(s.team2Id); setGameStarted(s.gameStarted);
     setT1FirstServer(s.t1FirstServer); setT2FirstServer(s.t2FirstServer);
@@ -323,7 +328,7 @@ export function useLiveGame({ teams, players, informalMode, tournamentMatches, p
   };
 
   const discardSaved = () => {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
+    try { localStorage.removeItem(saveKey); } catch {}
     setShowRestore(false);
   };
 

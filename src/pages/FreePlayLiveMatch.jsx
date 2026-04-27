@@ -24,7 +24,7 @@ const Svg = ({ children, size = 20 }) => (
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 // ─── Setup screen ─────────────────────────────────────────────────────────────
-function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
+function MatchSetup({ live, teams, team1Id, team2Id, routeState, onBack }) {
   const tName = (tid) => teams.find(t => t.id === tid)?.name || '?'
   const t1Name = tName(team1Id)
   const t2Name = tName(team2Id)
@@ -62,13 +62,16 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
       </div>
 
       {/* ── DEBUG PANEL (remove once fixed) ── */}
-      <div className="bg-error/10 border border-error/30 rounded-xl p-3 mb-2 text-[11px] font-mono text-error break-all max-w-[400px] w-full mx-auto">
-        <div><b>t1Id:</b> {team1Id || '(empty)'}</div>
-        <div><b>t2Id:</b> {team2Id || '(empty)'}</div>
-        <div><b>teams count:</b> {teams.length}</div>
-        <div><b>teams:</b> {JSON.stringify(teams.map(t => ({ id: t.id.slice(0,8), name: t.name, players: t.players?.length })))}</div>
-        <div><b>t1ServeOrder:</b> {JSON.stringify(live.t1ServeOrder)}</div>
-        <div><b>t2ServeOrder:</b> {JSON.stringify(live.t2ServeOrder)}</div>
+      <div className="bg-error/10 border border-error/30 rounded-xl p-3 mb-2 text-[11px] font-mono break-all max-w-[400px] w-full mx-auto text-error">
+        <pre className="whitespace-pre-wrap">{JSON.stringify({
+          t1Id: team1Id || '(empty)',
+          t2Id: team2Id || '(empty)',
+          routeState: routeState,
+          teamsCount: teams.length,
+          teams: teams.map(t => ({ id: t.id?.slice(0,8), name: t.name, players: t.players })),
+          t1Order: live.t1ServeOrder,
+          t2Order: live.t2ServeOrder,
+        }, null, 2)}</pre>
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
@@ -265,6 +268,7 @@ export default function FreePlayLiveMatch() {
     )
   }
 
+
   if (!gameId || !session) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-3">
@@ -284,6 +288,7 @@ export default function FreePlayLiveMatch() {
         teams={teams}
         team1Id={stateTeam1Id}
         team2Id={stateTeam2Id}
+        routeState={location.state}
         onBack={() => navigate(`/free-play/${id}`)}
       />
     )

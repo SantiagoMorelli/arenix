@@ -329,8 +329,10 @@ function KnockoutResults({ tournament, onMatchClick, players = [] }) {
                   key={m.id}
                   onClick={() => m.played && onMatchClick && onMatchClick(m)}
                   className={`flex items-center px-3.5 py-2.5 rounded-xl mb-1.5 border ${
-                    m.played
+                    m.played && onMatchClick
                       ? 'bg-surface border-line cursor-pointer hover:bg-alt transition-colors'
+                      : m.played
+                      ? 'bg-surface border-line'
                       : 'bg-gradient-to-r from-surface to-alt border-accent/40'
                   }`}
                 >
@@ -1160,7 +1162,6 @@ export default function TournamentDetail() {
           <StandingsTab
             tournament={tournament}
             onGenerateKnockout={handleGenerateKnockout}
-            onMatchClick={m => navigate(`/league/${id}/tournament/${tid}/match/${m.id}`)}
             canManage={canManage}
             players={leaguePlayers}
           />

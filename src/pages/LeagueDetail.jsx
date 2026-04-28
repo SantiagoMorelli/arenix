@@ -164,6 +164,7 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
   const [editName,       setEditName]       = useState(league?.name       || '')
   const [editLocation,   setEditLocation]   = useState(league?.location   || '')
   const [editVisibility, setEditVisibility] = useState(league?.visibility || 'public')
+  const [editingGeneral, setEditingGeneral] = useState(false)
   const [savingGeneral,  setSavingGeneral]  = useState(false)
   const [generalSaved,   setGeneralSaved]   = useState(false)
 
@@ -179,10 +180,18 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
       })
       await refetch()
       setGeneralSaved(true)
+      setEditingGeneral(false)
       setTimeout(() => setGeneralSaved(false), 2000)
     } finally {
       setSavingGeneral(false)
     }
+  }
+
+  function handleCancelGeneral() {
+    setEditName(league?.name       || '')
+    setEditLocation(league?.location   || '')
+    setEditVisibility(league?.visibility || 'public')
+    setEditingGeneral(false)
   }
 
   async function handleToggleAdmin(member) {
@@ -260,60 +269,102 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
       {(isAdmin || isSuperAdmin) && (
         <>
           <SectionLabel color="accent">General</SectionLabel>
-          <form onSubmit={handleSaveGeneral} className="bg-surface border border-line rounded-xl p-4 mb-4 flex flex-col gap-3">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">League Name</div>
-              <input
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                placeholder="League name"
-                className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
-              />
-            </div>
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">Location</div>
-              <input
-                value={editLocation}
-                onChange={e => setEditLocation(e.target.value)}
-                placeholder="City, Country (optional)"
-                className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
-              />
-            </div>
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">Visibility</div>
-              <div className="flex gap-2">
+          {!editingGeneral ? (
+            <div className="bg-surface border border-line rounded-xl p-4 mb-4">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="text-[15px] font-bold text-text leading-snug">{league?.name}</div>
                 <button
                   type="button"
-                  onClick={() => setEditVisibility('public')}
-                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
-                    editVisibility === 'public'
-                      ? 'bg-accent text-white border-accent'
-                      : 'bg-bg text-dim border-line'
-                  }`}
+                  onClick={() => setEditingGeneral(true)}
+                  className="flex-shrink-0 text-[12px] font-bold text-accent bg-accent/10 border border-accent/30 px-3 py-1.5 rounded-lg cursor-pointer"
                 >
-                  Public
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditVisibility('private')}
-                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
-                    editVisibility === 'private'
-                      ? 'bg-accent text-white border-accent'
-                      : 'bg-bg text-dim border-line'
-                  }`}
-                >
-                  Private
+                  Edit
                 </button>
               </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-dim w-20">Location</span>
+                  <span className="text-[13px] text-text">{league?.location || <span className="text-dim italic">Not set</span>}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-dim w-20">Visibility</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md capitalize ${
+                    league?.visibility === 'private'
+                      ? 'bg-error/10 text-error'
+                      : 'bg-success/10 text-success'
+                  }`}>
+                    {league?.visibility || 'public'}
+                  </span>
+                </div>
+              </div>
+              {generalSaved && (
+                <div className="mt-3 text-[12px] text-success font-semibold">Saved!</div>
+              )}
             </div>
-            <button
-              type="submit"
-              disabled={!editName.trim() || savingGeneral}
-              className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[14px] disabled:opacity-50"
-            >
-              {savingGeneral ? 'Saving…' : generalSaved ? 'Saved!' : 'Save Changes'}
-            </button>
-          </form>
+          ) : (
+            <form onSubmit={handleSaveGeneral} className="bg-surface border border-line rounded-xl p-4 mb-4 flex flex-col gap-3">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">League Name</div>
+                <input
+                  autoFocus
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="League name"
+                  className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">Location</div>
+                <input
+                  value={editLocation}
+                  onChange={e => setEditLocation(e.target.value)}
+                  placeholder="City, Country (optional)"
+                  className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">Visibility</div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditVisibility('public')}
+                    className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                      editVisibility === 'public'
+                        ? 'bg-accent text-white border-accent'
+                        : 'bg-bg text-dim border-line'
+                    }`}
+                  >
+                    Public
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditVisibility('private')}
+                    className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                      editVisibility === 'private'
+                        ? 'bg-accent text-white border-accent'
+                        : 'bg-bg text-dim border-line'
+                    }`}
+                  >
+                    Private
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={!editName.trim() || savingGeneral}
+                className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[14px] disabled:opacity-50"
+              >
+                {savingGeneral ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelGeneral}
+                className="w-full py-2.5 rounded-xl text-dim font-semibold text-[13px] bg-transparent border-0 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </form>
+          )}
 
           <SectionLabel color="accent">Invite Players</SectionLabel>
           <div className="bg-surface border border-line rounded-xl p-4 mb-4">

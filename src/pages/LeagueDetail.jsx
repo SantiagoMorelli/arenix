@@ -589,7 +589,10 @@ export default function LeagueDetail() {
             </button>
             <div>
               <div className="text-[18px] font-bold text-text leading-tight">{league.name}</div>
-              <div className="text-[11px] text-dim">Season {league.season}</div>
+              <div className="text-[11px] text-dim">
+                Season {new Date().getFullYear()}
+                {league.location && <> · {league.location}</>}
+              </div>
             </div>
           </div>
 

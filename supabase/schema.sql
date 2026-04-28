@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS public.leagues (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   season      TEXT NOT NULL DEFAULT '2026',
+  location    TEXT,
+  visibility  TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
   invite_code TEXT UNIQUE NOT NULL
     DEFAULT UPPER(SUBSTRING(replace(gen_random_uuid()::TEXT, '-', ''), 1, 8)),
   owner_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,

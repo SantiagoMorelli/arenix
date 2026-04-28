@@ -118,6 +118,8 @@ export default function Home() {
   const [showNotifs,     setShowNotifs]     = useState(false)
   const [showCreate,     setShowCreate]     = useState(false)
   const [newName,        setNewName]        = useState('')
+  const [newLocation,    setNewLocation]    = useState('')
+  const [newVisibility,  setNewVisibility]  = useState('public')
   const [creating,       setCreating]       = useState(false)
   const [notifications,  setNotifications]  = useState([])
   const [toastNotif,     setToastNotif]     = useState(null)
@@ -247,10 +249,12 @@ export default function Home() {
     if (!newName.trim()) return
     setCreating(true)
     try {
-      const lg = await createLeague({ name: newName.trim() })
+      const lg = await createLeague({ name: newName.trim(), location: newLocation.trim(), visibility: newVisibility })
       setLeagues(prev => [...prev, lg])
       setShowCreate(false)
       setNewName('')
+      setNewLocation('')
+      setNewVisibility('public')
       navigate(`/league/${lg.id}`)
     } finally {
       setCreating(false)
@@ -471,6 +475,36 @@ export default function Home() {
                 placeholder="League name"
                 className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
               />
+              <input
+                value={newLocation}
+                onChange={e => setNewLocation(e.target.value)}
+                placeholder="Location (optional)"
+                className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewVisibility('public')}
+                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                    newVisibility === 'public'
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-bg text-dim border-line'
+                  }`}
+                >
+                  Public
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewVisibility('private')}
+                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                    newVisibility === 'private'
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-bg text-dim border-line'
+                  }`}
+                >
+                  Private
+                </button>
+              </div>
               <button
                 type="submit"
                 disabled={!newName.trim() || creating}
@@ -480,7 +514,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => { setShowCreate(false); setNewName('') }}
+                onClick={() => { setShowCreate(false); setNewName(''); setNewLocation(''); setNewVisibility('public') }}
                 className="w-full py-3 rounded-xl text-dim font-semibold text-[13px] bg-transparent border-0"
               >
                 Cancel

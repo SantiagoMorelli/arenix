@@ -7,6 +7,7 @@ import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService
 import { deleteLeague, leaveLeague } from '../services/leagueService'
 import { buildInviteLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
+import LeaguePlayersTab from '../components/LeaguePlayersTab'
 import { createNotification } from '../services/notificationService'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -148,252 +149,6 @@ const NAV_ITEMS = [
   { id: 'tournaments', icon: <TrophyIcon />, label: 'Tournaments' },
   { id: 'settings',    icon: <GearIcon />,   label: 'Settings'    },
 ]
-
-// ── Players Tab ───────────────────────────────────────────────────────────────
-function PlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate, currentUserId, currentUserSex }) {
-  const [newName, setNewName]   = useState('')
-  const [newLevel, setNewLevel] = useState('beginner')
-  const [newSex, setNewSex]     = useState(null) // 'M' | 'F' | null
-  const [adding, setAdding]     = useState(false)
-  const [formMode, setFormMode] = useState(null) // 'join' or 'add'
-  const [linkingPlayerId, setLinkingPlayerId] = useState(null)
-  const [selectedUserId, setSelectedUserId]   = useState('')
-
-  const myPlayer = (league?.players || []).find(p => p.userId === currentUserId)
-
-  // Find members who are not yet linked to any player
-  const unlinkedMembers = (league?.members || []).filter(m => 
-    !league.players?.some(p => p.userId === m.userId)
-  )
-
-  async function handleAdd() {
-    if (!newName.trim()) return
-    setAdding(true)
-    try {
-      const payload = { name: newName.trim(), level: newLevel, sex: newSex }
-      if (formMode === 'join') payload.userId = currentUserId
-
-      await onAdd(payload)
-      setNewName(''); setNewLevel('beginner'); setNewSex(null); setFormMode(null)
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-2.5">
-        <span className="text-[12px] font-bold text-accent tracking-wide uppercase">RANKINGS</span>
-        <div className="flex gap-2">
-          {!myPlayer && (
-            <button
-              onClick={() => setFormMode(formMode === 'join' ? null : 'join')}
-              className="flex items-center gap-1 text-[11px] font-semibold text-free cursor-pointer bg-transparent border-0"
-            >
-              <PlusIcon /> Join
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => setFormMode(formMode === 'add' ? null : 'add')}
-              className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
-            >
-              <PlusIcon /> Add Player
-            </button>
-          )}
-        </div>
-      </div>
-
-      {formMode && (
-        <div className="bg-surface border border-line rounded-xl p-3.5 mb-3">
-          <input
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            placeholder="Player name"
-            className="w-full bg-bg border border-line rounded-lg px-3 py-2 text-[13px] text-text outline-none mb-2 focus:border-accent"
-          />
-          <select
-            value={newLevel}
-            onChange={e => setNewLevel(e.target.value)}
-            className="w-full bg-bg border border-line rounded-lg px-3 py-2 text-[13px] text-text outline-none mb-2 focus:border-accent"
-          >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
-          <div className="mb-3">
-            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-1.5">Gender (optional)</div>
-            <div className="flex gap-2">
-              {[{ v: 'M', label: '♂ Male' }, { v: 'F', label: '♀ Female' }].map(opt => (
-                <button
-                  key={opt.v}
-                  type="button"
-                  onClick={() => setNewSex(newSex === opt.v ? null : opt.v)}
-                  className={`flex-1 py-2 rounded-lg text-[12px] font-semibold border cursor-pointer transition-all ${
-                    newSex === opt.v
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-line bg-bg text-dim'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFormMode(null)}
-              className="flex-1 py-2 rounded-lg bg-alt border border-line text-[12px] font-semibold text-dim"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={adding || !newName.trim()}
-              className="flex-1 py-2 rounded-lg bg-accent border-0 text-[12px] font-bold text-white disabled:opacity-50"
-            >
-              {adding ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
-        {(league?.players || []).length === 0 ? (
-          <div className="text-center text-[13px] text-dim py-6">No players yet</div>
-        ) : (
-          [...(league.players || [])]
-            .sort((a, b) => (b.points || 0) - (a.points || 0))
-            .map((p, i, arr) => {
-            const isMe = p.userId === currentUserId
-            const isUnclaimed = !p.userId
-            const isLinkingThis = linkingPlayerId === p.id
-            const label = p.displayName || p.name
-            const flag = countryFlag(p.country)
-
-            return (
-              <div key={p.id} className={`flex items-center px-3.5 py-2.5 flex-wrap gap-y-2 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
-                <span className={`w-[22px] text-[13px] font-bold flex-shrink-0 ${i < 3 ? 'text-accent' : 'text-dim'}`}>
-                  {i + 1}
-                </span>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-semibold mr-2.5 flex-shrink-0 ${isMe ? 'bg-accent/20 text-accent' : 'bg-alt text-text'}`}>
-                  {label[0]}
-                </div>
-                <div className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className={`text-[13px] font-medium truncate ${isMe ? 'text-accent' : 'text-text'}`}>
-                    {label}
-                  </span>
-                  {p.sex && (
-                    <span className="text-[9px] font-bold text-dim bg-alt px-1.5 py-0.5 rounded flex-shrink-0">
-                      {p.sex === 'M' ? '♂' : '♀'}
-                    </span>
-                  )}
-                  {flag && <span className="text-[14px] leading-none flex-shrink-0">{flag}</span>}
-                  {isMe && (
-                    <span className="text-[9px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded flex-shrink-0">
-                      YOU
-                    </span>
-                  )}
-                  {p.userId && !isMe && (
-                    <span className="text-[9px] font-bold bg-success/20 text-success px-1.5 py-0.5 rounded flex-shrink-0" title="Account linked">
-                      ✓
-                    </span>
-                  )}
-                </div>
-                
-                <span className="text-[12px] font-semibold text-dim ml-2 mr-3 min-w-[30px] text-right">{p.points ?? 0}</span>
-                
-                {/* Regular users claiming themselves (Optional: keeping this for regular users if you want them to be able to claim, but usually admins handle this)
-                    Let's only show this if I am an admin OR if I don't have a player yet. */}
-                {!myPlayer && isUnclaimed && !isAdmin && (
-                  <button
-                    onClick={() => onUpdate(p.id, { userId: currentUserId, ...(currentUserSex && !p.sex ? { sex: currentUserSex } : {}) })}
-                    className="text-free text-[10px] font-bold bg-free/15 px-2 py-1 rounded cursor-pointer mr-2 border-0"
-                  >
-                    Claim
-                  </button>
-                )}
-
-                {/* Admin controls */}
-                <div className="flex items-center gap-2 ml-auto">
-                  {isAdmin && isUnclaimed && !isLinkingThis && (
-                    <button
-                      onClick={() => {
-                        setLinkingPlayerId(p.id)
-                        setSelectedUserId('')
-                      }}
-                      className="text-free text-[10px] font-bold bg-free/15 px-2 py-1 rounded cursor-pointer border-0"
-                    >
-                      Link
-                    </button>
-                  )}
-                  
-                  {isAdmin && p.userId && (
-                     <button
-                      onClick={() => onUpdate(p.id, { userId: null })}
-                      className="text-dim text-[10px] font-bold bg-transparent border-0 cursor-pointer"
-                    >
-                      Unlink
-                    </button>
-                  )}
-
-                  {isAdmin && (
-                    <button
-                      onClick={() => onDelete(p.id)}
-                      className="text-error text-[10px] font-bold bg-transparent border-0 cursor-pointer ml-1"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-
-                {/* Linking UI dropdown for Admins */}
-                {isLinkingThis && (
-                  <div className="w-full flex items-center gap-2 mt-1 bg-bg p-2 rounded-lg border border-line">
-                    <select
-                      value={selectedUserId}
-                      onChange={e => setSelectedUserId(e.target.value)}
-                      className="flex-1 bg-surface border border-line rounded px-2 py-1 text-[11px] text-text outline-none focus:border-accent"
-                    >
-                      <option value="">Select member...</option>
-                      {unlinkedMembers.map(m => (
-                        <option key={m.userId} value={m.userId}>
-                          {m.fullName || 'Unknown'} ({m.role})
-                        </option>
-                      ))}
-                      {unlinkedMembers.length === 0 && (
-                        <option disabled>No unlinked members</option>
-                      )}
-                    </select>
-                    <button
-                      onClick={() => setLinkingPlayerId(null)}
-                      className="text-dim text-[11px] font-semibold bg-transparent border-0 cursor-pointer px-2"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (selectedUserId) {
-                          onUpdate(p.id, { userId: selectedUserId })
-                          setLinkingPlayerId(null)
-                        }
-                      }}
-                      disabled={!selectedUserId}
-                      className="text-white text-[11px] font-bold bg-accent px-3 py-1 rounded cursor-pointer border-0 disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                  </div>
-                )}
-
-              </div>
-            )
-          })
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) {
@@ -654,7 +409,6 @@ export default function LeagueDetail() {
   }
 
   async function handleDeletePlayer(playerId) {
-    if (!window.confirm('Remove this player from the league?')) return
     try {
       await deletePlayer(playerId)
       refetch()
@@ -784,14 +538,13 @@ export default function LeagueDetail() {
 
           {/* ════ Players tab ════ */}
           {activeTab === 'players' && (
-            <PlayersTab
+            <LeaguePlayersTab
               league={league}
               isAdmin={isAdmin}
               onAdd={handleAddPlayer}
               onDelete={handleDeletePlayer}
               onUpdate={handleUpdatePlayer}
               currentUserId={profile?.id}
-              currentUserSex={profile?.gender ?? null}
             />
           )}
 

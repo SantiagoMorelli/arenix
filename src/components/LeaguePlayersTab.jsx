@@ -24,7 +24,7 @@ const LinkIcon   = ({ size = 14 }) => <Svg size={size} className="shrink-0"><pat
 // ── Shared data ────────────────────────────────────────────────────────────────
 const GENDERS      = [{ k: 'F', l: 'Female' }, { k: 'M', l: 'Male' }, { k: 'X', l: 'Other' }]
 const LEVELS       = ['Beginner', 'Intermediate', 'Advanced']
-const GENDER_LABEL = { F: 'Female', M: 'Male', X: 'Other' }
+const GENDER_LABEL = { F: 'Female', M: 'Male', X: 'Other', male: 'Male', female: 'Female', other: 'Other' }
 const levelCap     = v => (v ? v[0].toUpperCase() + v.slice(1) : '—')
 
 // ── Sheet ──────────────────────────────────────────────────────────────────────
@@ -90,12 +90,14 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState(null)
 
+  const PROFILE_TO_SEX = { male: 'M', female: 'F', other: 'X' }
+
   useEffect(() => {
     if (player) {
       setDraft({
-        name:     player.displayName || player.name || '',
+        name:     player.fullName || player.name || '',
         nickname: player.nickname || '',
-        gender:   player.sex || player.gender || '',
+        gender:   player.sex || PROFILE_TO_SEX[player.gender] || '',
         level:    player.level || 'beginner',
       })
       setEditing(false)
@@ -111,9 +113,9 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
   }
 
   const detailRows = [
-    { label: 'FULL NAME', value: player.displayName || player.name },
+    { label: 'FULL NAME', value: player.fullName || player.name },
     { label: 'NICKNAME',  value: player.nickname || '—' },
-    { label: 'GENDER',    value: GENDER_LABEL[player.sex || player.gender] || '—' },
+    { label: 'GENDER',    value: (player.userId ? GENDER_LABEL[player.gender] || GENDER_LABEL[player.sex] : GENDER_LABEL[player.sex]) || '—' },
     {
       label: 'LEVEL',
       value: (

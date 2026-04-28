@@ -142,10 +142,13 @@ function normalizePlayer(row) {
   return {
     id:          row.id,
     name:        row.name,
+    fullName:    linked?.full_name ?? row.name,
+    nickname:    linked?.nickname  ?? null,
     displayName: (linked?.nickname || linked?.full_name) || row.name,
     country:     linked?.country ?? row.country ?? null,
     avatarUrl:   linked?.avatar_url ?? null,
     sex:         row.sex ?? null,
+    gender:      linked?.gender   ?? null,
     level:       row.level,
     wins:        row.wins,
     losses:      row.losses,

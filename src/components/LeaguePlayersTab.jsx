@@ -52,7 +52,7 @@ function Toast({ message }) {
 }
 
 // ── Avatar with link-status dot ────────────────────────────────────────────────
-function Avatar({ player, size, dotBorder }) {
+function Avatar({ player, size, dotBorder, showDot = true }) {
   const sz       = size || 34
   const isLarge  = sz > 40
   const isLinked = !!player.userId
@@ -69,16 +69,18 @@ function Avatar({ player, size, dotBorder }) {
       >
         {label[0].toUpperCase()}
       </div>
-      <span
-        className="absolute rounded-full"
-        style={{
-          right: -1, bottom: -1,
-          width: dotSz, height: dotSz,
-          backgroundColor: isLinked ? '#2ECC71' : 'transparent',
-          border: `${dotBw}px solid ${dotBorder || '#1A2734'}`,
-          boxShadow: isLinked ? '0 0 0 1px #2ECC71' : '0 0 0 1px #7A8EA0',
-        }}
-      />
+      {showDot && (
+        <span
+          className="absolute rounded-full"
+          style={{
+            right: -1, bottom: -1,
+            width: dotSz, height: dotSz,
+            backgroundColor: isLinked ? '#2ECC71' : 'transparent',
+            border: `${dotBw}px solid ${dotBorder || '#1A2734'}`,
+            boxShadow: isLinked ? '0 0 0 1px #2ECC71' : '0 0 0 1px #7A8EA0',
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -541,20 +543,20 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
         )}
       </div>
 
-      {/* Linked / guest legend */}
-      <div className="flex items-center gap-3 text-[10px] text-dim mb-2 mx-0.5">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-[7px] h-[7px] rounded-full bg-success" />
-          {linkedCount} linked
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-[7px] h-[7px] rounded-full border border-dim" />
-          {guestCount} guest
-        </span>
-        {isAdmin && (
+      {/* Linked / guest legend — admin only */}
+      {isAdmin && (
+        <div className="flex items-center gap-3 text-[10px] text-dim mb-2 mx-0.5">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-[7px] h-[7px] rounded-full bg-success" />
+            {linkedCount} linked
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-[7px] h-[7px] rounded-full border border-dim" />
+            {guestCount} guest
+          </span>
           <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.6px]">Tap to manage</span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Player list */}
       <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
@@ -569,10 +571,12 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
               onClick={() => isAdmin && setSelectedId(p.id)}
               className={`flex items-center gap-3 px-3.5 py-2.5 transition-colors ${isAdmin ? 'cursor-pointer active:bg-alt/50' : ''} ${i < arr.length - 1 ? 'border-b border-line' : ''}`}
             >
-              <Avatar player={p} size={34} dotBorder="#1A2734" />
+              <Avatar player={p} size={34} dotBorder="#1A2734" showDot={isAdmin} />
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-text truncate">{p.displayName || p.name}</div>
-                <div className="text-[10px] text-dim mt-0.5">ELO {p.points ?? 0} · {levelCap(p.level)}</div>
+                <div className="text-[10px] text-dim mt-0.5">
+                  ELO {p.points ?? 0}{isAdmin ? ` · ${levelCap(p.level)}` : ''}
+                </div>
               </div>
               {isAdmin && <ChevR />}
             </div>

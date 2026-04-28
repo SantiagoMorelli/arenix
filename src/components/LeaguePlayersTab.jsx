@@ -19,6 +19,7 @@ const ChevR      = () => <Svg size={16} className="text-dim shrink-0"><polyline 
 const CheckIcon  = ({ size = 11 }) => <Svg size={size} className="shrink-0"><polyline points="20 6 9 17 4 12"/></Svg>
 const EditIcon   = () => <Svg size={14} className="shrink-0"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></Svg>
 const XIcon      = ({ size = 14 }) => <Svg size={size} className="shrink-0"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Svg>
+const LinkIcon   = ({ size = 14 }) => <Svg size={size} className="shrink-0"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></Svg>
 
 // ── Shared data ────────────────────────────────────────────────────────────────
 const GENDERS      = [{ k: 'F', l: 'Female' }, { k: 'M', l: 'Male' }, { k: 'X', l: 'Other' }]
@@ -83,7 +84,7 @@ function Avatar({ player, size, dotBorder }) {
 }
 
 // ── PlayerDetailSheet ──────────────────────────────────────────────────────────
-function PlayerDetailSheet({ player, onClose, onSave, onUnlink, onRemove }) {
+function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState(null)
 
@@ -224,12 +225,19 @@ function PlayerDetailSheet({ player, onClose, onSave, onUnlink, onRemove }) {
             >
               <EditIcon /> Edit details
             </button>
-            {isLinked && (
+            {isLinked ? (
               <button
                 onClick={onUnlink}
                 className="flex-1 flex items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-alt border border-line text-text text-[13px] font-semibold cursor-pointer"
               >
                 <XIcon size={14} /> Unlink
+              </button>
+            ) : (
+              <button
+                onClick={onLink}
+                className="flex-1 flex items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-alt border border-line text-text text-[13px] font-semibold cursor-pointer"
+              >
+                <LinkIcon size={14} /> Link
               </button>
             )}
           </div>
@@ -294,6 +302,71 @@ function ConfirmSheet({ confirm, onCancel, onConfirm }) {
           className="flex-1 min-h-[44px] rounded-xl bg-error text-white text-[13px] font-bold cursor-pointer border-0"
         >
           {isRemove ? 'Remove' : 'Unlink'}
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
+// ── LinkSheet ──────────────────────────────────────────────────────────────────
+function LinkSheet({ player, members, onCancel, onConfirm }) {
+  const [selectedUserId, setSelectedUserId] = useState('')
+
+  useEffect(() => { setSelectedUserId('') }, [player?.id])
+
+  if (!player) return null
+  const name = player.displayName || player.name
+
+  return (
+    <Sheet open={true} onClose={onCancel}>
+      <div className="w-12 h-12 rounded-full bg-free/10 flex items-center justify-center text-free mx-auto mb-3">
+        <LinkIcon size={22} />
+      </div>
+      <div className="text-[17px] font-bold text-text text-center mb-1.5">Link account</div>
+      <div className="text-[12px] text-dim text-center mb-4 px-3 leading-relaxed">
+        Select a member to link to <b className="text-text">{name}</b>.
+      </div>
+
+      {members.length === 0 ? (
+        <div className="text-[12px] text-dim text-center py-4 bg-bg border border-line rounded-xl mb-4">
+          No unlinked members available
+        </div>
+      ) : (
+        <div className="bg-bg border border-line rounded-xl overflow-hidden mb-4">
+          {members.map((m, i, arr) => (
+            <div
+              key={m.userId}
+              onClick={() => setSelectedUserId(m.userId)}
+              className={`flex items-center gap-3 px-3.5 py-3 min-h-[44px] cursor-pointer transition-colors ${selectedUserId === m.userId ? 'bg-free/10' : 'active:bg-alt/50'} ${i < arr.length - 1 ? 'border-b border-line' : ''}`}
+            >
+              <div className="w-8 h-8 rounded-lg bg-alt flex items-center justify-center text-[12px] font-bold text-text flex-shrink-0">
+                {(m.fullName || '?')[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-semibold text-text truncate">{m.fullName || 'Unknown'}</div>
+                <div className="text-[11px] text-dim capitalize">{m.role}</div>
+              </div>
+              {selectedUserId === m.userId && (
+                <span className="text-free"><CheckIcon size={16} /></span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          className="flex-1 min-h-[44px] rounded-xl bg-alt border border-line text-accent text-[13px] font-bold cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => selectedUserId && onConfirm(selectedUserId)}
+          disabled={!selectedUserId}
+          className="flex-1 min-h-[44px] rounded-xl bg-free text-white text-[13px] font-bold cursor-pointer border-0 disabled:opacity-50"
+        >
+          Link
         </button>
       </div>
     </Sheet>
@@ -395,15 +468,21 @@ function AddPlayerSheet({ open, onClose, onAdd }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onUpdate }) {
-  const [search,     setSearch]     = useState('')
-  const [selectedId, setSelectedId] = useState(null)
-  const [confirm,    setConfirm]    = useState(null) // { kind: 'remove'|'unlink', player }
-  const [toast,      setToast]      = useState('')
-  const [showAdd,    setShowAdd]    = useState(false)
+  const [search,      setSearch]      = useState('')
+  const [selectedId,  setSelectedId]  = useState(null)
+  const [confirm,     setConfirm]     = useState(null) // { kind: 'remove'|'unlink', player }
+  const [linkTarget,  setLinkTarget]  = useState(null) // player being linked
+  const [toast,       setToast]       = useState('')
+  const [showAdd,     setShowAdd]     = useState(false)
 
   const allPlayers  = league?.players || []
   const linkedCount = allPlayers.filter(p => !!p.userId).length
   const guestCount  = allPlayers.length - linkedCount
+
+  // Members not yet linked to any player
+  const unlinkedMembers = (league?.members || []).filter(m =>
+    !allPlayers.some(p => p.userId === m.userId)
+  )
 
   const filtered = search.trim()
     ? allPlayers.filter(p => (p.displayName || p.name || '').toLowerCase().includes(search.toLowerCase()))
@@ -430,6 +509,13 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
       showToast('Account unlinked')
     }
     setConfirm(null)
+  }
+
+  async function handleLinkConfirm(userId) {
+    if (!linkTarget) return
+    await onUpdate(linkTarget.id, { userId })
+    setLinkTarget(null)
+    showToast('Account linked')
   }
 
   return (
@@ -498,6 +584,7 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
         player={selected}
         onClose={() => setSelectedId(null)}
         onSave={handleSavePlayer}
+        onLink={() => setLinkTarget(selected)}
         onUnlink={() => setConfirm({ kind: 'unlink', player: selected })}
         onRemove={() => setConfirm({ kind: 'remove', player: selected })}
       />
@@ -506,6 +593,13 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
         confirm={confirm}
         onCancel={() => setConfirm(null)}
         onConfirm={handleConfirm}
+      />
+
+      <LinkSheet
+        player={linkTarget}
+        members={unlinkedMembers}
+        onCancel={() => setLinkTarget(null)}
+        onConfirm={handleLinkConfirm}
       />
 
       <AddPlayerSheet

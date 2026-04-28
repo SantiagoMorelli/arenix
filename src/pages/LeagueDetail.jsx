@@ -4,7 +4,7 @@ import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
-import { deleteLeague, leaveLeague } from '../services/leagueService'
+import { deleteLeague, leaveLeague, updateLeague } from '../services/leagueService'
 import { buildInviteLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 import LeaguePlayersTab from '../components/LeaguePlayersTab'
@@ -158,8 +158,32 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
   const [deleting, setDeleting] = useState(false)
   const [leaving, setLeaving]   = useState(false)
   const [saving,  setSaving]    = useState(null) // userId being saved
-  const isOwner = league?.ownerId === currentUserId;
+  const isOwner = league?.ownerId === currentUserId
   const inviteLink = buildInviteLink(league?.inviteCode || '')
+
+  const [editName,       setEditName]       = useState(league?.name       || '')
+  const [editLocation,   setEditLocation]   = useState(league?.location   || '')
+  const [editVisibility, setEditVisibility] = useState(league?.visibility || 'public')
+  const [savingGeneral,  setSavingGeneral]  = useState(false)
+  const [generalSaved,   setGeneralSaved]   = useState(false)
+
+  async function handleSaveGeneral(e) {
+    e.preventDefault()
+    if (!editName.trim()) return
+    setSavingGeneral(true)
+    try {
+      await updateLeague(league.id, {
+        name:       editName.trim(),
+        location:   editLocation.trim(),
+        visibility: editVisibility,
+      })
+      await refetch()
+      setGeneralSaved(true)
+      setTimeout(() => setGeneralSaved(false), 2000)
+    } finally {
+      setSavingGeneral(false)
+    }
+  }
 
   async function handleToggleAdmin(member) {
     setSaving(member.userId)
@@ -235,6 +259,62 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
     <div>
       {(isAdmin || isSuperAdmin) && (
         <>
+          <SectionLabel color="accent">General</SectionLabel>
+          <form onSubmit={handleSaveGeneral} className="bg-surface border border-line rounded-xl p-4 mb-4 flex flex-col gap-3">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">League Name</div>
+              <input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                placeholder="League name"
+                className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">Location</div>
+              <input
+                value={editLocation}
+                onChange={e => setEditLocation(e.target.value)}
+                placeholder="City, Country (optional)"
+                className="w-full bg-bg border border-line rounded-xl px-3 py-2.5 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wide text-dim mb-1.5">Visibility</div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditVisibility('public')}
+                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                    editVisibility === 'public'
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-bg text-dim border-line'
+                  }`}
+                >
+                  Public
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditVisibility('private')}
+                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                    editVisibility === 'private'
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-bg text-dim border-line'
+                  }`}
+                >
+                  Private
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={!editName.trim() || savingGeneral}
+              className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[14px] disabled:opacity-50"
+            >
+              {savingGeneral ? 'Saving…' : generalSaved ? 'Saved!' : 'Save Changes'}
+            </button>
+          </form>
+
           <SectionLabel color="accent">Invite Players</SectionLabel>
           <div className="bg-surface border border-line rounded-xl p-4 mb-4">
             <div className="text-[11px] text-dim mb-2">Share this link to invite players:</div>

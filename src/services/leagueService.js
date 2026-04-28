@@ -13,6 +13,8 @@ function normalizeLeague(row) {
     id:          row.id,
     name:        row.name,
     season:      row.season,
+    location:    row.location    || '',
+    visibility:  row.visibility  || 'public',
     inviteCode:  row.invite_code,
     ownerId:     row.owner_id,
     createdAt:   row.created_at,
@@ -108,12 +110,12 @@ export async function getLeagueById(leagueId) {
 /**
  * Create a new league. Automatically adds the creator as 'admin' member.
  */
-export async function createLeague({ name, season = '2026' }) {
+export async function createLeague({ name, location = '', visibility = 'public', season = '2026' }) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: league, error } = await supabase
     .from('leagues')
-    .insert({ name, season, owner_id: user.id })
+    .insert({ name, location: location || null, visibility, season, owner_id: user.id })
     .select()
     .single()
 
@@ -133,6 +135,26 @@ export async function createLeague({ name, season = '2026' }) {
   ])
 
   return normalizeLeague(league)
+}
+
+/**
+ * Update editable league fields (name, location, visibility).
+ */
+export async function updateLeague(leagueId, { name, location, visibility }) {
+  const patch = {}
+  if (name       !== undefined) patch.name       = name
+  if (location   !== undefined) patch.location   = location || null
+  if (visibility !== undefined) patch.visibility = visibility
+
+  const { data, error } = await supabase
+    .from('leagues')
+    .update(patch)
+    .eq('id', leagueId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return normalizeLeague(data)
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────

@@ -255,6 +255,7 @@ const GameStats = ({
                 <span className="w-8 text-[9px] font-bold text-dim text-center">ACE</span>
                 <span className="w-8 text-[9px] font-bold text-dim text-center">SPK</span>
                 <span className="w-8 text-[9px] font-bold text-dim text-center">BLK</span>
+                <span className="w-8 text-[9px] font-bold text-dim text-center">TIP</span>
               </div>
               {[
                 ...teamPlayerIds(team1Id).map(pid => ({ pid, stat: s1, isTeam1: true  })),
@@ -272,6 +273,7 @@ const GameStats = ({
                     <span className="w-8 text-[11px] text-dim text-center">{bt.ace   || 0}</span>
                     <span className="w-8 text-[11px] text-dim text-center">{bt.spike || 0}</span>
                     <span className="w-8 text-[11px] text-dim text-center">{bt.block || 0}</span>
+                    <span className="w-8 text-[11px] text-dim text-center">{bt.tip   || 0}</span>
                   </div>
                 );
               })}

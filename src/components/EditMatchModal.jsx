@@ -96,8 +96,12 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
   const isTie      = computedSets.some(s => s.winner === null)
   const canSave    = !!matchWinner && !isTie && !saving
 
-  const newScore1  = hasSets ? t1SetsWon : editSets[0]?.s1 ?? 0
-  const newScore2  = hasSets ? t2SetsWon : editSets[0]?.s2 ?? 0
+  // For 1-set tournaments score1/score2 in the DB are actual points (e.g. 21),
+  // not set counts. Multi-set tournaments store set counts (e.g. 2).
+  // This mirrors the isOneSet logic in LiveMatch.jsx handleSaveResult.
+  const setsPerMatch = tournament?.setsPerMatch || 1
+  const newScore1  = hasSets && setsPerMatch > 1 ? t1SetsWon : editSets[0]?.s1 ?? 0
+  const newScore2  = hasSets && setsPerMatch > 1 ? t2SetsWon : editSets[0]?.s2 ?? 0
 
   const t1Name = teamName(teams, match.team1)
   const t2Name = teamName(teams, match.team2)

@@ -25,8 +25,13 @@ function reconstructGameState(match, tournament) {
     points = currentEntries.length
   }
 
+  // All entries in match.sets are "completed" sets. Strip the last one so we
+  // resume scoring within it — score1/score2 from the log are already that
+  // last set's running totals, not a new set's scores.
+  const completedSets  = sets.length > 0 ? sets.slice(0, -1) : []
   const setsPerMatch   = tournament?.setsPerMatch || 1
-  const pointsToWin    = sets.length === setsPerMatch - 1 ? 15 : 21
+  // Use completedSets.length so the tiebreak threshold (15 pts) triggers correctly
+  const pointsToWin    = completedSets.length === setsPerMatch - 1 ? 15 : 21
   const team1          = tournament?.teams?.find(t => t.id === match.team1)
   const team2          = tournament?.teams?.find(t => t.id === match.team2)
   const t1ServeOrder   = team1?.players || []
@@ -38,7 +43,7 @@ function reconstructGameState(match, tournament) {
     gameStarted: true,
     score1,
     score2,
-    sets,
+    sets: completedSets,
     log,
     winner: null,
     t1FirstServer: 0,

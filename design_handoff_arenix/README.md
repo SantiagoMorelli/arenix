@@ -217,10 +217,10 @@ The remaining sections describe the surfaces that only appear in the admin view.
 
 ### 4. Tournament Setup Wizard
 4-step wizard with progress bar (4px alt track, accent fill).
-1. **Name + dates + format.** Input field, two date tiles, 3 radio cards (Round robin / Group + Knockout / Single elim).
+1. **Name + date + format.**
 2. **Players** (8 selected of 10). Selectable cards with checkbox.
-3. **Team building.** 3 radio cards (Auto by ELO / Manual / Random) + preview of 4 generated teams.
-4. **Review.** Key/value summary card. Big launch button.
+3. **Team building.**
+4. **Review.**
 Footer: Continue / Launch button (full-width, ok-green on final step).
 
 ### 5. Live Match Flow

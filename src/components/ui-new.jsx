@@ -132,7 +132,7 @@ export function SectionLabel({ children, color = 'dim' }) {
  */
 export function BottomNav({ items, active, onChange }) {
   return (
-    <div className="flex border-t border-line bg-surface pt-1.5 pb-0.5">
+    <div className="screen__bottom flex border-t border-line bg-surface pt-1.5 pb-0.5">
       {items.map(item => (
         <button
           key={item.id}

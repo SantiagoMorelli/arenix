@@ -170,10 +170,10 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
 
       {/* ── Back arrow header ── */}
-      <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0 text-text">
+      <div className="screen__top flex items-center gap-2.5 px-4 py-3 text-text">
         <button
           onClick={() => navigate(-1)}
           className="cursor-pointer bg-transparent border-0 p-1 -ml-1"
@@ -184,7 +184,7 @@ export default function Settings() {
       </div>
 
       {/* ── Scrollable content ── */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="screen__body">
         <div className="px-4 pb-6">
 
           {/* ── Appearance ── */}

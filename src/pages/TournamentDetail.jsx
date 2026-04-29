@@ -1024,7 +1024,7 @@ export default function TournamentDetail() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
 
       {/* ── Tournament Stats Full-screen Overlay ── */}
       {showTournamentStats && (
@@ -1076,7 +1076,7 @@ export default function TournamentDetail() {
             )}
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 relative">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 relative">
             {selectedStatsMatch.log && selectedStatsMatch.log.length > 0 ? (
               <GameStats
                 winner={selectedStatsMatch.winner}
@@ -1157,7 +1157,7 @@ export default function TournamentDetail() {
       )}
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-2.5 px-4 pt-3 pb-2.5 flex-shrink-0">
+      <div className="screen__top flex items-center gap-2.5 px-4 pt-3 pb-2.5">
         <button
           onClick={() => navigate(`/league/${id}`)}
           className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text flex-shrink-0"
@@ -1204,7 +1204,7 @@ export default function TournamentDetail() {
       />
 
       {/* ── Tab content ── */}
-      <main className="flex-1 overflow-y-auto pb-6 relative">
+      <main className="screen__body pb-6 relative">
         {activeTab === 'standings' && (
           <StandingsTab
             tournament={tournament}

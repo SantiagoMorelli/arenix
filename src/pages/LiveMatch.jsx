@@ -61,7 +61,7 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
   const canStart = live.t1ServeOrder?.length > 0 && live.t2ServeOrder?.length > 0
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden p-4">
+    <div className="screen bg-bg text-text p-4">
       <div className="flex items-center justify-between mt-2 mb-6">
         <button 
           onClick={onBack}
@@ -75,7 +75,7 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
         <div className="w-10" /> {/* Spacer */}
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
+      <div className="screen__body flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
         {/* One-time battery reminder */}
         {!reminderSeen && (
           <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 flex gap-3 items-start">
@@ -533,8 +533,8 @@ export default function LiveMatch() {
 
   if (live.winner) {
     return (
-      <div className="flex flex-col h-screen bg-bg text-text overflow-hidden overflow-y-auto p-4">
-        <GameStats
+      <div className="screen bg-bg text-text">
+        <main className="screen__body p-4"><GameStats
           winner={live.winner}
           team1Id={live.team1Id} team2Id={live.team2Id}
           sets={live.sets} t1Sets={setWins1} t2Sets={setWins2}
@@ -547,7 +547,7 @@ export default function LiveMatch() {
           pendingUndo={live.pendingUndo}
           onConfirmUndo={live.confirmUndo}
           onCancelUndo={live.cancelUndo}
-        />
+        /></main>
       </div>
     )
   }
@@ -593,9 +593,9 @@ export default function LiveMatch() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden select-none">
+    <div className="screen bg-bg text-text select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-surface border-b border-line shrink-0">
+      <div className="screen__top flex items-center justify-between px-4 py-3 bg-surface border-b border-line">
         <button onClick={live.requestEnd} className="text-[12px] font-bold text-error uppercase tracking-wider bg-transparent border-0">
           End
         </button>
@@ -673,7 +673,7 @@ export default function LiveMatch() {
       )}
 
       {/* Main Scoreboard */}
-      <div className="flex-1 flex flex-col px-4 pt-6 pb-4">
+      <div className="flex-1 min-h-0 flex flex-col px-4 pt-6 pb-4">
         {/* Sets Tracker */}
         {tournament.setsPerMatch > 1 && (
           <div className="flex justify-center gap-12 mb-6">
@@ -759,7 +759,7 @@ export default function LiveMatch() {
           <span>Match Log</span>
           <span>{live.log?.length || 0} actions</span>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 scroll-smooth">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-1 scroll-smooth">
           {(!live.log || live.log.length === 0) ? (
             <div className="h-full flex items-center justify-center text-[12px] text-dim italic">
               Awaiting first serve...

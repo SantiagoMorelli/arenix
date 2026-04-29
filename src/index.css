@@ -58,3 +58,34 @@
 body {
   font-family: var(--font-sans);
 }
+
+/* ─── Screen layout — fixed header + scrolling middle + fixed footer ────────── */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.screen__top,
+.screen__bottom {
+  flex: 0 0 auto;
+}
+
+.screen__body {
+  flex: 1 1 auto;
+  min-height: 0;                       /* prevents flex child from expanding past its basis */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
+  overscroll-behavior: contain;        /* don't propagate scroll to the page behind */
+}
+
+.screen__top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.screen__bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

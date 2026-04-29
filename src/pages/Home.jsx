@@ -289,7 +289,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
 
       <NotificationToast notification={toastNotif} onDismiss={() => setToastNotif(null)} />
       <NotificationPanel
@@ -301,7 +301,7 @@ export default function Home() {
       />
 
       {/* ── Scrollable body ── */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="screen__body">
         <div className="px-4 pb-6">
 
           {/* ── Header ── */}

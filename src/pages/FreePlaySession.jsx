@@ -85,7 +85,7 @@ function AddPlayerModal({ session, onAdd, onClose }) {
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
           {tab === 'league' ? (
             <div className="flex flex-col gap-3">
               {/* Search */}
@@ -216,7 +216,7 @@ function TeamModal({ session, team, onSave, onClose }) {
         </div>
 
         {/* Player multi-select */}
-        <div className="flex-1 overflow-y-auto px-6 pb-2">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-2">
           <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-3">
             Players ({selected.size} selected)
           </div>
@@ -408,10 +408,10 @@ export default function FreePlaySession() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pt-5 pb-4 shrink-0">
+      <div className="screen__top flex items-center justify-between px-4 pt-5 pb-4">
         <button
           onClick={() => navigate('/free-play')}
           className="w-10 h-10 flex items-center justify-center bg-surface border border-line rounded-xl text-text"
@@ -484,7 +484,7 @@ export default function FreePlaySession() {
       )}
 
       {/* ── Scrollable content ───────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 pb-10">
+      <div className="screen__body px-4 pb-10">
 
         {/* ── Players section ────────────────────────────────────────────────── */}
         <div className="mt-4">

@@ -602,6 +602,7 @@ export async function quickEditMatchScores(matchId, newSets, newScore1, newScore
     score2:    newScore2,
     winner_id: newWinnerId,
     sets:      newSets,
+    log:       null,  // old point log no longer matches edited scores
   }).eq('id', matchId)
 
   // Apply new stats

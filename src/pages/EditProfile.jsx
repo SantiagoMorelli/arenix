@@ -158,10 +158,10 @@ export default function EditProfile() {
   const currentPreview = photoPreview
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0">
+      <div className="screen__top flex items-center gap-2.5 px-4 py-3">
         <button
           onClick={() => navigate(-1)}
           className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text"
@@ -172,7 +172,7 @@ export default function EditProfile() {
       </div>
 
       {/* ── Scrollable content ── */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="screen__body">
         <div className="px-4 pb-8 flex flex-col gap-5">
 
           {/* ── Avatar picker ── */}

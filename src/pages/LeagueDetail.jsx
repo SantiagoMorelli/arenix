@@ -573,10 +573,10 @@ export default function LeagueDetail() {
   const myRank        = myPlayer ? rankedPlayers.indexOf(myPlayer) + 1 : null
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
 
       {/* ── Scrollable content ── */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="screen__body">
         <div className="px-4 pb-6">
 
           {/* ── Header ── */}

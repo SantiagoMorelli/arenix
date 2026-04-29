@@ -46,7 +46,7 @@ function MatchSetup({ live, teams, team1Id, team2Id, routeState, queryErrors, on
   const canStart = live.t1ServeOrder?.length > 0 && live.t2ServeOrder?.length > 0
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden p-4">
+    <div className="screen bg-bg text-text p-4">
       {/* Header */}
       <div className="flex items-center justify-between mt-2 mb-6">
         <button
@@ -78,7 +78,7 @@ function MatchSetup({ live, teams, team1Id, team2Id, routeState, queryErrors, on
         }, null, 2)}</pre>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
+      <div className="screen__body flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
 
         {/* Teams preview */}
         <div className="bg-surface rounded-xl border border-line p-4 flex items-center justify-center gap-4">

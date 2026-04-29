@@ -300,8 +300,8 @@ export default function TournamentSetupWizard() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0">
+    <div className="screen bg-bg text-text">
+      <div className="screen__top flex items-center gap-2.5 px-4 py-3">
         <button
           onClick={() => navigate(`/league/${id}`)}
           className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text"
@@ -316,7 +316,7 @@ export default function TournamentSetupWizard() {
 
       <Stepper step={step} />
 
-      <main className="flex-1 overflow-y-auto px-4 pb-6">
+      <main className="screen__body px-4 pb-6">
         {/* ══ Step 0: Players ══════════════════════════════════════════════════ */}
         {step === 0 && (
           <div>

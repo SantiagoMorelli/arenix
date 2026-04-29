@@ -106,9 +106,9 @@ export default function FreePlayList() {
   const finishedSessions = sessions.filter(s => s.status === 'finished')
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text overflow-hidden">
+    <div className="screen bg-bg text-text">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-5 pb-4 shrink-0">
+      <div className="screen__top flex items-center justify-between px-4 pt-5 pb-4">
         <button
           onClick={() => navigate('/')}
           className="w-10 h-10 flex items-center justify-center bg-surface border border-line rounded-xl text-text"
@@ -128,7 +128,7 @@ export default function FreePlayList() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-8">
+      <div className="screen__body px-4 pb-8">
         {loading ? (
           <div className="flex items-center justify-center h-40">
             <div className="w-7 h-7 border-2 border-free border-t-transparent rounded-full animate-spin" />

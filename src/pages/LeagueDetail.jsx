@@ -575,26 +575,26 @@ export default function LeagueDetail() {
   return (
     <div className="screen bg-bg text-text">
 
+      {/* ── Fixed top header ── */}
+      <div className="screen__top flex items-center gap-2.5 px-4 pt-2.5 pb-4">
+        <button
+          onClick={() => navigate('/')}
+          className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text"
+        >
+          <BackIcon />
+        </button>
+        <div>
+          <div className="text-[18px] font-bold text-text leading-tight">{league.name}</div>
+          <div className="text-[11px] text-dim">
+            Season {new Date().getFullYear()}
+            {league.location && <> · {league.location}</>}
+          </div>
+        </div>
+      </div>
+
       {/* ── Scrollable content ── */}
       <main className="screen__body">
         <div className="px-4 pb-6">
-
-          {/* ── Header ── */}
-          <div className="flex items-center gap-2.5 pt-2.5 pb-4">
-            <button
-              onClick={() => navigate('/')}
-              className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text"
-            >
-              <BackIcon />
-            </button>
-            <div>
-              <div className="text-[18px] font-bold text-text leading-tight">{league.name}</div>
-              <div className="text-[11px] text-dim">
-                Season {new Date().getFullYear()}
-                {league.location && <> · {league.location}</>}
-              </div>
-            </div>
-          </div>
 
           {/* ════ Rankings tab ════ */}
           {activeTab === 'rankings' && (

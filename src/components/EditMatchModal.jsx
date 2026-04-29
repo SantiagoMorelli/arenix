@@ -96,8 +96,9 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
   const isTie      = computedSets.some(s => s.winner === null)
   const canSave    = !!matchWinner && !isTie && !saving
 
-  const newScore1  = hasSets ? t1SetsWon : editSets[0]?.s1 ?? 0
-  const newScore2  = hasSets ? t2SetsWon : editSets[0]?.s2 ?? 0
+  const isSingleSet = (tournament?.setsPerMatch ?? 1) === 1
+  const newScore1   = hasSets && !isSingleSet ? t1SetsWon : editSets[0]?.s1 ?? 0
+  const newScore2   = hasSets && !isSingleSet ? t2SetsWon : editSets[0]?.s2 ?? 0
 
   const t1Name = teamName(teams, match.team1)
   const t2Name = teamName(teams, match.team2)

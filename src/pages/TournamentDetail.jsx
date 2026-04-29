@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
-import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam, fetchMatchScorer, claimMatchScorer } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam, fetchMatchScorer, claimMatchScorer, deleteTournament } from '../services/tournamentService'
 import { uid } from '../lib/utils'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import GameStats from '../components/GameStats'
@@ -851,6 +851,8 @@ export default function TournamentDetail() {
   // ── Tournament Stats Overlay State ──
   const [showTournamentStats, setShowTournamentStats] = useState(false)
   const [showMatchMenu, setShowMatchMenu] = useState(false)
+  const [showTournamentMenu, setShowTournamentMenu] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // ── Match Start Modal State ──
   const [selectedMatch, setSelectedMatch] = useState(null)
@@ -1002,6 +1004,18 @@ export default function TournamentDetail() {
 
   const handleMatchClick = (match) => {
     setSelectedStatsMatch(match)
+  }
+
+  const handleDeleteTournament = async () => {
+    if (!window.confirm(`Delete "${tournament.name}"? This cannot be undone — all matches and team data will be lost.`)) return
+    setDeleting(true)
+    try {
+      await deleteTournament(tid)
+      navigate(`/league/${id}`)
+    } catch (err) {
+      alert(err.message || 'Failed to delete tournament')
+      setDeleting(false)
+    }
   }
 
   // Mock translation function for GameStats
@@ -1171,6 +1185,30 @@ export default function TournamentDetail() {
           <div className="text-[11px] text-dim">{league?.name}</div>
         </div>
         <StatusBadge tournament={tournament} />
+        {isAdmin && (
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowTournamentMenu(v => !v)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-dim text-[20px] font-black leading-none cursor-pointer bg-transparent border-0"
+            >
+              ···
+            </button>
+            {showTournamentMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowTournamentMenu(false)} />
+                <div className="absolute right-0 top-10 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[180px]">
+                  <button
+                    onClick={() => { setShowTournamentMenu(false); handleDeleteTournament() }}
+                    disabled={deleting}
+                    className="w-full px-4 py-3 text-left text-[13px] font-semibold text-error hover:bg-alt cursor-pointer border-0 bg-transparent flex items-center gap-2"
+                  >
+                    🗑️ {deleting ? 'Deleting…' : 'Delete tournament'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Tournament Complete Banner ── */}

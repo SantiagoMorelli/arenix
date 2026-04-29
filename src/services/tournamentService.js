@@ -634,3 +634,11 @@ export async function quickEditMatchScores(matchId, newSets, newScore1, newScore
     }
   }
 }
+
+export async function deleteTournament(tournamentId) {
+  const { error } = await supabase
+    .from('tournaments')
+    .delete()
+    .eq('id', tournamentId)
+  if (error) throw error
+}

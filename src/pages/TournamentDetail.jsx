@@ -8,6 +8,7 @@ import { uid } from '../lib/utils'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import GameStats from '../components/GameStats'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
+import EditMatchModal from '../components/EditMatchModal'
 
 // ─── Inline icons ─────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -862,6 +863,9 @@ export default function TournamentDetail() {
   // ── Match Stats Overlay State ──
   const [selectedStatsMatch, setSelectedStatsMatch] = useState(null)
 
+  // ── Edit Match State ──
+  const [editingMatch, setEditingMatch] = useState(null)
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg text-text">
@@ -1069,7 +1073,7 @@ export default function TournamentDetail() {
                   <div className="text-[18px] font-bold text-text mb-1">Manual Score Result</div>
                   <div className="text-[13px] text-dim">No detailed stats were recorded for this match.</div>
                 </div>
-                
+
                 <div className="bg-surface border border-line rounded-2xl p-6 w-full max-w-[280px]">
                   {[
                     { teamId: selectedStatsMatch.team1, score: selectedStatsMatch.score1 },
@@ -1096,7 +1100,7 @@ export default function TournamentDetail() {
                     )
                   })}
                 </div>
-                
+
                 <button
                   onClick={() => setSelectedStatsMatch(null)}
                   className="mt-4 px-6 py-2.5 rounded-xl bg-alt text-[13px] font-bold text-text border-0 cursor-pointer"
@@ -1106,6 +1110,36 @@ export default function TournamentDetail() {
               </div>
             )}
           </div>
+
+          {/* Edit Result button — admin only */}
+          {isAdmin && (
+            <div className="flex-shrink-0 px-4 py-3 border-t border-line bg-surface">
+              <button
+                onClick={() => setEditingMatch(selectedStatsMatch)}
+                className="w-full min-h-[44px] rounded-xl bg-alt border border-line text-text font-semibold text-[13px] cursor-pointer hover:bg-bg transition-colors flex items-center justify-center gap-2"
+              >
+                ✏️ Edit Result
+              </button>
+            </div>
+          )}
+
+          {/* Edit Match Modal */}
+          {editingMatch && editingMatch.id === selectedStatsMatch.id && (
+            <EditMatchModal
+              match={editingMatch}
+              tournament={tournament}
+              teams={tournament.teams}
+              leagueId={id}
+              tournamentId={tid}
+              navigate={navigate}
+              onSave={() => {
+                setEditingMatch(null)
+                setSelectedStatsMatch(null)
+                refetch()
+              }}
+              onClose={() => setEditingMatch(null)}
+            />
+          )}
         </div>
       )}
 

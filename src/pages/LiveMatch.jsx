@@ -212,7 +212,7 @@ export default function LiveMatch() {
   const { id, tid, mid } = useParams()
 
   const { league, loading: leagueLoading, refetch } = useLeague(id)
-  const { canScore, loading: roleLoading }          = useLeagueRole(id)
+  const { canScore, isAdmin, loading: roleLoading }  = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
 
   // Get all matches flat to pass to the hook
@@ -360,12 +360,12 @@ export default function LiveMatch() {
     )
   }
 
-  // Redirect viewers away from the live match screen
-  if (canScore === false) {
+  // Redirect viewers away from the live match screen (admins are always allowed)
+  if (canScore === false && isAdmin === false) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-2">
         <div className="text-[18px] font-bold">Access Denied</div>
-        <div className="text-[13px] text-dim">Only scorers and players can record match scores.</div>
+        <div className="text-[13px] text-dim">Only scorers and admins can record match scores.</div>
         <button
           onClick={() => navigate(`/league/${id}/tournament/${tid}`)}
           className="mt-4 text-[13px] text-accent font-semibold bg-transparent border-0 cursor-pointer"

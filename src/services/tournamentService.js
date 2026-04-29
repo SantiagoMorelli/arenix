@@ -385,3 +385,251 @@ export async function claimMatchScorer(matchId, userId) {
     .update({ scorer_user_id: userId, scorer_started_at: new Date().toISOString() })
     .eq('id', matchId)
 }
+
+// ─── Admin edit helpers ───────────────────────────────────────────────────────
+
+async function reverseMatchStats(matchId) {
+  const { data: match } = await supabase
+    .from('matches')
+    .select('team1_id, team2_id, winner_id')
+    .eq('id', matchId)
+    .single()
+  if (!match?.winner_id) return
+
+  const winnerId = match.winner_id
+  const loserId  = match.team1_id === winnerId ? match.team2_id : match.team1_id
+
+  const { data: wTeam } = await supabase.from('teams').select('wins, points').eq('id', winnerId).single()
+  if (wTeam) {
+    await supabase.from('teams').update({
+      wins:   Math.max(0, wTeam.wins   - 1),
+      points: Math.max(0, wTeam.points - 1),
+    }).eq('id', winnerId)
+  }
+
+  if (loserId) {
+    const { data: lTeam } = await supabase.from('teams').select('losses').eq('id', loserId).single()
+    if (lTeam) {
+      await supabase.from('teams').update({ losses: Math.max(0, lTeam.losses - 1) }).eq('id', loserId)
+    }
+  }
+
+  const { data: wPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', winnerId)
+  if (wPlayers) {
+    for (const wp of wPlayers) {
+      const { data: p } = await supabase.from('players').select('wins, points').eq('id', wp.player_id).single()
+      if (p) {
+        await supabase.from('players').update({
+          wins:   Math.max(0, p.wins   - 1),
+          points: Math.max(0, p.points - 1),
+        }).eq('id', wp.player_id)
+      }
+    }
+  }
+
+  if (loserId) {
+    const { data: lPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', loserId)
+    if (lPlayers) {
+      for (const lp of lPlayers) {
+        const { data: p } = await supabase.from('players').select('losses').eq('id', lp.player_id).single()
+        if (p) {
+          await supabase.from('players').update({ losses: Math.max(0, p.losses - 1) }).eq('id', lp.player_id)
+        }
+      }
+    }
+  }
+}
+
+async function reverseTournamentCompletion(tournamentId, winnerTeamId, runnerUpTeamId) {
+  await supabase.from('tournaments').update({
+    phase: 'knockout',
+    status: null,
+    winner_team_id: null,
+  }).eq('id', tournamentId)
+
+  if (winnerTeamId) {
+    const { data: wTeam } = await supabase.from('teams').select('points').eq('id', winnerTeamId).single()
+    if (wTeam) {
+      await supabase.from('teams').update({ points: Math.max(0, wTeam.points - 2) }).eq('id', winnerTeamId)
+      const { data: wPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', winnerTeamId)
+      if (wPlayers) {
+        for (const wp of wPlayers) {
+          const { data: p } = await supabase.from('players').select('points').eq('id', wp.player_id).single()
+          if (p) await supabase.from('players').update({ points: Math.max(0, p.points - 2) }).eq('id', wp.player_id)
+        }
+      }
+    }
+  }
+
+  if (runnerUpTeamId) {
+    const { data: rTeam } = await supabase.from('teams').select('points').eq('id', runnerUpTeamId).single()
+    if (rTeam) {
+      await supabase.from('teams').update({ points: Math.max(0, rTeam.points - 1) }).eq('id', runnerUpTeamId)
+      const { data: rPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', runnerUpTeamId)
+      if (rPlayers) {
+        for (const rp of rPlayers) {
+          const { data: p } = await supabase.from('players').select('points').eq('id', rp.player_id).single()
+          if (p) await supabase.from('players').update({ points: Math.max(0, p.points - 1) }).eq('id', rp.player_id)
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Clears the knockout bracket advancement for matchId and cascades backward
+ * through any downstream played matches, reversing their stats and unsetting them.
+ */
+export async function reverseKnockoutAdvancement(matchId, tournament) {
+  const rounds = tournament.knockout?.rounds || []
+
+  // If this is the final and tournament is completed, undo completion
+  const isFinal = rounds.some(r => r.id === 'final' && r.matches.some(m => m.id === matchId))
+  if (isFinal && tournament.status === 'completed') {
+    const finalMatch = rounds.find(r => r.id === 'final')?.matches.find(m => m.id === matchId)
+    if (finalMatch?.winner) {
+      const runnerUpId = finalMatch.team1 === finalMatch.winner ? finalMatch.team2 : finalMatch.team1
+      await reverseTournamentCompletion(tournament.id, finalMatch.winner, runnerUpId)
+    }
+  }
+
+  // Find this match in rounds
+  let foundRound = null, foundRoundIdx = -1, foundMatchIdx = -1, foundMatch = null
+  for (let ri = 0; ri < rounds.length; ri++) {
+    const mi = rounds[ri].matches.findIndex(m => m.id === matchId)
+    if (mi !== -1) {
+      foundRound = rounds[ri]; foundRoundIdx = ri; foundMatchIdx = mi
+      foundMatch = rounds[ri].matches[mi]
+      break
+    }
+  }
+  if (!foundRound || !foundMatch) return
+
+  // Determine which next-round slots this match filled
+  const slotsToReverse = []
+
+  if (foundRound.id === 'semi') {
+    const isFirst  = foundMatchIdx === 0
+    const loserId  = foundMatch.team1 === foundMatch.winner ? foundMatch.team2 : foundMatch.team1
+    const finalRound = rounds.find(r => r.id === 'final')
+    const thirdRound = rounds.find(r => r.id === 'third_place')
+    if (finalRound?.matches[0]) {
+      slotsToReverse.push({ match: finalRound.matches[0], field: isFirst ? 'team1_id' : 'team2_id' })
+    }
+    if (thirdRound?.matches[0] && loserId) {
+      slotsToReverse.push({ match: thirdRound.matches[0], field: isFirst ? 'team1_id' : 'team2_id' })
+    }
+  } else {
+    const nextRound = rounds[foundRoundIdx + 1]
+    if (nextRound) {
+      const nextMatchIdx = Math.floor(foundMatchIdx / 2)
+      const isFirst      = foundMatchIdx % 2 === 0
+      if (nextRound.matches[nextMatchIdx]) {
+        slotsToReverse.push({ match: nextRound.matches[nextMatchIdx], field: isFirst ? 'team1_id' : 'team2_id' })
+      }
+    }
+  }
+
+  for (const slot of slotsToReverse) {
+    // If downstream match was played, cascade first
+    if (slot.match.played) {
+      await reverseMatchStats(slot.match.id)
+      await reverseKnockoutAdvancement(slot.match.id, tournament)
+      await supabase.from('matches').update({ played: false, winner_id: null }).eq('id', slot.match.id)
+    }
+    // Clear the slot
+    await supabase.from('matches').update({ [slot.field]: null }).eq('id', slot.match.id)
+  }
+}
+
+/**
+ * Reopen a finished match: reverse all stats, fix bracket, set played=false.
+ * Keeps the existing log and sets in the DB for scoreboard history.
+ */
+export async function reopenMatch(matchId, tournament) {
+  const { data: match } = await supabase
+    .from('matches')
+    .select('team1_id, team2_id, winner_id, source_type, played')
+    .eq('id', matchId)
+    .single()
+  if (!match?.played) return
+
+  await reverseMatchStats(matchId)
+
+  if (match.source_type === 'knockout' && tournament?.knockout) {
+    await reverseKnockoutAdvancement(matchId, tournament)
+  }
+
+  await supabase.from('matches').update({ played: false, winner_id: null }).eq('id', matchId)
+}
+
+/**
+ * Quick-edit a finished match's scores: reverse old stats, update scores, apply new stats.
+ */
+export async function quickEditMatchScores(matchId, newSets, newScore1, newScore2, newWinnerId, tournament) {
+  const { data: match } = await supabase
+    .from('matches')
+    .select('team1_id, team2_id, winner_id, source_type')
+    .eq('id', matchId)
+    .single()
+  if (!match) return
+
+  const oldWinnerId  = match.winner_id
+  const winnerChanged = oldWinnerId !== newWinnerId
+
+  await reverseMatchStats(matchId)
+
+  if (match.source_type === 'knockout' && tournament?.knockout && winnerChanged) {
+    await reverseKnockoutAdvancement(matchId, tournament)
+    await advanceKnockoutAfterMatch(matchId, newWinnerId, tournament.knockout)
+  }
+
+  // If final and winner changed: re-complete tournament with new winner
+  if (match.source_type === 'knockout' && winnerChanged && tournament?.status === 'completed') {
+    const isFinal = tournament.knockout?.rounds?.some(
+      r => r.id === 'final' && r.matches.some(m => m.id === matchId)
+    )
+    if (isFinal) {
+      const finalMatch = tournament.knockout.rounds
+        .find(r => r.id === 'final')?.matches.find(m => m.id === matchId)
+      const newRunnerUpId = finalMatch?.team1 === newWinnerId ? finalMatch?.team2 : finalMatch?.team1
+      await completeTournament(tournament.id, newWinnerId, newRunnerUpId)
+    }
+  }
+
+  await supabase.from('matches').update({
+    score1:    newScore1,
+    score2:    newScore2,
+    winner_id: newWinnerId,
+    sets:      newSets,
+  }).eq('id', matchId)
+
+  // Apply new stats
+  const newLoserId = match.team1_id === newWinnerId ? match.team2_id : match.team1_id
+
+  const { data: wTeam } = await supabase.from('teams').select('wins, points').eq('id', newWinnerId).single()
+  if (wTeam) {
+    await supabase.from('teams').update({ wins: wTeam.wins + 1, points: wTeam.points + 1 }).eq('id', newWinnerId)
+  }
+  const { data: wPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', newWinnerId)
+  if (wPlayers) {
+    for (const wp of wPlayers) {
+      const { data: p } = await supabase.from('players').select('wins, points').eq('id', wp.player_id).single()
+      if (p) await supabase.from('players').update({ wins: p.wins + 1, points: p.points + 1 }).eq('id', wp.player_id)
+    }
+  }
+
+  if (newLoserId) {
+    const { data: lTeam } = await supabase.from('teams').select('losses').eq('id', newLoserId).single()
+    if (lTeam) {
+      await supabase.from('teams').update({ losses: lTeam.losses + 1 }).eq('id', newLoserId)
+    }
+    const { data: lPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', newLoserId)
+    if (lPlayers) {
+      for (const lp of lPlayers) {
+        const { data: p } = await supabase.from('players').select('losses').eq('id', lp.player_id).single()
+        if (p) await supabase.from('players').update({ losses: p.losses + 1 }).eq('id', lp.player_id)
+      }
+    }
+  }
+}

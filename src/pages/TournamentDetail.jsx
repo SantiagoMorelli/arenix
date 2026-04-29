@@ -850,6 +850,7 @@ export default function TournamentDetail() {
 
   // ── Tournament Stats Overlay State ──
   const [showTournamentStats, setShowTournamentStats] = useState(false)
+  const [showMatchMenu, setShowMatchMenu] = useState(false)
 
   // ── Match Start Modal State ──
   const [selectedMatch, setSelectedMatch] = useState(null)
@@ -1039,7 +1040,7 @@ export default function TournamentDetail() {
         <div className="absolute inset-0 z-[100] bg-bg flex flex-col overflow-hidden">
           <div className="flex items-center gap-2.5 px-4 pt-3 pb-2.5 flex-shrink-0 bg-surface border-b border-line">
             <button
-              onClick={() => setSelectedStatsMatch(null)}
+              onClick={() => { setSelectedStatsMatch(null); setShowMatchMenu(false) }}
               className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text flex-shrink-0"
             >
               <BackIcon />
@@ -1050,6 +1051,29 @@ export default function TournamentDetail() {
               </div>
               <div className="text-[11px] text-dim">{selectedStatsMatch.label || 'Result'}</div>
             </div>
+            {isAdmin && (
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowMatchMenu(v => !v)}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-dim text-[20px] font-black leading-none cursor-pointer bg-transparent border-0"
+                >
+                  ···
+                </button>
+                {showMatchMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowMatchMenu(false)} />
+                    <div className="absolute right-0 top-10 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[150px]">
+                      <button
+                        onClick={() => { setShowMatchMenu(false); setEditingMatch(selectedStatsMatch) }}
+                        className="w-full px-4 py-3 text-left text-[13px] font-semibold text-text hover:bg-alt cursor-pointer border-0 bg-transparent flex items-center gap-2"
+                      >
+                        ✏️ Edit
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 relative">
@@ -1111,17 +1135,6 @@ export default function TournamentDetail() {
             )}
           </div>
 
-          {/* Edit Result button — admin only */}
-          {isAdmin && (
-            <div className="flex-shrink-0 px-4 py-3 border-t border-line bg-surface">
-              <button
-                onClick={() => setEditingMatch(selectedStatsMatch)}
-                className="w-full min-h-[44px] rounded-xl bg-alt border border-line text-text font-semibold text-[13px] cursor-pointer hover:bg-bg transition-colors flex items-center justify-center gap-2"
-              >
-                ✏️ Edit Result
-              </button>
-            </div>
-          )}
 
           {/* Edit Match Modal */}
           {editingMatch && editingMatch.id === selectedStatsMatch.id && (

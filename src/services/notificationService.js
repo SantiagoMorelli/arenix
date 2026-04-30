@@ -10,6 +10,7 @@ const NOTIF_CATEGORY = {
   role_admin:          'league_invites',
   profile_linked:      'league_invites',
   profile_unlinked:    'league_invites',
+  free_play_added:     'league_invites',
 }
 
 /** Returns true if the notification type is allowed by the user's prefs object. */
@@ -30,6 +31,7 @@ export const NOTIF_META = {
   tournament_finished: { emoji: '🏆', iconBg: 'bg-success/15 border border-success/25' },
   match_result:        { emoji: '⚡', iconBg: 'bg-accent/15 border border-accent/25' },
   member_joined:       { emoji: '👋', iconBg: 'bg-free/15 border border-free/25' },
+  free_play_added:   { emoji: '🎮', iconBg: 'bg-free/15 border border-free/25' },
 }
 
 export function formatRelativeTime(isoString) {
@@ -109,7 +111,7 @@ export async function createNotificationsForLeagueMembers(
 }
 
 export function getNotificationTarget(notif) {
-  const { leagueId, tournamentId, matchId } = notif.data || {}
+  const { leagueId, tournamentId } = notif.data || {}
 
   switch (notif.type) {
     case 'league_welcome':
@@ -130,6 +132,10 @@ export function getNotificationTarget(notif) {
     case 'match_result':
       if (leagueId && tournamentId) return { path: `/league/${leagueId}/tournament/${tournamentId}`, state: { tab: 'standings' } }
       return leagueId ? { path: `/league/${leagueId}` } : null
+    case 'free_play_added': {
+      const { freePlayId } = notif.data || {}
+      return freePlayId ? { path: `/free-play/${freePlayId}` } : null
+    }
     default:
       return null
   }

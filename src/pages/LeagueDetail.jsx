@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
 import { deleteLeague, leaveLeague, updateLeague } from '../services/leagueService'
-import { buildInviteLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
+import { buildInviteLink, buildViewLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 import LeaguePlayersTab from '../components/LeaguePlayersTab'
 import { createNotification } from '../services/notificationService'
@@ -37,6 +37,7 @@ const FLAG = {
   portugal: '🇵🇹', japan: '🇯🇵', canada: '🇨🇦', uk: '🇬🇧',
   'united kingdom': '🇬🇧', netherlands: '🇳🇱', sweden: '🇸🇪', norway: '🇳🇴',
 }
+// eslint-disable-next-line no-unused-vars
 function countryFlag(country) {
   if (!country) return ''
   return FLAG[country.toLowerCase()] || ''
@@ -150,16 +151,25 @@ const NAV_ITEMS = [
   { id: 'settings',    icon: <GearIcon />,   label: 'Settings'    },
 ]
 
+// Nav items shown to guests (no settings tab)
+const GUEST_NAV_ITEMS = [
+  { id: 'rankings',    icon: <ChartIcon />,  label: 'Rankings'    },
+  { id: 'players',     icon: <UsersIcon />,  label: 'Players'     },
+  { id: 'tournaments', icon: <TrophyIcon />, label: 'Tournaments' },
+]
+
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) {
-  const navigate               = useNavigate()
-  const [copying, setCopying]  = useState(false)
-  const [regen,   setRegen]    = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [leaving, setLeaving]   = useState(false)
-  const [saving,  setSaving]    = useState(null) // userId being saved
-  const isOwner = league?.ownerId === currentUserId
+  const navigate                   = useNavigate()
+  const [copying,     setCopying]  = useState(false)
+  const [copyingView, setCopyingView] = useState(false)
+  const [regen,       setRegen]    = useState(false)
+  const [deleting,    setDeleting] = useState(false)
+  const [leaving,     setLeaving]  = useState(false)
+  const [saving,      setSaving]   = useState(null) // userId being saved
+  const isOwner    = league?.ownerId === currentUserId
   const inviteLink = buildInviteLink(league?.inviteCode || '')
+  const viewLink   = buildViewLink(league?.inviteCode || '')
 
   const [editName,       setEditName]       = useState(league?.name       || '')
   const [editLocation,   setEditLocation]   = useState(league?.location   || '')
@@ -228,6 +238,11 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
     setTimeout(() => setCopying(false), 1500)
   }
 
+  async function handleCopyView() {
+    await navigator.clipboard.writeText(viewLink)
+    setCopyingView(true)
+    setTimeout(() => setCopyingView(false), 1500)
+  }
   async function handleRegen() {
     if (!window.confirm('Regenerate invite code? The old link will stop working.')) return
     setRegen(true)
@@ -368,25 +383,72 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
 
           <SectionLabel color="accent">Invite Players</SectionLabel>
           <div className="bg-surface border border-line rounded-xl p-4 mb-4">
-            <div className="text-[11px] text-dim mb-2">Share this link to invite players:</div>
-            <div className="flex items-center gap-2 bg-bg border border-line rounded-lg px-3 py-2 mb-3">
-              <span className="flex-1 text-[11px] text-text truncate">{inviteLink}</span>
+
+            {/* ── Join link (admin only) ── */}
+            {(isAdmin || isSuperAdmin) && (
+              <>
+                <div className="text-[11px] font-semibold text-text mb-1">Join link</div>
+                <div className="text-[10px] text-dim mb-2">Recipients log in and join as a player.</div>
+                <div className="flex items-center gap-2 bg-bg border border-line rounded-lg px-3 py-2 mb-3">
+                  <span className="flex-1 text-[11px] text-text truncate">{inviteLink}</span>
+                  <button
+                    onClick={handleCopy}
+                    className="text-accent flex items-center gap-1 text-[11px] font-bold bg-transparent border-0 cursor-pointer flex-shrink-0"
+                  >
+                    <CopyIcon /> {copying ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={handleRegen}
+                    disabled={regen}
+                    className="text-[11px] text-dim font-semibold bg-transparent border-0 cursor-pointer disabled:opacity-50 mb-4 block"
+                  >
+                    {regen ? 'Regenerating…' : '↻ Regenerate code'}
+                  </button>
+                )}
+                <div className="border-t border-line my-3" />
+              </>
+            )}
+
+            {/* ── View link (all members) ── */}
+            <div className="text-[11px] font-semibold text-text mb-1">View link</div>
+            <div className="text-[10px] text-dim mb-2">
+              Anyone with this link can browse rankings, matches, and results —
+              {league?.visibility === 'public' ? ' no account needed.' : ' they must log in first (private league).'}
+            </div>
+            <div className="flex items-center gap-2 bg-bg border border-line rounded-lg px-3 py-2">
+              <span className="flex-1 text-[11px] text-text truncate">{viewLink}</span>
               <button
-                onClick={handleCopy}
+                onClick={handleCopyView}
                 className="text-accent flex items-center gap-1 text-[11px] font-bold bg-transparent border-0 cursor-pointer flex-shrink-0"
               >
-                <CopyIcon /> {copying ? 'Copied!' : 'Copy'}
+                <CopyIcon /> {copyingView ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            {isAdmin && (
+          </div>
+        </>
+      )}
+
+      {/* ── View link for non-admin members ── */}
+      {!(isAdmin || isSuperAdmin) && (
+        <>
+          <SectionLabel color="accent">Share League</SectionLabel>
+          <div className="bg-surface border border-line rounded-xl p-4 mb-4">
+            <div className="text-[11px] font-semibold text-text mb-1">View link</div>
+            <div className="text-[10px] text-dim mb-2">
+              Share this so anyone can browse rankings, matches, and results —
+              {league?.visibility === 'public' ? ' no account needed.' : ' they must log in first (private league).'}
+            </div>
+            <div className="flex items-center gap-2 bg-bg border border-line rounded-lg px-3 py-2">
+              <span className="flex-1 text-[11px] text-text truncate">{viewLink}</span>
               <button
-                onClick={handleRegen}
-                disabled={regen}
-                className="text-[11px] text-dim font-semibold bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                onClick={handleCopyView}
+                className="text-accent flex items-center gap-1 text-[11px] font-bold bg-transparent border-0 cursor-pointer flex-shrink-0"
               >
-                {regen ? 'Regenerating…' : '↻ Regenerate code'}
+                <CopyIcon /> {copyingView ? 'Copied!' : 'Copy'}
               </button>
-            )}
+            </div>
           </div>
         </>
       )}
@@ -494,7 +556,16 @@ export default function LeagueDetail() {
 
   const { league, loading, error, refetch } = useLeague(id)
   const { isAdmin, isSuperAdmin }            = useLeagueRole(id)
-  const { profile }                          = useAuth()
+  const { session, profile }                 = useAuth()
+
+  const isGuest = !session
+
+  // Redirect guests who land on a private league to login with ?next=
+  useEffect(() => {
+    if (!loading && !error && league && isGuest && league.visibility !== 'public') {
+      navigate(`/login?next=/league/${id}`, { replace: true })
+    }
+  }, [loading, error, league, isGuest, id, navigate])
 
   // ── Player mutations ──────────────────────────────────────────────────────
   async function handleAddPlayer(data) {
@@ -583,14 +654,39 @@ export default function LeagueDetail() {
         >
           <BackIcon />
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="text-[18px] font-bold text-text leading-tight">{league.name}</div>
           <div className="text-[11px] text-dim">
             Season {new Date().getFullYear()}
             {league.location && <> · {league.location}</>}
           </div>
         </div>
+        {/* Guest: show Log in button in header */}
+        {isGuest && (
+          <button
+            onClick={() => navigate(`/login?next=/league/${id}`)}
+            className="px-3 py-1.5 rounded-lg bg-accent text-white text-[12px] font-bold border-0 cursor-pointer shrink-0"
+          >
+            Log in
+          </button>
+        )}
       </div>
+
+      {/* ── Guest join banner (public leagues only) ── */}
+      {isGuest && (
+        <div className="mx-4 mb-3 flex items-center gap-3 bg-accent/10 border border-accent/30 rounded-[14px] px-4 py-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-bold text-accent leading-snug">Viewing as guest</div>
+            <div className="text-[11px] text-dim mt-0.5">Log in or sign up to join this league.</div>
+          </div>
+          <button
+            onClick={() => navigate(`/login?next=/league/${id}`)}
+            className="shrink-0 px-3 py-2 rounded-xl bg-accent text-white text-[12px] font-bold border-0 cursor-pointer"
+          >
+            Join
+          </button>
+        </div>
+      )}
 
       {/* ── Scrollable content ── */}
       <main className="screen__body">
@@ -674,7 +770,7 @@ export default function LeagueDetail() {
           {activeTab === 'players' && (
             <LeaguePlayersTab
               league={league}
-              isAdmin={isAdmin}
+              isAdmin={isGuest ? false : isAdmin}
               onAdd={handleAddPlayer}
               onDelete={handleDeletePlayer}
               onUpdate={handleUpdatePlayer}
@@ -687,7 +783,7 @@ export default function LeagueDetail() {
             <>
               <div className="flex justify-between items-center mb-2.5">
                 <span className="text-[12px] font-bold text-accent tracking-wide uppercase">Tournaments</span>
-                {isAdmin && (
+                {isAdmin && !isGuest && (
                   <button
                     onClick={() => navigate(`/league/${id}/tournament/new`)}
                     className="flex items-center gap-1 text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
@@ -735,8 +831,8 @@ export default function LeagueDetail() {
                 </div>
               ) : (
                 <div className="text-[13px] text-dim text-center py-6">
-                  No tournaments yet{isAdmin && ' — '}
-                  {isAdmin && (
+                  No tournaments yet{isAdmin && !isGuest && ' — '}
+                  {isAdmin && !isGuest && (
                     <button
                       onClick={() => navigate(`/league/${id}/tournament/new`)}
                       className="text-accent font-semibold bg-transparent border-0 cursor-pointer p-0"
@@ -750,19 +846,41 @@ export default function LeagueDetail() {
           )}
 
           {/* ════ Settings tab ════ */}
-          {activeTab === 'settings' && (
+          {activeTab === 'settings' && !isGuest && (
             <SettingsTab league={league} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} refetch={refetch} currentUserId={profile?.id} />
+          )}
+          {activeTab === 'settings' && isGuest && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-4">
+              <div className="text-[32px]">🔒</div>
+              <div className="text-[15px] font-bold text-text">Log in to manage this league</div>
+              <div className="text-[13px] text-dim">Settings are only available to league members.</div>
+              <button
+                onClick={() => navigate(`/login?next=/league/${id}`)}
+                className="mt-2 px-6 py-2.5 rounded-xl bg-accent text-white font-bold text-[13px] border-0 cursor-pointer"
+              >
+                Log in
+              </button>
+            </div>
           )}
 
         </div>
       </main>
 
       {/* ── Bottom navigation ── */}
-      <BottomNav
-        items={NAV_ITEMS}
-        active={activeTab}
-        onChange={setActiveTab}
-      />
+      {!isGuest && (
+        <BottomNav
+          items={NAV_ITEMS}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
+      )}
+      {isGuest && (
+        <BottomNav
+          items={GUEST_NAV_ITEMS}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
+      )}
 
     </div>
   )

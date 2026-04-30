@@ -9,6 +9,7 @@ import { createNotification, createNotificationsForLeagueMembers } from '../serv
 import GameStats from '../components/GameStats'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
 import EditMatchModal from '../components/EditMatchModal'
+import { PillTabs } from '../components/ui-new'
 
 // ─── Inline icons ─────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -22,27 +23,6 @@ const Svg = ({ children, size = 20 }) => (
 )
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 const CloseIcon = () => <Svg><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Svg>
-
-// ─── Pill tab switcher (matches wireframe 02) ─────────────────────────────────
-function PillTabs({ items, active, onChange }) {
-  return (
-    <div className="flex bg-alt rounded-[10px] p-[3px] mx-4 mb-3.5 flex-shrink-0">
-      {items.map(item => (
-        <button
-          key={item.id}
-          onClick={() => onChange(item.id)}
-          className={`
-            flex-1 py-2 rounded-lg text-[11px] font-semibold cursor-pointer border-0
-            transition-all
-            ${active === item.id ? 'bg-surface text-accent shadow-sm' : 'bg-transparent text-dim'}
-          `}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 // ─── Header status badge ──────────────────────────────────────────────────────
 function StatusBadge({ tournament }) {
@@ -844,9 +824,11 @@ export default function TournamentDetail() {
 
   const { league, loading, refetch } = useLeague(id)
   const { canScore, canManage, isAdmin } = useLeagueRole(id)
-  const { profile }                  = useAuth()
+  const { session, profile }         = useAuth()
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
+
+  const isGuest = !session
 
   // ── Tournament Stats Overlay State ──
   const [showTournamentStats, setShowTournamentStats] = useState(false)
@@ -1065,7 +1047,7 @@ export default function TournamentDetail() {
               </div>
               <div className="text-[11px] text-dim">{selectedStatsMatch.label || 'Result'}</div>
             </div>
-            {isAdmin && (
+            {isAdmin && !isGuest && (
               <div className="relative flex-shrink-0">
                 <button
                   onClick={() => setShowMatchMenu(v => !v)}
@@ -1185,7 +1167,7 @@ export default function TournamentDetail() {
           <div className="text-[11px] text-dim">{league?.name}</div>
         </div>
         <StatusBadge tournament={tournament} />
-        {isAdmin && (
+        {isAdmin && !isGuest && (
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowTournamentMenu(v => !v)}
@@ -1261,7 +1243,7 @@ export default function TournamentDetail() {
           />
         )}
         {activeTab === 'positions' && (
-          <PositionsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} isAdmin={isAdmin} onRenameTeam={handleRenameTeam} />
+          <PositionsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} isAdmin={isGuest ? false : isAdmin} onRenameTeam={handleRenameTeam} />
         )}
       </main>
 

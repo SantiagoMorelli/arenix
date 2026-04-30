@@ -1,25 +1,28 @@
-/**
- * useLeagueRole — returns the current user's roles and permissions within a league,
- * plus their platform-level superadmin status.
- *
- * Usage:
- *   const { role, roles, permissions, isAdmin, isSuperAdmin, canScore, canManage, can, loading }
- *     = useLeagueRole(leagueId)
- *
- * Backward-compatible: role, isAdmin, canScore, canManage all behave as before.
- * isSuperAdmin bypasses all per-league checks — superadmins can do everything.
- */
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+
+// Empty permissions object returned for guests (no session)
+const GUEST_ROLE = {
+  role: null, roles: [], permissions: new Set(),
+  isAdmin: false, isSuperAdmin: false,
+  canScore: false, canManage: false,
+  can: () => false, loading: false,
+}
 
 export function useLeagueRole(leagueId) {
+  const { session } = useAuth()
+
+  // When there's no session or no leagueId, start as not-loading so callers
+  // don't wait unnecessarily. The guard in the effect prevents any DB queries.
   const [roles,        setRoles]        = useState([])
   const [permissions,  setPermissions]  = useState(new Set())
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
-  const [loading,      setLoading]      = useState(true)
+  const [loading,      setLoading]      = useState(!!(session && leagueId))
 
   useEffect(() => {
-    if (!leagueId) { setLoading(false); return }
+    // No session or no leagueId → nothing to fetch
+    if (!session || !leagueId) return
 
     let cancelled = false
 
@@ -64,7 +67,10 @@ export function useLeagueRole(leagueId) {
 
     load()
     return () => { cancelled = true }
-  }, [leagueId])
+  }, [leagueId, session])
+
+  // Guest short-circuit: return stable empty object
+  if (!session) return GUEST_ROLE
 
   // Legacy compat: first role string (or null)
   const role     = roles[0] ?? null

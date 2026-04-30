@@ -159,6 +159,42 @@ export function BottomNav({ items, active, onChange }) {
   )
 }
 
+/* ─── PillTabs ────────────────────────────────────────────────────────────── */
+/**
+ * Pill-style tab switcher (matches wireframe 02 / tournament standings header).
+ * Props:
+ *   items   Array<{ id: string, label: string }>
+ *   active  string   — id of active tab
+ *   onChange fn(id)
+ *   accent  "accent" | "free"  — highlight color for the active pill (default: accent)
+ *   className string  — extra classes for the container (e.g. to override margin)
+ */
+const PILL_ACTIVE_COLOR = {
+  accent: 'text-accent',
+  free:   'text-free',
+}
+
+export function PillTabs({ items, active, onChange, accent = 'accent', className = 'mx-4 mb-3.5' }) {
+  const activeColor = PILL_ACTIVE_COLOR[accent] ?? PILL_ACTIVE_COLOR.accent
+  return (
+    <div className={`flex bg-alt rounded-[10px] p-[3px] flex-shrink-0 ${className}`}>
+      {items.map(item => (
+        <button
+          key={item.id}
+          onClick={() => onChange(item.id)}
+          className={`
+            flex-1 py-2 rounded-lg text-[11px] font-semibold cursor-pointer border-0
+            transition-all
+            ${active === item.id ? `bg-surface ${activeColor} shadow-sm` : 'bg-transparent text-dim'}
+          `}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /* ─── IconButton ──────────────────────────────────────────────────────────── */
 /**
  * Props:

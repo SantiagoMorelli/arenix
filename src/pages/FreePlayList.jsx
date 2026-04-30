@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getFreePlays, createFreePlay } from '../services/freePlayService'
-import { getMyLeagues } from '../services/leagueService'
+import { getFreePlays } from '../services/freePlayService'
 import { AppCard, AppBadge } from '../components/ui-new'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -22,85 +21,21 @@ function formatDate(val) {
   catch { return val }
 }
 
-// ─── Create modal ─────────────────────────────────────────────────────────────
-function CreateModal({ leagues, onConfirm, onClose, loading }) {
-  const [name, setName]         = useState('')
-  const [leagueId, setLeagueId] = useState('')
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-[440px] bg-surface rounded-t-2xl p-6 pb-10 flex flex-col gap-5">
-        <div className="flex items-center justify-between">
-          <div className="text-[16px] font-black text-text uppercase tracking-widest">New Session</div>
-          <button onClick={onClose} className="text-dim text-[22px] leading-none bg-transparent border-0 cursor-pointer">×</button>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] font-bold text-dim uppercase tracking-wide">Session name</label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Sunday at the beach"
-            autoFocus
-            className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim focus:outline-none focus:border-free"
-          />
-        </div>
-
-        {leagues.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-dim uppercase tracking-wide">Link to league <span className="normal-case font-normal">(optional)</span></label>
-            <select
-              value={leagueId}
-              onChange={e => setLeagueId(e.target.value)}
-              className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text focus:outline-none focus:border-free appearance-none"
-            >
-              <option value="">No league — standalone</option>
-              {leagues.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <button
-          onClick={() => onConfirm(name.trim(), leagueId || null)}
-          disabled={!name.trim() || loading}
-          className="w-full py-4 rounded-xl bg-free text-white font-black text-[14px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 border-0 cursor-pointer"
-        >
-          {loading ? 'Creating…' : 'Create Session'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FreePlayList() {
   const navigate = useNavigate()
 
   const [sessions, setSessions] = useState([])
-  const [leagues,  setLeagues]  = useState([])
   const [loading,  setLoading]  = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
-    Promise.all([getFreePlays(), getMyLeagues()])
-      .then(([fp, lg]) => { setSessions(fp); setLeagues(lg) })
+    getFreePlays()
+      .then(setSessions)
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
 
-  const handleCreate = async (name, leagueId) => {
-    setCreating(true)
-    try {
-      const session = await createFreePlay(name, leagueId)
-      navigate(`/free-play/${session.id}`)
-    } catch (err) {
-      console.error(err)
-      setCreating(false)
-    }
-  }
+  const handleNew = () => navigate('/free-play/new')
 
   const activeSessions   = sessions.filter(s => s.status !== 'finished')
   const finishedSessions = sessions.filter(s => s.status === 'finished')
@@ -120,7 +55,7 @@ export default function FreePlayList() {
           <div className="text-[11px] text-dim">Quick match · Any players</div>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={handleNew}
           className="w-10 h-10 flex items-center justify-center bg-free/15 border border-free/30 rounded-xl text-free"
         >
           <PlusIcon />
@@ -144,7 +79,7 @@ export default function FreePlayList() {
               <div className="text-[12px] text-dim">Create one to start playing</div>
             </div>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={handleNew}
               className="mt-2 px-6 py-3 rounded-xl bg-free text-white font-bold text-[14px] border-0 cursor-pointer active:scale-[0.98] transition-transform"
             >
               Start New Session
@@ -178,15 +113,6 @@ export default function FreePlayList() {
           </div>
         )}
       </div>
-
-      {showModal && (
-        <CreateModal
-          leagues={leagues}
-          loading={creating}
-          onConfirm={handleCreate}
-          onClose={() => setShowModal(false)}
-        />
-      )}
     </div>
   )
 }

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useFreePlay } from '../hooks/useFreePlay'
-import { useLiveGame, FP_SAVE_KEY, loadSavedFrom } from '../hooks/useLiveGame'
+import { useLiveGame, FP_SAVE_KEY } from '../hooks/useLiveGame'
+import LiveScoreboard from '../components/LiveScoreboard'
+import { saveFreePlayGame } from '../services/freePlayService'
 
 const t = (key) => {
   const dict = {
@@ -24,7 +26,7 @@ const Svg = ({ children, size = 20 }) => (
 const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 // ─── Setup screen ─────────────────────────────────────────────────────────────
-function MatchSetup({ live, teams, team1Id, team2Id, routeState, queryErrors, onBack }) {
+function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
   const tName = (tid) => teams.find(t => t.id === tid)?.name || '?'
   const t1Name = tName(team1Id)
   const t2Name = tName(team2Id)
@@ -59,23 +61,6 @@ function MatchSetup({ live, teams, team1Id, team2Id, routeState, queryErrors, on
           Match Setup
         </h1>
         <div className="w-10" />
-      </div>
-
-      {/* ── DEBUG PANEL (remove once fixed) ── */}
-      <div className="bg-error/10 border border-error/30 rounded-xl p-3 mb-2 text-[11px] font-mono break-all max-w-[400px] w-full mx-auto text-error">
-        <pre className="whitespace-pre-wrap">{JSON.stringify({
-          t1Id: team1Id || '(empty)',
-          t2Id: team2Id || '(empty)',
-          routeState,
-          sessionError,
-          queryErrors,
-          sessionId: session?.id,
-          sessionStatus: session?.status,
-          teamsCount: teams.length,
-          playersCount: session?.players?.length,
-          gamesCount: session?.games?.length,
-          teams: teams.map(t => ({ id: t.id?.slice(0,8), name: t.name, players: t.players })),
-        }, null, 2)}</pre>
       </div>
 
       <div className="screen__body flex flex-col gap-6 max-w-[400px] w-full mx-auto pb-8">
@@ -225,7 +210,8 @@ export default function FreePlayLiveMatch() {
   const stateTeam1Id  = location.state?.team1Id  || ''
   const stateTeam2Id  = location.state?.team2Id  || ''
 
-  const { session, loading, error: sessionError } = useFreePlay(id)
+  const { session, loading, isAdmin } = useFreePlay(id)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Shape data for useLiveGame
   const teams   = (session?.teams   || []).map(t => ({ id: t.id, name: t.name, players: t.playerIds }))
@@ -263,11 +249,53 @@ export default function FreePlayLiveMatch() {
     if (t2?.playerIds?.length) live.setT2ServeOrder(t2.playerIds)
   }, [session])
 
+  // ── Save handler (called by GameStats inside LiveScoreboard) ─────────────
+  // GameStats invokes onSaveResult(matchId, s1_sets, s2_sets, winnerTeamId, log, sets).
+  // We compute raw-score for 1-set matches and set-score for best-of-N.
+  const handleSaveResult = async (matchId, s1_sets, s2_sets, winnerTeamId, log, sets) => {
+    if (isSaving) return
+    setIsSaving(true)
+    const isOneSet = setsPerMatch === 1
+    const score1 = isOneSet ? (sets[0]?.s1 ?? live.score1) : s1_sets
+    const score2 = isOneSet ? (sets[0]?.s2 ?? live.score2) : s2_sets
+    try {
+      await saveFreePlayGame(id, {
+        id:      matchId || gameId,
+        team1:   live.team1Id,
+        team2:   live.team2Id,
+        score1,
+        score2,
+        winner:  winnerTeamId,
+        played:  true,
+        log,
+        sets,
+      })
+      try { localStorage.removeItem(FP_SAVE_KEY) } catch { /* ignored */ }
+      navigate(`/free-play/${id}`)
+    } catch (err) {
+      console.error('Failed to save free play result:', err)
+      setIsSaving(false)
+    }
+  }
+
   // ── Guards ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
         <div className="w-8 h-8 border-2 border-free border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Non-admin visitors cannot score matches — redirect to session view
+  if (session && !isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-3 px-6">
+        <div className="text-[15px] font-bold text-center">View only</div>
+        <div className="text-[13px] text-dim text-center">Only the session admin can score matches.</div>
+        <button onClick={() => navigate(`/free-play/${id}`)} className="text-[13px] text-free font-semibold bg-transparent border-0 cursor-pointer">
+          ← Back to session
+        </button>
       </div>
     )
   }
@@ -284,6 +312,25 @@ export default function FreePlayLiveMatch() {
     )
   }
 
+  // ── Restore prompt (unfinished saved match in localStorage) ──────────────
+  if (live.showRestore) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text p-6">
+        <div className="bg-surface border border-free p-6 rounded-2xl max-w-[320px] text-center shadow-[0_0_20px_rgba(var(--c-free),0.3)]">
+          <div className="text-[32px] mb-3">🔄</div>
+          <div className="text-[16px] font-bold mb-2">Resume match?</div>
+          <div className="text-[12px] text-dim mb-6">You have an unfinished free play match saved.</div>
+          <button onClick={live.restoreGame} className="w-full py-3 bg-free text-white font-bold rounded-xl mb-3 border-0">
+            Resume Match
+          </button>
+          <button onClick={live.discardSaved} className="w-full py-3 bg-error/10 text-error font-bold rounded-xl border border-error/20">
+            Discard &amp; Start New
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // ── Setup screen (not yet started) ───────────────────────────────────────
   if (!live.gameStarted) {
     return (
@@ -292,27 +339,22 @@ export default function FreePlayLiveMatch() {
         teams={teams}
         team1Id={stateTeam1Id}
         team2Id={stateTeam2Id}
-        routeState={location.state}
-        queryErrors={session?._queryErrors}
         onBack={() => navigate(`/free-play/${id}`)}
       />
     )
   }
 
-  // ── Live scoring + result (steps 5b / 5c / 5d — coming next) ────────────
+  // ── In-game (shared scoreboard) ──────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-3 p-6">
-      <div className="text-[32px]">🏐</div>
-      <div className="text-[18px] font-black text-free uppercase tracking-widest">Match Started!</div>
-      <div className="text-[13px] text-dim text-center">
-        Live scoring coming in steps 5b–5d
-      </div>
-      <button
-        onClick={() => { live.reset(); navigate(`/free-play/${id}`) }}
-        className="mt-4 text-[13px] text-error font-semibold bg-transparent border-0 cursor-pointer"
-      >
-        Abandon match
-      </button>
-    </div>
+    <LiveScoreboard
+      live={live}
+      teams={teams}
+      players={players}
+      setsPerMatch={setsPerMatch}
+      activeMatchId={gameId}
+      accent="free"
+      onSaveResult={handleSaveResult}
+      isSaving={isSaving}
+    />
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import GuestHome from './GuestHome'
 import { getMyLeagues, getLeagueById, createLeague } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
 import { BottomNav, IconButton, AppBadge } from '../components/ui-new'
@@ -109,7 +110,7 @@ const NAV_ITEMS = [
 // ─── Home page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate()
-  const { profile, isSuperAdmin, canCreateLeague } = useAuth()
+  const { session, loading: authLoading, profile, isSuperAdmin, canCreateLeague } = useAuth()
   const canCreate = isSuperAdmin || canCreateLeague
 
   const [leagues,        setLeagues]        = useState([])
@@ -125,6 +126,9 @@ export default function Home() {
   const [toastNotif,     setToastNotif]     = useState(null)
 
   useEffect(() => {
+    // Only fetch data when logged in
+    if (!session) return
+
     async function fetchData() {
       try {
         const shallowLeagues = await getMyLeagues()
@@ -159,7 +163,7 @@ export default function Home() {
       })
     }
     return () => { if (unsubscribe) unsubscribe() }
-  }, [profile?.id])
+  }, [profile?.id, session])
 
   const league        = leagues[0] || null
   const tournaments   = league?.tournaments || []
@@ -279,6 +283,18 @@ export default function Home() {
   }
 
   const displayName = profile?.full_name?.split(' ')[0] || 'Player'
+
+  // Auth loading spinner
+  if (authLoading) {
+    return (
+      <div className="flex flex-col h-screen bg-bg text-text items-center justify-center">
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Guest: show landing page (all hooks already called above)
+  if (!session) return <GuestHome />
 
   if (loading) {
     return (

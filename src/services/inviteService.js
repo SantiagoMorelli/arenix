@@ -4,6 +4,7 @@
 import { supabase } from '../lib/supabase'
 import {
   createNotification,
+  // eslint-disable-next-line no-unused-vars
   createNotificationsForLeagueMembers,
 } from './notificationService'
 
@@ -27,6 +28,22 @@ export async function getLeagueByInviteCode(code) {
     .single()
 
   if (error) return null
+  return data
+}
+
+/**
+ * Resolve an invite code to a league id only.
+ * Works for anon (public leagues) and authenticated users.
+ * Returns the league id string, or null if not found.
+ */
+export async function getLeagueIdByInviteCode(code) {
+  const { data, error } = await supabase
+    .from('leagues')
+    .select('id, visibility')
+    .eq('invite_code', code.toUpperCase())
+    .single()
+
+  if (error || !data) return null
   return data
 }
 
@@ -130,6 +147,14 @@ export async function regenerateInviteCode(leagueId) {
  */
 export function buildInviteLink(code) {
   return `${window.location.origin}/join/${code}`
+}
+
+/**
+ * Build the read-only view link for a given invite code.
+ * Anyone with this link can view the league (public leagues only).
+ */
+export function buildViewLink(code) {
+  return `${window.location.origin}/league/view/${code}`
 }
 
 /**

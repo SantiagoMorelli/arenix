@@ -59,13 +59,15 @@ export function AuthProvider({ children }) {
       signOut,
       updateProfile,
       isSuperAdmin: profile?.is_super_admin ?? false,
-      canCreateLeague: profile?.can_create_league ?? false
+      canCreateLeague: profile?.can_create_league ?? false,
+      isGuest: !loading && !session,
     }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')

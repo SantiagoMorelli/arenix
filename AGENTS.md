@@ -51,5 +51,4 @@
 
 ## Practical Workflow for Safe Changes
 - Prefer implementing new UI/routes in routed pages/components first.
-- Use `/legacy` for any flow not yet migrated.
 - After edits: run `npm run build` + targeted `npx eslint` on changed files.

@@ -7,9 +7,12 @@ Mobile-first PWA used on phones via the browser. Standard React web app, **not**
 - **React 19** + **Vite 8** (`@vitejs/plugin-react`, `vite-plugin-pwa`)
 - **React Router 7** — all routes in `src/AppRouter.jsx`
 - **Supabase** (`@supabase/supabase-js`) — real-time DB + auth
-- **Tailwind v4** via `@tailwindcss/vite` (no PostCSS step)
-- **Fonts:** DM Sans (body/UI) + Bebas Neue (display/scoreboard)
-- **Icons:** Lucide React (mandated by the design handoff)
+- **Tailwind v4** via `@tailwindcss/vite` (no PostCSS step). Tokens are
+  declared in `src/index.css` inside `@theme { … }` — **not** in
+  `tailwind.config.js`. Light values live in `:root`, dark overrides in `.dark`.
+- **Fonts:** DM Sans (body/UI) + Bebas Neue (display/scoreboard) — already
+  imported in `index.html` and exposed as `font-sans` / `font-display`.
+- **Icons:** Lucide React (`lucide-react`) — mandated by the design handoff.
 - **QR handoff:** `qrcode.react` + `html5-qrcode`
 
 ## Design system
@@ -130,12 +133,14 @@ npm run lint      # ESLint v9 flat config
 npm run preview   # serve the build locally
 ```
 
-## Known gaps
+## Token reference
 
-These are intentional follow-ups, not bugs to fix opportunistically:
+Available Tailwind utilities (from `src/index.css` `@theme`):
 
-- `tailwind.config.js` does **not** yet expose the handoff tokens
-  (`theme.extend.colors`, `fontFamily`). Visual work that depends on
-  `bg-accent`, `text-dim`, `font-display`, etc. needs these added first.
-- `lucide-react` is **not yet a dependency**. Add it before introducing icons.
-- DM Sans + Bebas Neue are **not yet imported** in `index.html`.
+- **Colors:** `bg`, `surface`, `alt`, `accent`, `free`, `success`, `error`,
+  `text`, `dim`, `line` → use as `bg-accent`, `text-dim`, `border-line`, etc.
+- **Fonts:** `font-sans` (DM Sans, default on `<body>`), `font-display`
+  (Bebas Neue — scoreboard, big stats, hero titles).
+
+The handoff (`design_handoff_arenix/README.md`) is authoritative for type
+scale, radii, and per-screen rules.

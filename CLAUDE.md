@@ -19,8 +19,7 @@ Mobile-first PWA used on phones via the browser. Standard React web app, **not**
 
 All visual specs — colors, typography, spacing, component primitives, per-screen
 layouts, animations — live in **`design_handoff_arenix/README.md`**. Treat that
-file as canonical and pixel-match against it. Wireframes and prompt templates
-are in `docs/wireframes/` and `docs/claude-code-prompts.md`. Do **not**
+file as canonical and pixel-match against it.  Do **not**
 duplicate token values into this file; they drift.
 
 ## File structure

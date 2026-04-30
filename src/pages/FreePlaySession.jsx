@@ -860,6 +860,7 @@ export default function FreePlaySession() {
   const [setsPerMatch,  setSetsPerMatch]  = useState(1)
   const [startingMatch, setStartingMatch] = useState(false)
   const [startError,    setStartError]    = useState('')
+  const [confirmingResume, setConfirmingResume] = useState(null)
 
   const isFinished = session?.status === 'finished'
 
@@ -919,12 +920,18 @@ export default function FreePlaySession() {
   }
 
   const handleResumeMatch = (pendingGame) => {
+    setConfirmingResume(pendingGame)
+  }
+
+  const handleConfirmResume = () => {
+    const game = confirmingResume
+    setConfirmingResume(null)
     navigate(`/free-play/${id}/match`, {
       state: {
-        gameId:      pendingGame.id,
-        team1Id:     pendingGame.team1Id,
-        team2Id:     pendingGame.team2Id,
-        setsPerMatch: pendingGame.setsPerMatch ?? 1,
+        gameId:      game.id,
+        team1Id:     game.team1Id,
+        team2Id:     game.team2Id,
+        setsPerMatch: game.setsPerMatch ?? 1,
       },
     })
   }
@@ -1171,6 +1178,35 @@ export default function FreePlaySession() {
           onClose={() => setShowEditSession(false)}
         />
       )}
+
+      {/* ── Resume confirmation modal ────────────────────────────────────── */}
+      {confirmingResume && (() => {
+        const tName = (tid) => session.teams.find(t => t.id === tid)?.name || '?'
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
+            <div className="bg-surface border border-free rounded-2xl max-w-[320px] w-full p-6 text-center shadow-[0_0_24px_rgba(0,188,212,0.2)]">
+              <div className="text-[30px] mb-3">🔄</div>
+              <div className="text-[16px] font-bold text-text mb-1">Resume match?</div>
+              <div className="text-[12px] text-dim mb-1">
+                {tName(confirmingResume.team1Id)} vs {tName(confirmingResume.team2Id)}
+              </div>
+              <div className="text-[11px] text-dim mb-6">You'll be taken to the match setup screen.</div>
+              <button
+                onClick={handleConfirmResume}
+                className="w-full py-3 bg-free text-white font-bold rounded-xl mb-3 border-0 cursor-pointer active:scale-[0.98] transition-transform"
+              >
+                Resume Match
+              </button>
+              <button
+                onClick={() => setConfirmingResume(null)}
+                className="w-full py-3 bg-bg text-dim font-bold rounded-xl border border-line cursor-pointer active:opacity-70 transition-opacity"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Match Stats Full-screen Overlay ───────────────────────────────── */}
       {selectedStatsMatch && (

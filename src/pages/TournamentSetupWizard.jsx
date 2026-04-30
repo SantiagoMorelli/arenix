@@ -7,8 +7,8 @@ import { createNotificationsForLeagueMembers } from '../services/notificationSer
 import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 
 const FORMAT_OPTIONS = [
-  { id: 'group',    label: 'Group + Knockout', emoji: '🏆' },
-  { id: 'freeplay', label: 'Free Play',         emoji: '🎮' },
+  { id: 'group',    label: 'Group + Knockout' },
+  { id: 'freeplay', label: 'Round-robin'       },
 ]
 
 // ── Team generation helpers ───────────────────────────────────────────────────
@@ -756,7 +756,7 @@ export default function TournamentSetupWizard() {
                   return (
                     <button key={opt.id} onClick={() => !disabled && setFormatMode(opt.id)} disabled={disabled}
                       className={`px-3 py-2.5 rounded-lg border-2 text-[12px] text-left cursor-pointer disabled:opacity-50 ${effectiveFormat === opt.id ? 'border-accent bg-accent/10 text-accent font-bold' : 'border-line bg-bg text-text'}`}>
-                      <div>{opt.emoji} {opt.label}</div>
+                      <div>{opt.label}</div>
                     </button>
                   )
                 })}
@@ -764,7 +764,7 @@ export default function TournamentSetupWizard() {
 
               {!canGroupStage && (
                 <div className="text-[11px] text-dim mt-2">
-                  Need at least 6 teams for Group + Knockout. Free Play is selected automatically.
+                  Need at least 6 teams for Group + Knockout. Round-robin is selected automatically.
                 </div>
               )}
 

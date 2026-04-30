@@ -28,13 +28,70 @@ export function canEditFreePlay(session, userId) {
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
+/**
+ * Visibility contract: a Free Play appears in a user's list only when they are:
+ *   1. The creator (created_by = current user), OR
+ *   2. A league-linked player added to the session
+ *      (free_play_players.league_player_id → players.user_id = current user).
+ *
+ * Sessions where the user only has an invite link (but was not added as a
+ * player) do NOT appear in the list — they are still reachable via the direct
+ * invite-code URL (/free-play/join/:code). Legacy rows (created_by IS NULL)
+ * are hidden from everyone's list; they remain accessible by direct URL.
+ *
+ * RLS on free_plays enforces the same rule server-side; this function mirrors
+ * it at the query layer so we don't need a custom RPC.
+ */
 export async function getFreePlays(leagueId = null) {
-  let q = supabase.from('free_plays').select('*').order('created_at', { ascending: false })
-  if (leagueId) q = q.eq('league_id', leagueId)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
 
-  const { data, error } = await q
-  if (error) throw error
-  return data || []
+  // ── Branch 1: sessions I created ────────────────────────────────────────
+  const createdQuery = supabase
+    .from('free_plays')
+    .select('*')
+    .eq('created_by', user.id)
+
+  // ── Branch 2: sessions where I am a league-linked player ─────────────────
+  // Step 2a — find my player row ids in any league
+  const { data: myPlayers } = await supabase
+    .from('players')
+    .select('id')
+    .eq('user_id', user.id)
+  const myPlayerIds = (myPlayers || []).map(r => r.id)
+
+  // Step 2b — find free_play_ids where one of my player rows was added
+  let joinedSessionIds = []
+  if (myPlayerIds.length) {
+    const { data: fppRows } = await supabase
+      .from('free_play_players')
+      .select('free_play_id')
+      .in('league_player_id', myPlayerIds)
+    joinedSessionIds = [...new Set((fppRows || []).map(r => r.free_play_id))]
+  }
+
+  // ── Fetch both sets in parallel ──────────────────────────────────────────
+  const [createdRes, joinedRes] = await Promise.all([
+    createdQuery,
+    joinedSessionIds.length
+      ? supabase.from('free_plays').select('*').in('id', joinedSessionIds)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  if (createdRes.error) throw createdRes.error
+  if (joinedRes.error) throw joinedRes.error
+
+  // De-dup (a session I created AND was added to as player should appear once)
+  const byId = new Map(
+    [...(createdRes.data || []), ...(joinedRes.data || [])].map(r => [r.id, r])
+  )
+
+  let rows = [...byId.values()].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  )
+
+  if (leagueId) rows = rows.filter(r => r.league_id === leagueId)
+  return rows
 }
 
 export async function createFreePlay(name, leagueId = null) {

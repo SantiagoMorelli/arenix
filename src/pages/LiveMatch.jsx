@@ -41,9 +41,6 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
   const t1Name = teamName(tournament.teams, live.team1Id)
   const t2Name = teamName(tournament.teams, live.team2Id)
 
-  const handleSwap1 = () => live.setT1ServeOrder(o => [...o.slice(1), o[0]])
-  const handleSwap2 = () => live.setT2ServeOrder(o => [...o.slice(1), o[0]])
-
   const handleMoveUp1 = (idx) => live.setT1ServeOrder(o => {
     const n = [...o]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; return n
   })
@@ -114,9 +111,6 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
                     )}
                   </div>
                 ))}
-                <button onClick={handleSwap1} className="text-[11px] font-bold text-dim bg-alt py-1.5 rounded-lg mt-1 active:bg-line">
-                  Swap Order
-                </button>
               </div>
             </div>
 
@@ -135,9 +129,6 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
                     )}
                   </div>
                 ))}
-                <button onClick={handleSwap2} className="text-[11px] font-bold text-dim bg-alt py-1.5 rounded-lg mt-1 active:bg-line">
-                  Swap Order
-                </button>
               </div>
             </div>
           </div>

@@ -120,9 +120,7 @@ src/
 - **Restyle, don't rewire.** When changing visuals, keep `useState`,
   `useEffect`, event handlers, and props intact.
 - **Tailwind utilities only**, no inline styles.
-- For any visual decision, defer to `design_handoff_arenix/README.md`; for
-  layout questions, check `docs/wireframes/`.
-
+- For any visual decision, defer to `design_handoff_arenix/README.md`; 
 ## Commands
 
 ```bash

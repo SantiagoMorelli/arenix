@@ -1,99 +1,146 @@
 # Arenix — Beach Volleyball Tournament Manager
 
-## Tech Stack
+Mobile-first PWA used on phones via the browser. Standard React web app, **not** React Native.
 
-- **Frontend:** React 19 + Vite 8 (standard web app, NOT React Native)
-- **Styling:** Tailwind CSS (`ui-new.jsx` for shared components)
-- **Data:** Supabase (real-time DB + auth)
-- **Routing:** React Router v6 — routes defined in `AppRouter.jsx`
-- **Font:** DM Sans + Bebas Neue (Google Fonts)
-- **Target:** Mobile-first PWA (mostly used on phones via browser)
+## Tech stack
 
-## Current File Structure
+- **React 19** + **Vite 8** (`@vitejs/plugin-react`, `vite-plugin-pwa`)
+- **React Router 7** — all routes in `src/AppRouter.jsx`
+- **Supabase** (`@supabase/supabase-js`) — real-time DB + auth
+- **Tailwind v4** via `@tailwindcss/vite` (no PostCSS step). Tokens are
+  declared in `src/index.css` inside `@theme { … }` — **not** in
+  `tailwind.config.js`. Light values live in `:root`, dark overrides in `.dark`.
+- **Fonts:** DM Sans (body/UI) + Bebas Neue (display/scoreboard) — already
+  imported in `index.html` and exposed as `font-sans` / `font-display`.
+- **Icons:** Lucide React (`lucide-react`) — mandated by the design handoff.
+- **QR handoff:** `qrcode.react` + `html5-qrcode`
+
+## Design system
+
+All visual specs — colors, typography, spacing, component primitives, per-screen
+layouts, animations — live in **`design_handoff_arenix/README.md`**. Treat that
+file as canonical and pixel-match against it. Wireframes and prompt templates
+are in `docs/wireframes/` and `docs/claude-code-prompts.md`. Do **not**
+duplicate token values into this file; they drift.
+
+## File structure
 
 ```
 src/
-├── AppRouter.jsx                        ← React Router setup, all routes
-├── main.jsx                             ← Entry point
-├── assets/                              ← Images (hero.png, etc.)
-├── contexts/
-│   └── AuthContext.jsx                  ← Supabase auth context
-├── hooks/
-│   ├── useLiveGame.js                   ← Core match logic — serve rotation, scoring, undo, sets
-│   ├── useLeague.js                     ← League data fetching
-│   ├── useLeagueRole.js                 ← Role/permission check per league
-│   ├── useBattery.js                    ← Battery level detection
-│   └── useLocalStorage.js              ← localStorage wrapper
+├── AppRouter.jsx                ← all routes
+├── main.jsx                     ← entry
+├── contexts/AuthContext.jsx     ← Supabase auth context
 ├── layouts/
-│   ├── MainLayout.jsx                   ← Root layout (nav, auth gate)
-│   └── LeagueLayout.jsx                 ← Layout for /league/:id routes
+│   ├── MainLayout.jsx           ← bottom nav + auth gate
+│   └── LeagueLayout.jsx         ← /league/:id/* shell
 ├── lib/
-│   ├── i18n.js                          ← Translation keys (English only)
-│   ├── utils.js                         ← uid(), now(), LEVELS
-│   └── supabase.js                      ← Supabase client
+│   ├── supabase.js              ← single client (env-validated)
+│   ├── i18n.js                  ← translation keys (English only)
+│   ├── utils.js                 ← uid(), now(), LEVELS
+│   └── standings.js             ← ranking math
+├── services/                    ← ALL Supabase reads/writes go here
+│   ├── leagueService.js
+│   ├── tournamentService.js
+│   ├── playerService.js
+│   ├── freePlayService.js
+│   ├── inviteService.js
+│   └── notificationService.js
+├── hooks/                       ← state-bearing flows; consume services
+│   ├── useLiveGame.js           ← serve rotation, scoring, undo, sets
+│   ├── useFreePlay.js           ← free-play session state
+│   ├── useLeague.js             ← league data fetching
+│   ├── useLeagueRole.js         ← role/permission per league
+│   ├── useBattery.js
+│   └── useLocalStorage.js
 ├── pages/
-│   ├── Home.jsx                         ← / — dashboard (league card, free play, recent)
-│   ├── LeagueDetail.jsx                 ← /league/:id — rankings, players, tournaments tabs
-│   ├── TournamentDetail.jsx             ← /league/:id/tournament/:tid
-│   ├── TournamentSetupWizard.jsx        ← Tournament creation wizard
-│   ├── LiveMatch.jsx                    ← /league/:id/tournament/:tid/match/:mid ← MAIN LIVE MATCH
-│   ├── Profile.jsx                      ← /profile
-│   ├── EditProfile.jsx                  ← /profile/edit
-│   ├── Settings.jsx                     ← /settings
-│   ├── Login.jsx                        ← /login
-│   ├── Signup.jsx                       ← /signup
-│   └── JoinLeague.jsx                   ← /join/:code
+│   ├── Home.jsx, GuestHome.jsx               ← / (auth | guest)
+│   ├── Login.jsx, Signup.jsx
+│   ├── Profile.jsx, EditProfile.jsx, Settings.jsx
+│   ├── JoinLeague.jsx                         ← /join/:code
+│   ├── LeagueDetail.jsx, LeaguePublicView.jsx ← private vs public read-only
+│   ├── TournamentDetail.jsx, TournamentSetupWizard.jsx
+│   ├── LiveMatch.jsx                          ← orchestrator (see below)
+│   └── FreePlay{List,Wizard,Session,LiveMatch,Join}.jsx
 └── components/
-    ├── ui-new.jsx                       ← Shared Tailwind components
-    ├── GameStats.jsx                    ← Post-match stats (used by LiveMatch + TournamentDetail)
-    ├── LeaguePlayersTab.jsx             ← Players tab inside LeagueDetail
-    ├── TournamentStatsScreen.jsx        ← Tournament statistics overlay
-    ├── NotificationPanel.jsx            ← Bell dropdown
-    ├── NotificationToast.jsx            ← Toast notifications
-    ├── ProtectedRoute.jsx               ← Auth guard wrapper
-    ├── QRExportModal.jsx                ← QR code export for match handoff
-    └── QRImportModal.jsx                ← QR code import
+    ├── ui-new.jsx               ← shared primitives (Card, Btn, …) — REUSE
+    ├── GameSetupScreen.jsx      ← LiveMatch: pre-match setup phase
+    ├── LiveScoreboard.jsx, LiveScoreSection.jsx, ScoreBoard.jsx
+    ├── PointButtons.jsx, PointLog.jsx, EditMatchModal.jsx
+    ├── GameStats.jsx, FreePlayStatsScreen.jsx, TournamentStatsScreen.jsx
+    ├── LeaguePlayersTab.jsx
+    ├── NotificationPanel.jsx, NotificationToast.jsx
+    ├── ProtectedRoute.jsx
+    └── QRExportModal.jsx, QRImportModal.jsx
 ```
 
-
-## Current Navigation (React Router)
+## Routes
 
 ```
-/                                       → Home.jsx
-/login                                  → Login.jsx
-/signup                                 → Signup.jsx
-/join/:code                             → JoinLeague.jsx
-/profile                                → Profile.jsx
-/profile/edit                           → EditProfile.jsx
-/settings                               → Settings.jsx
-/league/:id                             → LeagueDetail.jsx  (inside LeagueLayout)
-/league/:id/tournament/new              → TournamentSetupWizard.jsx
-/league/:id/tournament/:tid             → TournamentDetail.jsx
-/league/:id/tournament/:tid/match/:mid  → LiveMatch.jsx
+/                                        → Home (auth) | GuestHome (guest)
+/login, /signup                          → public
+/profile                                 → Profile (auth)
+/edit-profile                            → EditProfile
+/settings                                → Settings
+/join/:code                              → JoinLeague (auth)
+/league/view/:code                       → LeaguePublicView (public, read-only)
+/league/:id                              → LeagueDetail        ┐
+/league/:id/tournament/new               → TournamentSetupWizard│ inside
+/league/:id/tournament/:tid              → TournamentDetail     │ LeagueLayout
+/league/:id/tournament/:tid/match/:mid   → LiveMatch (auth)    ┘
+/free-play                               → FreePlayList
+/free-play/new                           → FreePlayWizard
+/free-play/:id                           → FreePlaySession
+/free-play/:id/match                     → FreePlayLiveMatch
+/free-play/join/:code                    → FreePlayJoin (public)
 ```
 
------
+## Architectural patterns
 
-### Color Tokens (configure in tailwind.config.js)
-
-Dark (primary): bg:#0F1923 surface:#1A2734 alt:#243447 accent:#F5A623 free:#00BCD4 success:#2ECC71 error:#E74C3C text:#E8ECF1 dim:#7A8EA0 line:#2A3A4A
-Light: bg:#F5F6F8 surface:#FFF alt:#EDF0F4 accent:#E8850C free:#0891B2 success:#16A34A error:#DC2626 text:#1A1D23 dim:#6B7280 line:#E2E5EB
-
-### Design Constants
-
-Card: 12px radius, 12px 14px padding. Labels: 12px uppercase weight-700 tracking-wide.
-Body: 13px. Subtitles: 11px. Headers: 18px. CTAs: 14px padding+font, full-width, rounded-xl.
-Touch: min 44px. Side padding: 16px. Gaps: 8px.
-
------
+- **Services layer.** All Supabase calls live in `src/services/*.js`. Pages,
+  components, and hooks must **not** call `supabase.from(...)` directly.
+- **Hooks wrap services.** Stateful flows like `useLiveGame` and `useFreePlay`
+  consume services and expose UI-friendly state.
+- **Layouts.** `MainLayout` wraps authenticated screens with bottom nav;
+  `LeagueLayout` wraps everything under `/league/:id/`.
+- **LiveMatch composition.** `LiveMatch.jsx` orchestrates phases via
+  `GameSetupScreen` → `LiveScoreboard` / `ScoreBoard` / `LiveScoreSection`
+  (+ `PointButtons`, `PointLog`, `EditMatchModal`) → `GameStats`. When
+  restyling, edit the sub-components, not the orchestrator.
 
 ## Rules
 
-### ALWAYS do:
+- **Lucide React for all icons.** No inline SVGs, no other icon libraries.
+- **All Supabase calls go through `src/services/`.** Never import the client
+  directly into a page or component.
+- **Reuse `components/ui-new.jsx` primitives** (Card, Btn, Avatar, Badge,
+  Label, …) before creating new styled elements.
+- **Mobile-first (320–428px).** Dark mode is primary; light mode uses the
+  Tailwind `class` strategy.
+- **No test framework is configured.** Do not scaffold vitest/jest/RTL or
+  create test files unless explicitly asked.
+- **Restyle, don't rewire.** When changing visuals, keep `useState`,
+  `useEffect`, event handlers, and props intact.
+- **Tailwind utilities only**, no inline styles.
+- For any visual decision, defer to `design_handoff_arenix/README.md`; for
+  layout questions, check `docs/wireframes/`.
 
-- Keep all useState, useEffect, event handlers intact when restyling
-- Keep all props and data flow intact
-- Reference docs/wireframes/ for exact visual specs
-- Use Tailwind utility classes, not inline styles
-- Support dark mode with class strategy
-- Design mobile-first (320-428px)
+## Commands
+
+```bash
+npm run dev       # start Vite dev server
+npm run build     # production build
+npm run lint      # ESLint v9 flat config
+npm run preview   # serve the build locally
+```
+
+## Token reference
+
+Available Tailwind utilities (from `src/index.css` `@theme`):
+
+- **Colors:** `bg`, `surface`, `alt`, `accent`, `free`, `success`, `error`,
+  `text`, `dim`, `line` → use as `bg-accent`, `text-dim`, `border-line`, etc.
+- **Fonts:** `font-sans` (DM Sans, default on `<body>`), `font-display`
+  (Bebas Neue — scoreboard, big stats, hero titles).
+
+The handoff (`design_handoff_arenix/README.md`) is authoritative for type
+scale, radii, and per-screen rules.

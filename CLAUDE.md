@@ -55,16 +55,6 @@ src/
     └── QRImportModal.jsx                ← QR code import
 ```
 
-## ORPHANED FILES — DO NOT TOUCH
-
-These files exist on disk but are **not imported anywhere** in the active codebase.
-They are leftovers from the pre-router architecture. Do not edit them.
-
-- `src/components/LiveScoreSection.jsx`
-- `src/components/ScoreBoard.jsx`
-- `src/components/GameSetupScreen.jsx`
-- `src/components/PointButtons.jsx`
-- `src/components/PointLog.jsx`
 
 ## Current Navigation (React Router)
 

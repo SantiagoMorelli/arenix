@@ -908,7 +908,14 @@ export default function FreePlaySession() {
   }
 
   const handleResumeMatch = (pendingGame) => {
-    navigate(`/free-play/${id}/match`, { state: { gameId: pendingGame.id } })
+    navigate(`/free-play/${id}/match`, {
+      state: {
+        gameId:      pendingGame.id,
+        team1Id:     pendingGame.team1Id,
+        team2Id:     pendingGame.team2Id,
+        setsPerMatch: pendingGame.setsPerMatch ?? 1,
+      },
+    })
   }
 
   // ── Loading / error ─────────────────────────────────────────────────────

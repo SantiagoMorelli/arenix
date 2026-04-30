@@ -74,43 +74,6 @@ src/
 
 -----
 
-## Screen Status
-
-### ACTIVE — edit these:
-
-- `pages/LiveMatch.jsx` — live match scoreboard (the real one, routed)
-- `pages/TournamentDetail.jsx` — tournament view (standings, matches, players)
-- `pages/LeagueDetail.jsx` — league view
-- `pages/TournamentSetupWizard.jsx` — create tournament flow
-- `pages/Home.jsx` — dashboard
-- `pages/Profile.jsx` — player profile
-- `pages/Settings.jsx` — app settings
-- `components/GameStats.jsx` — post-match stats screen
-- `components/LeaguePlayersTab.jsx` — player list in league
-- `components/NotificationPanel.jsx` — bell dropdown
-- `hooks/useLiveGame.js` — all match logic lives here
-
-### ORPHANED — do not edit:
-
-- `components/LiveScoreSection.jsx` — replaced by `pages/LiveMatch.jsx`
-- `components/ScoreBoard.jsx` — was used by LiveScoreSection only
-- `components/GameSetupScreen.jsx` — was used by LiveScoreSection only
-- `components/PointButtons.jsx` — was used by LiveScoreSection only
-- `components/PointLog.jsx` — was used by LiveScoreSection only
-
------
-
-## Design System
-
-All wireframes in `docs/wireframes/`:
-
-- `01-home-league-freeplay.jsx` — Home, League, Tournament overview, Free Play
-- `02-tournament-setup-live.jsx` — Tournament setup wizard + live view
-- `03-live-match.jsx` — Start game, match setup, scoreboard, modals
-- `04-match-result.jsx` — Post-match stats
-- `05-profile-settings.jsx` — Profile + Settings
-- `06-notifications.jsx` — Bell icon + dropdown panel
-
 ### Color Tokens (configure in tailwind.config.js)
 
 Dark (primary): bg:#0F1923 surface:#1A2734 alt:#243447 accent:#F5A623 free:#00BCD4 success:#2ECC71 error:#E74C3C text:#E8ECF1 dim:#7A8EA0 line:#2A3A4A

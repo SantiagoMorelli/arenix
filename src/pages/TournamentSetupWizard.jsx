@@ -4,9 +4,7 @@ import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { createTournament } from '../services/tournamentService'
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
-import { uid, now, levelOf, generateRoundRobinSchedule } from '../lib/utils'
-
-const STEPS = ['Players', 'Teams', 'Schedule']
+import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 
 const FORMAT_OPTIONS = [
   { id: 'group',    label: 'Group + Knockout', emoji: '🏆' },
@@ -80,34 +78,23 @@ function paramDescription(params) {
   return 'Primary: balance skill level across teams. Secondary: alternate sex within the same level.'
 }
 
-function Stepper({ step }) {
-  return (
-    <div className="px-4 mb-4">
-      <div className="flex items-center">
-        {STEPS.map((label, idx) => {
-          const done   = idx < step
-          const active = idx === step
-          return (
-            <div key={label} className="flex items-center flex-1">
-              <div className="flex items-center gap-1.5 flex-1">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                  done ? 'bg-success text-white' : active ? 'bg-accent text-white' : 'bg-alt text-dim'
-                }`}>
-                  {done ? '✓' : idx + 1}
-                </div>
-                <span className={`text-[11px] font-semibold ${active ? 'text-accent' : done ? 'text-success' : 'text-dim'}`}>
-                  {label}
-                </span>
-              </div>
-              {idx < STEPS.length - 1 && (
-                <div className={`w-5 h-0.5 rounded ${done ? 'bg-success' : 'bg-line'}`} />
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
+function playerColor(name) {
+  const palette = ['#C0392B','#8E44AD','#2980B9','#16A085','#27AE60','#E67E22','#9B59B6','#1ABC9C','#D35400','#2C3E50']
+  let hash = 0
+  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) | 0
+  return palette[Math.abs(hash) % palette.length]
+}
+
+function playerInitials(name) {
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+function formatDateDisplay(iso) {
+  if (!iso) return 'Select date'
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const parts = iso.split('-')
+  if (parts.length === 3) return `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[2])}`
+  return iso
 }
 
 function getValidGroupOptions(numTeams) {
@@ -135,9 +122,8 @@ export default function TournamentSetupWizard() {
   const [saving, setSaving] = useState(false)
 
   // Step 0 state
-  const [playerSearch, setPlayerSearch] = useState('')
   const [name,         setName]         = useState('')
-  const [date,         setDate]         = useState(now())
+  const [date,         setDate]         = useState(new Date().toISOString().slice(0, 10))
   const [teamSize,     setTeamSize]     = useState(2)
   const [setsPerMatch, setSetsPerMatch] = useState(1)
   const [pickedPlayers, setPickedPlayers] = useState([])
@@ -168,8 +154,7 @@ export default function TournamentSetupWizard() {
     [invitedPlayers, teams]
   )
 
-  const canContinueFromPlayers = name.trim() && pickedPlayers.length >= teamSize
-  const canContinueFromTeams   = teams.length >= 2
+  const canContinueFromTeams = teams.length >= 2
   const validGroupOptions      = getValidGroupOptions(teams.length)
   const canGroupStage          = validGroupOptions.length > 0
   const effectiveFormat        = canGroupStage ? formatMode : 'freeplay'
@@ -177,7 +162,7 @@ export default function TournamentSetupWizard() {
 
   // ── Group preview — regenerate when step/format/group-count changes ──────
   useEffect(() => {
-    if (step === 2 && effectiveFormat === 'group') {
+    if (step === 3 && effectiveFormat === 'group') {
       setPreviewGroups(buildPreviewGroups(teams, selectedGroups))
       setSelectedTeamId(null)
     }
@@ -299,138 +284,184 @@ export default function TournamentSetupWizard() {
     )
   }
 
+  const totalSteps = 4
+
   return (
     <div className="screen bg-bg text-text">
-      <div className="screen__top flex items-center gap-2.5 px-4 py-3">
-        <button
-          onClick={() => navigate(`/league/${id}`)}
-          className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text"
-        >
-          ←
-        </button>
-        <div>
-          <div className="text-[18px] font-bold">Tournament Setup</div>
-          <div className="text-[11px] text-dim">{league.name}</div>
+      <div className="screen__top">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            onClick={() => step > 0 ? setStep(step - 1) : navigate(`/league/${id}`)}
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-surface border border-line cursor-pointer text-text flex-shrink-0"
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <div>
+            <div className="text-[18px] font-bold leading-tight">New Tournament</div>
+            <div className="text-[11px] text-dim">Step {step + 1} of {totalSteps}</div>
+          </div>
+        </div>
+        <div className="px-4 pb-3">
+          <div className="h-1 bg-alt rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent rounded-full transition-[width] duration-300 ease-in-out"
+              style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      <Stepper step={step} />
-
       <main className="screen__body px-4 pb-6">
-        {/* ══ Step 0: Players ══════════════════════════════════════════════════ */}
+        {/* ══ Step 0: Settings ═════════════════════════════════════════════════ */}
         {step === 0 && (
-          <div>
-            <div className="text-[16px] font-bold mb-1">Invite Players</div>
-            <div className="text-[12px] text-dim mb-3.5">Select from your league roster</div>
-
-            <div className="bg-surface rounded-xl border border-line p-3.5 mb-3.5">
-              <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Tournament Info</div>
-              <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-5 pt-1">
+            {/* Name */}
+            <div>
+              <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Name</div>
+              <div className="bg-surface border border-line rounded-xl px-4 py-3.5">
                 <input
-                  value={name} onChange={e => setName(e.target.value)}
-                  placeholder="Tournament name"
-                  className="w-full border border-line rounded-lg px-3 py-2.5 text-[14px] text-text bg-bg outline-none focus:border-accent"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Spring Cup 2026"
+                  className="w-full bg-transparent border-0 outline-none text-[15px] font-semibold text-text placeholder:text-dim"
                 />
-                <input
-                  value={date} onChange={e => setDate(e.target.value)}
-                  placeholder="Date"
-                  className="w-full border border-line rounded-lg px-3 py-2.5 text-[14px] text-text bg-bg outline-none focus:border-accent"
-                />
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="bg-bg border border-line rounded-lg p-2.5">
-                    <div className="text-[10px] text-dim uppercase font-bold mb-1">Players/Team</div>
-                    <div className="flex gap-1.5">
-                      {[2, 3].map(n => (
-                        <button key={n} onClick={() => setTeamSize(n)}
-                          className={`flex-1 py-1.5 text-[12px] rounded-md border cursor-pointer ${teamSize === n ? 'border-accent bg-accent/10 text-accent font-bold' : 'border-line bg-surface text-text'}`}>
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-bg border border-line rounded-lg p-2.5">
-                    <div className="text-[10px] text-dim uppercase font-bold mb-1">Sets/Match</div>
-                    <div className="flex gap-1.5">
-                      {[1, 3, 5].map(n => (
-                        <button key={n} onClick={() => setSetsPerMatch(n)}
-                          className={`flex-1 py-1.5 text-[12px] rounded-md border cursor-pointer ${setsPerMatch === n ? 'border-accent bg-accent/10 text-accent font-bold' : 'border-line bg-surface text-text'}`}>
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Search */}
-            <input
-              value={playerSearch}
-              onChange={e => setPlayerSearch(e.target.value)}
-              placeholder="🔍 Search players..."
-              className="w-full bg-surface border border-line rounded-[10px] px-3.5 py-2.5 text-[13px] text-text outline-none focus:border-accent mb-3.5"
-            />
-
-            {/* Selected pills */}
-            <div className="text-[11px] font-bold text-accent uppercase tracking-wide mb-2">
-              Selected ({pickedPlayers.length})
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {pickedPlayers.map(pid => {
-                const pl = league.players.find(p => p.id === pid)
-                return pl ? (
-                  <span key={pid} className="text-[11px] bg-accent/15 text-accent rounded-lg px-2.5 py-1.5 font-medium flex items-center gap-1">
-                    {pl.name}
-                    <button
-                      onClick={() => togglePickedPlayer(pid)}
-                      className="text-[9px] text-dim cursor-pointer bg-transparent border-0 p-0 leading-none"
-                    >✕</button>
-                  </span>
-                ) : null
-              })}
+            {/* Start date */}
+            <div>
+              <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Start date</div>
+              <div className="relative">
+                <div className="bg-surface border border-line rounded-xl px-4 py-3.5 flex items-center gap-3">
+                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dim flex-shrink-0">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span className="text-[14px] font-semibold text-text">{formatDateDisplay(date)}</span>
+                </div>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                />
+              </div>
             </div>
 
-            {/* Available league players */}
-            <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">League Players</div>
-            <div className="flex flex-col">
-              {(league.players || [])
-                .filter(p => !pickedPlayers.includes(p.id))
-                .filter(p => p.name.toLowerCase().includes(playerSearch.toLowerCase()))
-                .map(player => (
-                  <div key={player.id} className="bg-surface rounded-[10px] border border-line px-3.5 py-2.5 mb-1.5 flex items-center gap-2.5">
-                    <div className="w-[30px] h-[30px] rounded-lg bg-alt flex items-center justify-center text-[12px] font-semibold text-text flex-shrink-0">
-                      {player.name[0]}
-                    </div>
-                    <span className="flex-1 text-[13px] font-medium text-text">{player.name}</span>
-                    <button
-                      onClick={() => togglePickedPlayer(player.id)}
-                      className="w-6 h-6 rounded-[6px] border-2 border-line flex items-center justify-center cursor-pointer bg-transparent text-dim flex-shrink-0"
-                    >
-                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                    </button>
-                  </div>
-                ))
-              }
+            {/* Team size */}
+            <div>
+              <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Team size</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: 2, title: '2 players', sub: 'Doubles' },
+                  { v: 3, title: '3 players', sub: 'Triples' },
+                ].map(o => (
+                  <button
+                    key={o.v}
+                    onClick={() => setTeamSize(o.v)}
+                    className={`rounded-xl border-2 py-3.5 text-center cursor-pointer transition-colors ${
+                      teamSize === o.v
+                        ? 'border-accent bg-surface'
+                        : 'border-line bg-surface'
+                    }`}
+                  >
+                    <div className={`text-[18px] font-extrabold leading-tight ${teamSize === o.v ? 'text-accent' : 'text-text'}`}>{o.title}</div>
+                    <div className="text-[11px] text-dim mt-1">{o.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Match length */}
+            <div>
+              <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Match length</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: 1, title: '1 set',     sub: 'Quick play' },
+                  { v: 3, title: 'Best of 3', sub: 'Standard'   },
+                ].map(o => (
+                  <button
+                    key={o.v}
+                    onClick={() => setSetsPerMatch(o.v)}
+                    className={`rounded-xl border-2 py-3.5 text-center cursor-pointer transition-colors ${
+                      setsPerMatch === o.v
+                        ? 'border-accent bg-surface'
+                        : 'border-line bg-surface'
+                    }`}
+                  >
+                    <div className={`text-[18px] font-extrabold leading-tight ${setsPerMatch === o.v ? 'text-accent' : 'text-text'}`}>{o.title}</div>
+                    <div className="text-[11px] text-dim mt-1">{o.sub}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button
               onClick={() => setStep(1)}
-              disabled={!canContinueFromPlayers}
-              className="w-full mt-3.5 min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              disabled={!name.trim()}
+              className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
             >
-              Next: Create Teams
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              Continue
             </button>
           </div>
         )}
 
-        {/* ══ Step 1: Teams ════════════════════════════════════════════════════ */}
+        {/* ══ Step 1: Players ══════════════════════════════════════════════════ */}
         {step === 1 && (
+          <div className="pt-1">
+            <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-3">
+              Players ({pickedPlayers.length} selected)
+            </div>
+            <div className="flex flex-col gap-1.5 mb-4">
+              {(league.players || [])
+                .slice()
+                .sort((a, b) => (b.elo || 0) - (a.elo || 0))
+                .map(player => {
+                  const on = pickedPlayers.includes(player.id)
+                  return (
+                    <button
+                      key={player.id}
+                      onClick={() => togglePickedPlayer(player.id)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border-[1.5px] bg-surface cursor-pointer text-left transition-colors ${
+                        on ? 'border-accent' : 'border-line'
+                      }`}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
+                        style={{ backgroundColor: playerColor(player.name) }}
+                      >
+                        {playerInitials(player.name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-text leading-tight">{player.name}</div>
+                        {player.elo && <div className="text-[10px] text-dim mt-0.5">ELO {player.elo}</div>}
+                      </div>
+                      <div className={`w-[22px] h-[22px] rounded-[6px] flex items-center justify-center flex-shrink-0 ${
+                        on ? 'bg-accent border-0' : 'bg-transparent border-[1.5px] border-line'
+                      }`}>
+                        {on && (
+                          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+            </div>
+            <button
+              onClick={() => setStep(2)}
+              disabled={pickedPlayers.length < teamSize}
+              className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {/* ══ Step 2: Teams ════════════════════════════════════════════════════ */}
+        {step === 2 && (
           <div>
             <div className="text-[16px] font-bold mb-1">Create Teams</div>
             <div className="text-[12px] text-dim mb-4">{invitedPlayers.length} players · {teamSize} per team</div>
@@ -671,8 +702,8 @@ export default function TournamentSetupWizard() {
             )}
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setStep(0)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>
-              <button onClick={() => setStep(2)} disabled={!canContinueFromTeams}
+              <button onClick={() => setStep(1)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>
+              <button onClick={() => setStep(3)} disabled={!canContinueFromTeams}
                 className="min-h-[42px] rounded-lg text-[13px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50">
                 Next: Schedule
               </button>
@@ -680,8 +711,8 @@ export default function TournamentSetupWizard() {
           </div>
         )}
 
-        {/* ══ Step 2: Schedule ═════════════════════════════════════════════════ */}
-        {step === 2 && (
+        {/* ══ Step 3: Schedule ═════════════════════════════════════════════════ */}
+        {step === 3 && (
           <div>
             <div className="text-[16px] font-bold mb-1">Generate Schedule</div>
             <div className="text-[12px] text-dim mb-4">
@@ -777,7 +808,7 @@ export default function TournamentSetupWizard() {
             )}
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setStep(1)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>
+              <button onClick={() => setStep(2)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>
               <button onClick={handleStartTournament} disabled={saving}
                 className="min-h-[42px] rounded-lg text-[13px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-60">
                 {saving ? 'Creating…' : 'Start Tournament'}

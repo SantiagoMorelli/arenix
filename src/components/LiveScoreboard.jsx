@@ -2,6 +2,7 @@ import { useState } from 'react'
 import GameStats from './GameStats'
 import QRExportModal from './QRExportModal'
 import { useBattery } from '../hooks/useBattery'
+import { useWakeLock } from '../hooks/useWakeLock'
 
 /**
  * LiveScoreboard — in-game scoreboard, overlays, and match log.
@@ -64,6 +65,7 @@ export default function LiveScoreboard({
 
   // ── Battery (only when enabled) ──────────────────────────────────────────
   const battery = useBattery()
+  useWakeLock()
   const [batteryBannerDismissed, setBatteryBannerDismissed] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showQRExport, setShowQRExport] = useState(false)

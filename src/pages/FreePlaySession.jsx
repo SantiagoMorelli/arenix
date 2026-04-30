@@ -828,7 +828,7 @@ export default function FreePlaySession() {
     session, loading, error, isAdmin,
     addPlayer, removePlayer,
     createTeam, updateTeam, deleteTeam,
-    startGame, finishSession, updateSession, inviteLink,
+    startGame, finishSession, deleteSession, updateSession, inviteLink,
   } = useFreePlay(id)
 
   // Tabs
@@ -837,6 +837,7 @@ export default function FreePlaySession() {
   // Global chrome state
   const [showMenu,      setShowMenu]      = useState(false)
   const [confirmEnd,    setConfirmEnd]    = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [copied,        setCopied]        = useState(false)
   const [showSessionStats, setShowSessionStats] = useState(false)
 
@@ -882,6 +883,16 @@ export default function FreePlaySession() {
     try {
       await finishSession()
       setShowSessionStats(true)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleDeleteSession = async () => {
+    setConfirmDelete(false)
+    try {
+      await deleteSession()
+      navigate('/free-play')
     } catch (err) {
       console.error(err)
     }
@@ -999,6 +1010,14 @@ export default function FreePlaySession() {
                     Finish Session
                   </button>
                 )}
+                {isAdmin && (
+                  <button
+                    onClick={() => { setShowMenu(false); setConfirmDelete(true) }}
+                    className="w-full px-4 py-3.5 text-left text-[13px] font-semibold text-error flex items-center gap-3 active:bg-alt border-0 bg-transparent cursor-pointer border-t border-line"
+                  >
+                    Delete Session
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -1015,6 +1034,21 @@ export default function FreePlaySession() {
             </button>
             <button onClick={handleFinishSession} className="text-[13px] font-bold text-white bg-error px-3 py-1 rounded-lg border-0 cursor-pointer">
               Finish
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {confirmDelete && (
+        <div className="bg-error/10 border-b border-error/20 px-4 py-3 flex items-center justify-between shrink-0">
+          <span className="text-[13px] font-bold text-error">Delete this session?</span>
+          <div className="flex gap-3">
+            <button onClick={() => setConfirmDelete(false)} className="text-[13px] font-semibold text-dim bg-transparent border-0 cursor-pointer">
+              Cancel
+            </button>
+            <button onClick={handleDeleteSession} className="text-[13px] font-bold text-white bg-error px-3 py-1 rounded-lg border-0 cursor-pointer">
+              Delete
             </button>
           </div>
         </div>

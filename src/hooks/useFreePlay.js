@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   getFreePlay,
   finishFreePlay,
+  deleteFreePlay,
   updateFreePlay,
   addFreePlayPlayer,
   removeFreePlayPlayer,
@@ -106,6 +107,10 @@ export function useFreePlay(id) {
     setSession(s => s ? { ...s, status: 'finished' } : s)
   }
 
+  const deleteSession = async () => {
+    await deleteFreePlay(id)
+  }
+
   const updateSession = async ({ name, leagueId } = {}) => {
     const patch = {}
     if (name !== undefined) patch.name = name
@@ -131,7 +136,7 @@ export function useFreePlay(id) {
     isAdmin, isOwner,
     addPlayer, removePlayer,
     createTeam, updateTeam, deleteTeam,
-    startGame, finishSession, updateSession,
+    startGame, finishSession, deleteSession, updateSession,
     inviteLink,
   }
 }

@@ -97,6 +97,14 @@ function formatDateDisplay(iso) {
   return iso
 }
 
+function shortName(name) {
+  const parts = name.trim().split(' ').filter(Boolean)
+  if (parts.length < 2) return parts[0] || name
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`
+}
+
+const NATO = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet']
+
 function getValidGroupOptions(numTeams) {
   return [2, 4, 8].filter(g => Math.floor(numTeams / g) >= 3)
 }
@@ -136,6 +144,7 @@ export default function TournamentSetupWizard() {
   const [addingTeam,       setAddingTeam]       = useState(false)
   const [addingTeamName,   setAddingTeamName]   = useState('')
   const [pickingForTeamId, setPickingForTeamId] = useState(null)    // teamId or null
+  const [confirmedAuto,    setConfirmedAuto]    = useState(false)
 
   // Step 2 state
   const [formatMode,      setFormatMode]      = useState('group')
@@ -189,19 +198,23 @@ export default function TournamentSetupWizard() {
   const toggleParam = p => {
     setParams(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
     setProposedTeams([])
+    setConfirmedAuto(false)
   }
 
   const propose = () => {
-    const groups = buildTeamGroups(availablePlayers, params, teamSize)
+    const groups = buildTeamGroups(invitedPlayers, params, teamSize)
     setProposedTeams(groups.map((pIds, i) => ({
-      id: uid(), name: `Team ${teams.length + i + 1}`, players: pIds, wins: 0, losses: 0, points: 0,
+      id: uid(), name: `Team ${NATO[i] || i + 1}`, players: pIds, wins: 0, losses: 0, points: 0,
     })))
+    setTeams([])
+    setConfirmedAuto(false)
   }
 
   const confirmProposed = () => {
     if (!proposedTeams.length) return
-    setTeams(prev => [...prev, ...proposedTeams])
+    setTeams([...proposedTeams])
     setProposedTeams([])
+    setConfirmedAuto(true)
   }
 
   // ── Manual team creation ──────────────────────────────────────────────────
@@ -467,11 +480,15 @@ export default function TournamentSetupWizard() {
             <div className="text-[12px] text-dim mb-4">{invitedPlayers.length} players · {teamSize} per team</div>
 
             {/* Mode toggle */}
-            <div className="flex bg-alt rounded-[10px] p-[3px] mb-4">
-              {[{ id: 'auto', label: 'Auto Generate', emoji: '🔀' }, { id: 'manual', label: 'Manual', emoji: '✏️' }].map(opt => (
-                <button key={opt.id} onClick={() => { setTeamMode(opt.id); setProposedTeams([]) }}
-                  className={`flex-1 py-2 rounded-lg text-[12px] font-semibold cursor-pointer border-0 transition-all ${teamMode === opt.id ? 'bg-surface text-accent shadow-sm' : 'bg-transparent text-dim'}`}>
-                  {opt.emoji} {opt.label}
+            <div className="flex bg-alt border border-line rounded-xl p-1 mb-4 gap-1">
+              {[{ id: 'auto', label: 'Auto generate' }, { id: 'manual', label: 'Manual' }].map(opt => (
+                <button key={opt.id} onClick={() => { setTeamMode(opt.id); setProposedTeams([]); setConfirmedAuto(false) }}
+                  className={`flex-1 py-2.5 rounded-[10px] text-[13px] font-bold cursor-pointer border-0 transition-all ${
+                    teamMode === opt.id
+                      ? 'bg-surface text-text shadow-sm'
+                      : 'bg-transparent text-dim'
+                  }`}>
+                  {opt.label}
                 </button>
               ))}
             </div>
@@ -480,121 +497,108 @@ export default function TournamentSetupWizard() {
             {teamMode === 'auto' && (
               <div className="flex flex-col gap-3 mb-4">
 
-                {/* Parameter selector */}
-                <div className="bg-surface border border-line rounded-xl px-3.5 py-3">
-                  <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2.5">Balance by (tap to set priority)</div>
-                  <div className="flex gap-2 mb-2.5">
-                    {[{ id: 'sex', label: 'Sex', icon: '⚥' }, { id: 'level', label: 'Level', icon: '📊' }].map(({ id, label, icon }) => {
-                      const idx    = params.indexOf(id)
-                      const active = idx !== -1
-                      return (
-                        <button key={id} onClick={() => toggleParam(id)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold border-2 cursor-pointer transition-all ${active ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-alt text-dim'}`}>
-                          <span>{icon}</span>
-                          {label}
-                          {active && (
-                            <span className="w-4 h-4 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center leading-none shrink-0">
-                              {idx + 1}
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {params.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] text-dim">Priority:</span>
-                      {params.map((p, i) => {
-                        const def = { sex: { icon: '⚥', label: 'Sex' }, level: { icon: '📊', label: 'Level' } }[p]
-                        return (
-                          <span key={p} className="flex items-center gap-1 text-[11px] font-semibold text-accent">
-                            {i > 0 && <span className="text-dim">→</span>}
-                            {def.icon} {def.label}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  )}
+                {/* Balance by label */}
+                <div className="text-[11px] font-bold text-accent uppercase tracking-widest">
+                  Balance by · tap to set priority
                 </div>
 
-                {/* Tip */}
-                <div className="bg-accent/10 border border-accent/30 rounded-lg px-3 py-2.5 text-[12px] text-accent">
-                  💡 {paramDescription(params)}
+                {/* Balance buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[{ id: 'sex', label: 'Sex' }, { id: 'level', label: 'Level' }].map(({ id, label }) => {
+                    const idx    = params.indexOf(id)
+                    const active = idx !== -1
+                    return (
+                      <button key={id} onClick={() => toggleParam(id)}
+                        className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3.5 text-[15px] font-bold cursor-pointer transition-all ${
+                          active ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-surface text-text'
+                        }`}>
+                        {active && (
+                          <span className="w-5 h-5 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center leading-none shrink-0">
+                            {idx + 1}
+                          </span>
+                        )}
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Info text */}
+                <div className="bg-alt rounded-xl px-3.5 py-3 text-[12px] text-dim leading-relaxed">
+                  {paramDescription(params)}
                 </div>
 
                 {/* Generate / Regenerate button */}
-                <button onClick={propose} disabled={availablePlayers.length < teamSize}
-                  className="w-full min-h-[42px] rounded-lg border border-dashed border-accent/50 text-accent font-semibold bg-transparent cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
-                  🔀 {proposedTeams.length ? 'Regenerate' : 'Generate Teams'}
-                </button>
-
-                {/* Preview */}
-                {proposedTeams.length > 0 && (
-                  <>
-                    <div className="text-[11px] font-bold text-dim uppercase tracking-wide">Preview ({proposedTeams.length} teams)</div>
-                    <div className="flex flex-col gap-2">
-                      {proposedTeams.map(tm => (
-                        <div key={tm.id} className="bg-surface border border-line rounded-xl px-3.5 py-3">
-                          <div className="text-[14px] font-bold text-text mb-1.5">{tm.name}</div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {tm.players.map(pid => {
-                              const pl = invitedPlayers.find(p => p.id === pid)
-                              return pl ? (
-                                <span key={pid} className="flex items-center gap-1 bg-accent/10 text-accent text-[11px] font-medium px-2.5 py-1 rounded-lg">
-                                  <span>{levelOf(pl.level).icon}</span>{pl.name}
-                                  {pl.sex && <span className="text-[10px] text-accent/70">({pl.sex})</span>}
-                                </span>
-                              ) : null
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={propose}
-                        className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">
-                        🔄 Regenerate
-                      </button>
-                      <button onClick={confirmProposed}
-                        className="min-h-[42px] rounded-lg text-[13px] font-bold text-white bg-accent border-0 cursor-pointer">
-                        ✓ Confirm
-                      </button>
-                    </div>
-                  </>
+                {proposedTeams.length === 0 && !confirmedAuto ? (
+                  <button onClick={propose} disabled={invitedPlayers.length < teamSize}
+                    className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[14px] border-0 cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
+                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Generate teams
+                  </button>
+                ) : (
+                  <button onClick={propose} disabled={invitedPlayers.length < teamSize}
+                    className="w-full min-h-[50px] rounded-xl bg-surface border border-line text-accent font-bold text-[14px] cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
+                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Regenerate teams
+                  </button>
                 )}
 
-                {/* Confirmed teams */}
-                {teams.length > 0 && (
-                  <>
-                    <div className="text-[11px] font-bold text-success uppercase tracking-wide">Confirmed ({teams.length} teams)</div>
-                    <div className="flex flex-col gap-2">
-                      {teams.map(tm => (
-                        <div key={tm.id} className="bg-surface rounded-xl border border-success/40 px-3.5 py-3 flex items-center gap-2">
-                          <div className="flex-1">
-                            <div className="text-[13px] font-bold text-text mb-1">{tm.name}</div>
-                            <div className="flex flex-wrap gap-1.5">
+                {/* Preview */}
+                {(proposedTeams.length > 0 || confirmedAuto) && (() => {
+                  const displayTeams = proposedTeams.length > 0 ? proposedTeams : teams
+                  return (
+                    <>
+                      <div className="text-[11px] font-bold text-accent uppercase tracking-widest">
+                        Preview · {displayTeams.length} teams
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {displayTeams.map(tm => (
+                          <div key={tm.id} className="bg-accent/10 border border-accent/20 rounded-xl px-3.5 py-3 flex items-center gap-3">
+                            <div className="text-[13px] font-bold text-accent leading-snug w-16 flex-shrink-0">
+                              {tm.name}
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 flex-1">
                               {tm.players.map(pid => {
                                 const pl = invitedPlayers.find(p => p.id === pid)
                                 return pl ? (
-                                  <span key={pid} className="flex items-center gap-1 bg-accent/10 text-accent text-[11px] font-medium px-2 py-0.5 rounded-lg">
-                                    <span>{levelOf(pl.level).icon}</span>{pl.name}
+                                  <span key={pid} className="flex items-center gap-1.5 bg-surface border border-line rounded-full px-2.5 py-1 text-[11px] font-medium text-text">
+                                    <span
+                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: playerColor(pl.name) }}
+                                    />
+                                    {shortName(pl.name)}
                                   </span>
                                 ) : null
                               })}
                             </div>
                           </div>
-                          <button onClick={() => removeTeam(tm.id)} className="text-dim bg-transparent border-0 cursor-pointer text-[16px] leading-none shrink-0">✕</button>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
+                        ))}
+                      </div>
 
-                {availablePlayers.length > 0 && availablePlayers.length < teamSize && (
-                  <div className="text-[11px] text-dim text-center">
-                    {availablePlayers.length} unassigned player{availablePlayers.length > 1 ? 's' : ''} — not enough for a full team
-                  </div>
-                )}
+                      {/* Confirm / Confirmed button */}
+                      {proposedTeams.length > 0 ? (
+                        <button onClick={confirmProposed}
+                          className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[14px] border-0 cursor-pointer flex items-center justify-center gap-2">
+                          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Confirm teams
+                        </button>
+                      ) : (
+                        <div className="w-full min-h-[50px] rounded-xl bg-success/10 border border-success/40 text-success font-bold text-[14px] flex items-center justify-center gap-2">
+                          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Teams confirmed
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             )}
 
@@ -701,13 +705,6 @@ export default function TournamentSetupWizard() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setStep(1)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>
-              <button onClick={() => setStep(3)} disabled={!canContinueFromTeams}
-                className="min-h-[42px] rounded-lg text-[13px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50">
-                Next: Schedule
-              </button>
-            </div>
           </div>
         )}
 
@@ -807,16 +804,30 @@ export default function TournamentSetupWizard() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setStep(2)} className="min-h-[42px] rounded-lg text-[13px] font-semibold text-text border border-line bg-surface cursor-pointer">Back</button>
-              <button onClick={handleStartTournament} disabled={saving}
-                className="min-h-[42px] rounded-lg text-[13px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-60">
-                {saving ? 'Creating…' : 'Start Tournament'}
-              </button>
-            </div>
           </div>
         )}
       </main>
+
+      <div className="screen__bottom px-4 py-3.5 border-t border-line bg-surface">
+        {step === 2 && (
+          <button
+            onClick={() => setStep(3)}
+            disabled={!canContinueFromTeams}
+            className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+          >
+            Continue
+          </button>
+        )}
+        {step === 3 && (
+          <button
+            onClick={handleStartTournament}
+            disabled={saving}
+            className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-60"
+          >
+            {saving ? 'Creating…' : 'Start Tournament'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

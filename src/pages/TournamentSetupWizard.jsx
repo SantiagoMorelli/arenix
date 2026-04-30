@@ -105,6 +105,12 @@ function shortName(name) {
 
 const NATO = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet']
 
+function genderLabel(sex) {
+  if (sex === 'M') return 'Male'
+  if (sex === 'F') return 'Female'
+  return sex ? 'Other' : null
+}
+
 function getValidGroupOptions(numTeams) {
   return [2, 4, 8].filter(g => Math.floor(numTeams / g) >= 3)
 }
@@ -141,9 +147,7 @@ export default function TournamentSetupWizard() {
   const [teamMode,         setTeamMode]         = useState('auto')
   const [params,           setParams]           = useState([])       // ordered: ['sex','level']
   const [proposedTeams,    setProposedTeams]    = useState([])
-  const [addingTeam,       setAddingTeam]       = useState(false)
-  const [addingTeamName,   setAddingTeamName]   = useState('')
-  const [pickingForTeamId, setPickingForTeamId] = useState(null)    // teamId or null
+  const [pickingForTeamId, setPickingForTeamId] = useState(null)
   const [confirmedAuto,    setConfirmedAuto]    = useState(false)
 
   // Step 2 state
@@ -218,12 +222,8 @@ export default function TournamentSetupWizard() {
   }
 
   // ── Manual team creation ──────────────────────────────────────────────────
-  const addEmptyTeam = () => {
-    if (!addingTeamName.trim()) return
-    setTeams(prev => [...prev, { id: uid(), name: addingTeamName.trim(), players: [], wins: 0, losses: 0, points: 0 }])
-    setAddingTeamName('')
-    setAddingTeam(false)
-  }
+  const addManualTeam = () =>
+    setTeams(prev => [...prev, { id: uid(), name: `Team ${prev.length + 1}`, players: [], wins: 0, losses: 0, points: 0 }])
 
   const assignPlayer = (teamId, pid) => {
     setTeams(prev => prev.map(t =>
@@ -606,102 +606,134 @@ export default function TournamentSetupWizard() {
             {teamMode === 'manual' && (
               <div className="flex flex-col gap-3 mb-4">
 
-                {/* Team cards */}
-                {teams.length === 0 && !addingTeam && (
-                  <div className="bg-surface border border-line rounded-xl p-6 text-center text-dim text-[13px]">
-                    Add your first team below
+                {/* Empty state */}
+                {teams.length === 0 && (
+                  <div className="border border-dashed border-line rounded-xl p-6 text-center text-[13px] text-dim">
+                    No teams yet. Tap <strong className="text-text font-bold">Add team</strong> to start building.
                   </div>
                 )}
-                {teams.map(tm => (
-                  <div key={tm.id} className={`bg-surface rounded-xl border px-3.5 py-3 ${tm.players.length === teamSize ? 'border-success/40' : 'border-line'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[14px] font-bold text-text">{tm.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-dim">{tm.players.length}/{teamSize}</span>
-                        <button onClick={() => removeTeam(tm.id)} className="bg-transparent border-0 cursor-pointer text-dim text-[16px] leading-none">✕</button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {tm.players.map(pid => {
-                        const pl = invitedPlayers.find(p => p.id === pid)
-                        return pl ? (
-                          <span key={pid} className="flex items-center gap-1 bg-accent/10 text-accent text-[11px] font-medium px-2.5 py-1 rounded-lg">
-                            <span>{levelOf(pl.level).icon}</span>{pl.name}
-                            {pl.sex && <span className="text-[10px] text-accent/70">({pl.sex})</span>}
-                            <button onClick={() => removePlayerFromTeam(tm.id, pid)} className="bg-transparent border-0 cursor-pointer text-dim leading-none ml-0.5">×</button>
-                          </span>
-                        ) : null
-                      })}
-                      {tm.players.length < teamSize && (
+
+                {/* Team cards */}
+                {teams.map((tm, ti) => {
+                  const pickerOpen = pickingForTeamId === tm.id
+                  return (
+                    <div key={tm.id} className="bg-surface border border-line rounded-xl overflow-hidden">
+
+                      {/* Header */}
+                      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                        <input
+                          value={tm.name}
+                          onChange={e => setTeams(prev => prev.map(t => t.id === tm.id ? { ...t, name: e.target.value } : t))}
+                          placeholder={`Team ${ti + 1}`}
+                          className="flex-1 bg-transparent outline-none text-[15px] font-semibold text-dim border-0 border-b border-dashed border-line pb-0.5"
+                        />
+                        <span className="text-[12px] font-semibold text-dim flex-shrink-0">{tm.players.length}/{teamSize}</span>
                         <button
-                          onClick={() => setPickingForTeamId(pickingForTeamId === tm.id ? null : tm.id)}
-                          className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border border-dashed cursor-pointer transition-all ${pickingForTeamId === tm.id ? 'border-accent text-accent bg-accent/10' : 'border-dim/40 text-dim bg-transparent'}`}>
-                          + Add player
+                          onClick={() => removeTeam(tm.id)}
+                          className="bg-transparent border-0 cursor-pointer text-dim flex-shrink-0 p-0.5"
+                        >
+                          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
                         </button>
+                      </div>
+
+                      {/* Player chips */}
+                      {tm.players.length > 0 && (
+                        <div className="px-4 pb-3 flex flex-wrap gap-2">
+                          {tm.players.map(pid => {
+                            const pl = invitedPlayers.find(p => p.id === pid)
+                            return pl ? (
+                              <span key={pid} className="flex items-center gap-1.5 bg-accent/10 rounded-full pl-1 pr-2.5 py-1">
+                                <div
+                                  className="w-5 h-5 rounded-[6px] flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                                  style={{ backgroundColor: playerColor(pl.name) }}
+                                >
+                                  {playerInitials(pl.name)}
+                                </div>
+                                <span className="text-[12px] font-medium text-text">{shortName(pl.name)}</span>
+                                <button
+                                  onClick={() => removePlayerFromTeam(tm.id, pid)}
+                                  className="bg-transparent border-0 cursor-pointer text-dim p-0 leading-none"
+                                >
+                                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                  </svg>
+                                </button>
+                              </span>
+                            ) : null
+                          })}
+                        </div>
                       )}
-                    </div>
-                    {/* Inline picker */}
-                    {pickingForTeamId === tm.id && (
-                      <div className="mt-2.5 pt-2.5 border-t border-line flex flex-wrap gap-1.5">
-                        {availablePlayers.filter(p => !tm.players.includes(p.id)).length === 0 ? (
-                          <span className="text-[11px] text-dim">No unassigned players</span>
-                        ) : (
-                          availablePlayers
-                            .filter(p => !tm.players.includes(p.id))
-                            .map(p => (
-                              <button key={p.id} onClick={() => assignPlayer(tm.id, p.id)}
-                                className="flex items-center gap-1 bg-alt text-text text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-line cursor-pointer active:opacity-70 transition-opacity">
-                                <span>{levelOf(p.level).icon}</span>{p.name}
-                                {p.sex && <span className="text-[10px] text-dim">({p.sex})</span>}
+
+                      {/* Add player dashed button */}
+                      {tm.players.length < teamSize && !pickerOpen && (
+                        <div className="px-4 pb-4">
+                          <button
+                            onClick={() => setPickingForTeamId(tm.id)}
+                            className="w-full border border-dashed border-line rounded-xl py-3 text-[13px] text-dim font-medium flex items-center justify-center gap-1.5 cursor-pointer bg-transparent"
+                          >
+                            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add player
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Inline picker */}
+                      {pickerOpen && (
+                        <div className="border-t border-line px-4 pt-3.5 pb-2">
+                          <div className="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Select player</div>
+                          {(() => {
+                            const pool = availablePlayers
+                              .filter(p => !tm.players.includes(p.id))
+                              .slice()
+                              .sort((a, b) => (b.elo || 0) - (a.elo || 0))
+                            if (pool.length === 0) return (
+                              <div className="text-[12px] text-dim py-2">All invited players are assigned.</div>
+                            )
+                            return pool.map(p => (
+                              <button
+                                key={p.id}
+                                onClick={() => assignPlayer(tm.id, p.id)}
+                                className="w-full flex items-center gap-3 py-2.5 cursor-pointer bg-transparent border-0 text-left"
+                              >
+                                <div
+                                  className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
+                                  style={{ backgroundColor: playerColor(p.name) }}
+                                >
+                                  {playerInitials(p.name)}
+                                </div>
+                                <div>
+                                  <div className="text-[13px] font-semibold text-text">{p.name}</div>
+                                  <div className="text-[10px] text-dim">
+                                    {levelOf(p.level).label}{genderLabel(p.sex || p.gender) ? ` · ${genderLabel(p.sex || p.gender)}` : ''}
+                                  </div>
+                                </div>
                               </button>
                             ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Add Team input */}
-                {addingTeam ? (
-                  <div className="bg-surface border border-accent/40 rounded-xl px-3.5 py-3 flex gap-2 items-center">
-                    <input
-                      value={addingTeamName}
-                      onChange={e => setAddingTeamName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && addEmptyTeam()}
-                      placeholder="Team name…"
-                      autoFocus
-                      className="flex-1 bg-transparent text-[14px] font-bold text-text outline-none placeholder:text-dim"
-                    />
-                    <button onClick={addEmptyTeam} disabled={!addingTeamName.trim()}
-                      className="text-accent font-bold text-[13px] bg-transparent border-0 cursor-pointer disabled:opacity-40">
-                      Add
-                    </button>
-                    <button onClick={() => { setAddingTeam(false); setAddingTeamName('') }}
-                      className="text-dim bg-transparent border-0 cursor-pointer text-[14px]">✕</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setAddingTeam(true)}
-                    className="w-full min-h-[44px] border border-dashed border-accent/50 rounded-xl text-[13px] font-semibold text-accent bg-transparent cursor-pointer flex items-center justify-center gap-2">
-                    + Add Team
-                  </button>
-                )}
-
-                {/* Unassigned strip */}
-                {availablePlayers.length > 0 && (
-                  <div className="bg-alt rounded-xl px-3.5 py-3">
-                    <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">
-                      Unassigned ({availablePlayers.length})
+                          })()}
+                          <button
+                            onClick={() => setPickingForTeamId(null)}
+                            className="w-full py-3 text-[12px] text-dim font-semibold text-center cursor-pointer bg-transparent border-0"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {availablePlayers.map(p => (
-                        <span key={p.id} className="flex items-center gap-1 bg-surface text-text text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-line">
-                          <span>{levelOf(p.level).icon}</span>{p.name}
-                          {p.sex && <span className="text-[10px] text-dim">({p.sex})</span>}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )
+                })}
+
+                {/* Add team button */}
+                <button
+                  onClick={addManualTeam}
+                  className="w-full min-h-[50px] bg-surface border border-line rounded-xl text-[13px] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="text-text font-medium">+</span>
+                  <span className="text-accent font-semibold">Add team</span>
+                </button>
               </div>
             )}
 

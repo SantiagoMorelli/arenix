@@ -7,6 +7,14 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { getPublicLeagues } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
+import {
+  getMyNotifications,
+  markAllRead,
+  subscribeToNotifications,
+  isNotifAllowed,
+} from '../services/notificationService'
+import NotificationPanel from '../components/NotificationPanel'
+import NotificationToast from '../components/NotificationToast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -367,23 +375,37 @@ function FreePlaySection({ sessions, navigate }) {
 
 export default function Landing() {
   const navigate = useNavigate()
-  const { session, profile } = useAuth()
+  const { session, profile, loading: authLoading } = useAuth()
   const isLoggedIn = !!session
 
   const [publicLeagues, setPublicLeagues] = useState([])
   const [freePlays,     setFreePlays]     = useState([])
   const [query,         setQuery]         = useState('')
   const [filter,        setFilter]        = useState('all')
+  const [showNotifs,    setShowNotifs]    = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [toastNotif,    setToastNotif]    = useState(null)
 
   useEffect(() => {
     getPublicLeagues().then(setPublicLeagues).catch(console.error)
   }, [])
 
   useEffect(() => {
-    if (isLoggedIn) {
-      getFreePlays().then(setFreePlays).catch(console.error)
-    }
+    if (!isLoggedIn) return
+    getFreePlays().then(setFreePlays).catch(console.error)
+    getMyNotifications().then(setNotifications).catch(console.error)
   }, [isLoggedIn])
+
+  useEffect(() => {
+    if (!profile?.id) return
+    const unsubscribe = subscribeToNotifications(profile.id, newNotif => {
+      setNotifications(prev => [newNotif, ...prev])
+      if (isNotifAllowed(newNotif.type, profile?.notification_prefs)) {
+        setToastNotif(newNotif)
+      }
+    })
+    return () => unsubscribe?.()
+  }, [profile?.id, profile?.notification_prefs])
 
   // Flatten tournaments for chip counts (unfiltered)
   const allTourneys = useMemo(
@@ -409,9 +431,38 @@ export default function Landing() {
       .slice(0, 1)
   }, [publicLeagues, query, filter])
 
-  const displayName = profile?.full_name?.split(' ')[0] || 'Player'
+  const displayName   = profile?.full_name?.split(' ')[0] || 'Player'
+  const visibleNotifs = notifications.filter(n => isNotifAllowed(n.type, profile?.notification_prefs))
+  const unreadCount   = visibleNotifs.filter(n => !n.read).length
+
+  async function handleMarkAllRead() {
+    await markAllRead()
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  function handleRead(id) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  }
+
+  if (authLoading) {
+    return (
+      <div className="flex h-screen bg-bg items-center justify-center">
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
+    <>
+    <NotificationToast notification={toastNotif} onDismiss={() => setToastNotif(null)} />
+    <NotificationPanel
+      isOpen={showNotifs}
+      onClose={() => setShowNotifs(false)}
+      notifications={visibleNotifs}
+      onMarkAllRead={handleMarkAllRead}
+      onRead={handleRead}
+    />
+
     <div className="min-h-screen bg-bg text-text flex flex-col">
       <div className="flex-1 overflow-y-auto">
 
@@ -428,11 +479,16 @@ export default function Landing() {
             {isLoggedIn ? (
               <>
                 <button
-                  onClick={() => navigate('/settings')}
+                  onClick={() => setShowNotifs(v => !v)}
                   className="relative w-[38px] h-[38px] flex items-center justify-center rounded-[12px] bg-alt text-text active:opacity-70 transition-opacity"
-                  aria-label="Notifications"
+                  aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
                 >
                   <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-error text-white text-[9px] font-bold px-0.5 leading-none">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => navigate('/profile')}
@@ -579,5 +635,6 @@ export default function Landing() {
         {isLoggedIn && <div className="h-6" />}
       </div>
     </div>
+    </>
   )
 }

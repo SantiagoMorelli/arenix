@@ -25,14 +25,6 @@ function snakeDraft(sorted, numTeams, teamSize) {
   return slots.filter(s => s.length === teamSize)
 }
 
-function seqDraft(sorted, numTeams, teamSize) {
-  const slots = Array.from({ length: numTeams }, () => [])
-  sorted.forEach((p, i) => {
-    const col = Math.floor(i / teamSize)
-    if (col < numTeams && slots[col].length < teamSize) slots[col].push(p.id)
-  })
-  return slots.filter(s => s.length === teamSize)
-}
 
 function interleave(...arrs) {
   const pools = arrs.map(arr => ({ arr, idx: 0 })).filter(p => p.arr.length > 0)
@@ -87,18 +79,28 @@ function buildTeamGroups(pool, params, teamSize) {
   else if (params[0] === 'sex'   && params.length === 1) sorted = interleave(rand(pool.filter(M)), rand(pool.filter(F)), rand(pool.filter(O)))
   else if (params[0] === 'level' && params.length === 1) sorted = byLevel(pool)
   else if (params[0] === 'sex')                          sorted = interleave(byLevel(pool.filter(M)), byLevel(pool.filter(F)), byLevel(pool.filter(O)))
-  else                                                   sorted = [...pool].sort((a, b) => {
-    // Level-primary: sort by tier desc (unknown → bottom), then shuffle within
-    // same tier via sex ordering M < F < other for a stable tiebreak.
-    const la = LEVEL_SCORE[a.level] || 0
-    const lb = LEVEL_SCORE[b.level] || 0
-    if (lb !== la) return lb - la
-    const s = x => sexOf(x) === 'M' ? 0 : sexOf(x) === 'F' ? 1 : 2
-    return s(a) - s(b)
-  })
+  else {
+    // Level-primary, sex-secondary: sort by tier desc, then randomise within each
+    // (level, sex) sub-bucket so Regenerate produces genuinely different teams.
+    const TIERS = ['advanced', 'intermediate', 'beginner', 'unknown']
+    const SEXES = ['M', 'F', 'X']
+    sorted = []
+    for (const tier of TIERS) {
+      for (const sx of SEXES) {
+        sorted.push(...rand(pool.filter(p => {
+          const key = Object.prototype.hasOwnProperty.call(LEVEL_SCORE, p.level) ? p.level : 'unknown'
+          return key === tier && sexOf(p) === sx
+        })))
+      }
+      // Include players of this tier whose sex is null / unrecognised
+      sorted.push(...rand(pool.filter(p => {
+        const key = Object.prototype.hasOwnProperty.call(LEVEL_SCORE, p.level) ? p.level : 'unknown'
+        return key === tier && sexOf(p) !== 'M' && sexOf(p) !== 'F' && sexOf(p) !== 'X'
+      })))
+    }
+  }
 
-  const useSexBalance = params[0] === 'sex'
-  return useSexBalance ? seqDraft(sorted, n, teamSize) : snakeDraft(sorted, n, teamSize)
+  return snakeDraft(sorted, n, teamSize)
 }
 
 function paramDescription(params) {
@@ -466,13 +468,27 @@ export default function TournamentSetupWizard() {
         {/* ══ Step 1: Players ══════════════════════════════════════════════════ */}
         {step === 1 && (
           <div className="pt-1">
-            <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-3">
-              Players ({pickedPlayers.length} selected)
-            </div>
+            {(() => {
+              const allPlayerIds = (league.players || []).map(p => p.id)
+              const allSelected  = allPlayerIds.length > 0 && pickedPlayers.length === allPlayerIds.length
+              return (
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[11px] font-bold text-accent uppercase tracking-widest">
+                    Players ({pickedPlayers.length} selected)
+                  </div>
+                  <button
+                    onClick={() => setPickedPlayers(allSelected ? [] : allPlayerIds)}
+                    className="text-[11px] font-semibold text-accent bg-transparent border-0 cursor-pointer"
+                  >
+                    {allSelected ? 'Deselect all' : 'Select all'}
+                  </button>
+                </div>
+              )
+            })()}
             <div className="flex flex-col gap-1.5 mb-4">
               {(league.players || [])
                 .slice()
-                .sort((a, b) => (b.elo || 0) - (a.elo || 0))
+                .sort((a, b) => (a.displayName || a.name || '').localeCompare(b.displayName || b.name || ''))
                 .map(player => {
                   const on = pickedPlayers.includes(player.id)
                   return (
@@ -491,7 +507,11 @@ export default function TournamentSetupWizard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-semibold text-text leading-tight">{player.name}</div>
-                        {player.elo && <div className="text-[10px] text-dim mt-0.5">ELO {player.elo}</div>}
+                        {player.level && (
+                          <div className="text-[10px] text-dim mt-0.5">
+                            {levelOf(player.level).label}{genderLabel(player.sex || player.gender) ? ` · ${genderLabel(player.sex || player.gender)}` : ''}
+                          </div>
+                        )}
                       </div>
                       <div className={`w-[22px] h-[22px] rounded-[6px] flex items-center justify-center flex-shrink-0 ${
                         on ? 'bg-accent border-0' : 'bg-transparent border-[1.5px] border-line'
@@ -565,28 +585,42 @@ export default function TournamentSetupWizard() {
                 </div>
 
                 {/* Generate / Regenerate button */}
-                {invitedPlayers.length < teamSize * 2 && (
-                  <div className="text-[12px] text-dim bg-alt rounded-xl px-3.5 py-2.5 leading-relaxed">
-                    Need at least <strong>{teamSize * 2}</strong> players for team size <strong>{teamSize}</strong>. Currently invited: <strong>{invitedPlayers.length}</strong>.
-                  </div>
-                )}
-                {proposedTeams.length === 0 && !confirmedAuto ? (
-                  <button onClick={propose} disabled={invitedPlayers.length < teamSize * 2}
-                    className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[14px] border-0 cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
-                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    Generate teams
-                  </button>
-                ) : (
-                  <button onClick={propose} disabled={invitedPlayers.length < teamSize * 2}
-                    className="w-full min-h-[50px] rounded-xl bg-surface border border-line text-accent font-bold text-[14px] cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
-                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    Regenerate teams
-                  </button>
-                )}
+                {(() => {
+                  const leftover     = invitedPlayers.length % teamSize
+                  const notEnough    = invitedPlayers.length < teamSize * 2
+                  const canGenerate  = !notEnough && leftover === 0
+                  return (
+                    <>
+                      {notEnough && (
+                        <div className="text-[12px] text-dim bg-alt rounded-xl px-3.5 py-2.5 leading-relaxed">
+                          Need at least <strong>{teamSize * 2}</strong> players for team size <strong>{teamSize}</strong>. Currently invited: <strong>{invitedPlayers.length}</strong>.
+                        </div>
+                      )}
+                      {!notEnough && leftover > 0 && (
+                        <div className="text-[12px] bg-error/10 border border-error/40 text-error rounded-xl px-3.5 py-2.5 leading-relaxed">
+                          <strong>{invitedPlayers.length} players</strong> don&apos;t divide evenly into teams of <strong>{teamSize}</strong> — <strong>{leftover}</strong> player{leftover > 1 ? 's' : ''} would be left out. Go back and invite <strong>{teamSize - leftover}</strong> more, or remove <strong>{leftover}</strong>.
+                        </div>
+                      )}
+                      {proposedTeams.length === 0 && !confirmedAuto ? (
+                        <button onClick={propose} disabled={!canGenerate}
+                          className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[14px] border-0 cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
+                          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                          </svg>
+                          Generate teams
+                        </button>
+                      ) : (
+                        <button onClick={propose} disabled={!canGenerate}
+                          className="w-full min-h-[50px] rounded-xl bg-surface border border-line text-accent font-bold text-[14px] cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
+                          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                          </svg>
+                          Regenerate teams
+                        </button>
+                      )}
+                    </>
+                  )
+                })()}
 
                 {/* Preview */}
                 {(proposedTeams.length > 0 || confirmedAuto) && (() => {
@@ -730,7 +764,7 @@ export default function TournamentSetupWizard() {
                             const pool = availablePlayers
                               .filter(p => !tm.players.includes(p.id))
                               .slice()
-                              .sort((a, b) => (b.elo || 0) - (a.elo || 0))
+                              .sort((a, b) => (a.displayName || a.name || '').localeCompare(b.displayName || b.name || ''))
                             if (pool.length === 0) return (
                               <div className="text-[12px] text-dim py-2">All invited players are assigned.</div>
                             )

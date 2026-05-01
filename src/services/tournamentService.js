@@ -204,6 +204,18 @@ export async function saveMatchResult(matchId, score1, score2, winnerId, log = n
 }
 
 /**
+ * Persist tie-breaker config on the tournament row.
+ * config shape: { tieBreakerMode: 'id'|'seed'|'draw', seedMap: {}, drawMap: {} }
+ */
+export async function updateTieBreakerConfig(tournamentId, config) {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ tie_breaker_config: config })
+    .eq('id', tournamentId)
+  if (error) throw error
+}
+
+/**
  * Update tournament phase (e.g. 'group' → 'knockout').
  */
 export async function updateTournamentPhase(tournamentId, phase) {

@@ -5,14 +5,13 @@ import { calcOverallStandings, getAllMatches } from '../../lib/tournament'
 import TieBreakerControls from '../standings/TieBreakerControls'
 
 // ─── Teams positions table (with inline rename) ───────────────────────────────
-function TeamsPositionsTable({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
+function TeamsPositionsTable({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam, tbOptions, onTbOptionsChange }) {
   const { teams } = tournament
   const allMatches = getAllMatches(tournament)
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editName, setEditName]           = useState('')
   const [saving, setSaving]               = useState(false)
   const [saveError, setSaveError]         = useState(null)
-  const [tbOptions, setTbOptions]         = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
 
   const rows = calcOverallStandings(teams, allMatches, leaguePlayers, tbOptions)
 
@@ -34,7 +33,7 @@ function TeamsPositionsTable({ tournament, leaguePlayers, currentUserId, isAdmin
   return (
     <div className="flex flex-col gap-3">
       {isAdmin && (
-        <TieBreakerControls teams={teams} value={tbOptions} onChange={setTbOptions} accent="accent" />
+        <TieBreakerControls teams={teams} value={tbOptions} onChange={onTbOptionsChange} accent="accent" />
       )}
       <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
         <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt justify-between">
@@ -223,7 +222,7 @@ function PlayersPositionsTable({ tournament, leaguePlayers }) {
 }
 
 // ─── Positions tab (outer) ────────────────────────────────────────────────────
-export default function PositionsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
+export default function PositionsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam, tbOptions, onTbOptionsChange }) {
   const { teams } = tournament
   const [subTab, setSubTab] = useState('teams')
 
@@ -249,6 +248,8 @@ export default function PositionsTab({ tournament, leaguePlayers, currentUserId,
           currentUserId={currentUserId}
           isAdmin={isAdmin}
           onRenameTeam={onRenameTeam}
+          tbOptions={tbOptions}
+          onTbOptionsChange={onTbOptionsChange}
         />
       ) : (
         <PlayersPositionsTable tournament={tournament} leaguePlayers={leaguePlayers} />

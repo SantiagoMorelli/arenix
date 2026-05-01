@@ -47,9 +47,9 @@ export function calcStandings(group, options = {}) {
 }
 
 // ─── Knockout bracket builder ─────────────────────────────────────────────────
-export function buildKnockout(groups) {
+export function buildKnockout(groups, options = {}) {
   const qualifiers = groups.flatMap((g, gi) => {
-    const standings = calcStandings(g)
+    const standings = calcStandings(g, options)
     return standings.slice(0, 2).map((s, pos) => ({ teamId: s.teamId, position: pos, groupIdx: gi }))
   })
 

@@ -240,6 +240,7 @@ async function normalizeTournament(row) {
     phase:         row.phase,
     status:        row.status,
     winnerTeamId:  row.winner_team_id,
+    tieBreakerConfig: row.tie_breaker_config ?? { tieBreakerMode: 'id', seedMap: {}, drawMap: {} },
     teams,
     groups,
     knockout,

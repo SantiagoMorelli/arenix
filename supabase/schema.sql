@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
   status         TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'completed')),
   winner_team_id UUID,
+  tie_breaker_config jsonb NOT NULL DEFAULT '{"tieBreakerMode":"id","seedMap":{},"drawMap":{}}'::jsonb,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

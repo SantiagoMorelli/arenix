@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
@@ -13,6 +13,7 @@ import {
   fetchMatchScorer,
   claimMatchScorer,
   deleteTournament,
+  updateTieBreakerConfig,
 } from '../services/tournamentService'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import { buildKnockout } from '../lib/tournament'
@@ -57,6 +58,24 @@ export default function TournamentDetail() {
   const [conflictScorer,  setConflictScorer]  = useState(null)
   const [checkingScorer,  setCheckingScorer]  = useState(false)
   const [savingScore,     setSavingScore]     = useState(false)
+
+  // ── Tie-breaker state (shared across all tournament tabs, persisted to DB) ──
+  const DEFAULT_TB = { tieBreakerMode: 'id', seedMap: {}, drawMap: {} }
+  const [tbOptions, setTbOptions] = useState(
+    () => tournament?.tieBreakerConfig ?? DEFAULT_TB
+  )
+  // Keep a ref so the debounce effect always has the latest tid without re-running
+  const tbDebounceRef = useRef(null)
+  useEffect(() => {
+    if (!tid) return
+    clearTimeout(tbDebounceRef.current)
+    tbDebounceRef.current = setTimeout(() => {
+      updateTieBreakerConfig(tid, tbOptions).catch(err =>
+        console.error('Failed to save tie-breaker config:', err)
+      )
+    }, 500)
+    return () => clearTimeout(tbDebounceRef.current)
+  }, [tbOptions, tid])
 
   if (loading) {
     return (
@@ -177,8 +196,11 @@ export default function TournamentDetail() {
   }
 
   const handleGenerateKnockout = async () => {
-    const knockout = buildKnockout(tournament.groups)
+    // Flush any pending debounced save so the DB is up-to-date before we read it back
+    clearTimeout(tbDebounceRef.current)
     try {
+      await updateTieBreakerConfig(tid, tbOptions)
+      const knockout = buildKnockout(tournament.groups, tbOptions)
       await saveKnockoutRounds(tid, knockout.rounds)
       await updateTournamentPhase(tid, 'knockout')
       refetch()
@@ -209,6 +231,8 @@ export default function TournamentDetail() {
           tournament={tournament}
           leaguePlayers={leaguePlayers}
           onClose={() => setShowTournamentStats(false)}
+          tbOptions={tbOptions}
+          onTbOptionsChange={setTbOptions}
         />
       )}
 
@@ -276,6 +300,8 @@ export default function TournamentDetail() {
             onMatchClick={m => setSelectedStatsMatch(m)}
             canManage={canManage}
             players={leaguePlayers}
+            tbOptions={tbOptions}
+            onTbOptionsChange={setTbOptions}
           />
         )}
         {activeTab === 'matches' && (
@@ -294,6 +320,8 @@ export default function TournamentDetail() {
             currentUserId={profile?.id}
             isAdmin={isGuest ? false : isAdmin}
             onRenameTeam={handleRenameTeam}
+            tbOptions={tbOptions}
+            onTbOptionsChange={setTbOptions}
           />
         )}
       </main>

@@ -380,11 +380,15 @@ function MatchRecords({ records, tournament }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TournamentStatsScreen({ tournament, leaguePlayers, onClose }) {
+export default function TournamentStatsScreen({ tournament, leaguePlayers, onClose, tbOptions, onTbOptionsChange }) {
   const allMatches = useMemo(() => getAllMatches(tournament), [tournament])
   const playerStats = useMemo(() => computePlayerStats(allMatches), [allMatches])
   const records = useMemo(() => computeMatchRecords(allMatches), [allMatches])
-  const [tbOptions, setTbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
+  const DEFAULT_TB = { tieBreakerMode: 'id', seedMap: {}, drawMap: {} }
+  // If not controlled from parent, fall back to local state (e.g. when used outside TournamentDetail)
+  const [localTbOptions, setLocalTbOptions] = useState(DEFAULT_TB)
+  const effectiveTbOptions = tbOptions ?? localTbOptions
+  const effectiveOnTbOptionsChange = onTbOptionsChange ?? setLocalTbOptions
 
   return (
     <div className="absolute inset-0 z-[110] bg-bg flex flex-col overflow-hidden">
@@ -434,9 +438,9 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
             <SectionLabel>Final Standings</SectionLabel>
           </div>
           <div className="px-4 mb-3">
-            <TieBreakerControls teams={tournament.teams} value={tbOptions} onChange={setTbOptions} accent="accent" />
+            <TieBreakerControls teams={tournament.teams} value={effectiveTbOptions} onChange={effectiveOnTbOptionsChange} accent="accent" />
           </div>
-          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={tbOptions} />
+          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={effectiveTbOptions} />
         </div>
 
         <div className="h-px bg-line mx-4 mb-5" />

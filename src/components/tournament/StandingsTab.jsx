@@ -1,14 +1,11 @@
-import { useState } from 'react'
 import { calcGroupStandings, calcOverallStandings } from '../../lib/tournament'
 import StandingsTable from './StandingsTable'
 import KnockoutResults from './KnockoutResults'
 import TieBreakerControls from '../standings/TieBreakerControls'
 
-export default function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage, players }) {
+export default function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage, players, tbOptions, onTbOptionsChange }) {
   const { phase, groups, teams, matches } = tournament
   const hasGroups = (groups || []).length > 0
-
-  const [tbOptions, setTbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
 
   const allGroupMatchesPlayed = hasGroups && groups.every(g =>
     g.matches.every(m => m.played)
@@ -28,7 +25,7 @@ export default function StandingsTab({ tournament, onGenerateKnockout, onMatchCl
     return (
       <div className="px-4">
         {canManage && (
-          <TieBreakerControls teams={teams} value={tbOptions} onChange={setTbOptions} accent="accent" />
+          <TieBreakerControls teams={teams} value={tbOptions} onChange={onTbOptionsChange} accent="accent" />
         )}
         <StandingsTable rows={rows} />
       </div>
@@ -39,7 +36,7 @@ export default function StandingsTab({ tournament, onGenerateKnockout, onMatchCl
   return (
     <div className="px-4">
       {canManage && (
-        <TieBreakerControls teams={teams} value={tbOptions} onChange={setTbOptions} accent="accent" />
+        <TieBreakerControls teams={teams} value={tbOptions} onChange={onTbOptionsChange} accent="accent" />
       )}
 
       {groups.map(group => {

@@ -138,6 +138,17 @@ export async function createLeague({ name, location = '', visibility = 'public',
 }
 
 /**
+ * Join a public league as a regular member.
+ */
+export async function joinLeague(leagueId) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error } = await supabase
+    .from('league_member_roles')
+    .insert({ league_id: leagueId, user_id: user.id, role: 'member' })
+  if (error) throw error
+}
+
+/**
  * Fetch public leagues with their tournaments and player/team counts.
  * Used by the Landing page — no auth required.
  */

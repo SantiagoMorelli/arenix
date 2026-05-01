@@ -5,7 +5,7 @@ import {
   ChevronDown, Plus, Bell, Check,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { getPublicLeagues, getMyLeagues, createLeague } from '../services/leagueService'
+import { getPublicLeagues, getMyLeagues, createLeague, joinLeague } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
 import {
   getMyNotifications,
@@ -178,16 +178,19 @@ function TournamentRow({ tournament, leagueId, navigate }) {
 
 // ── Public league card ────────────────────────────────────────────────────────
 
-function PublicLeagueCard({ league, navigate }) {
+function PublicLeagueCard({ league, navigate, isJoined, canJoin, onJoin }) {
   const [open, setOpen] = useState(true)
   const hasLive = league.tournaments.some(t => tournamentDisplayStatus(t) === 'live')
   const hue = hueFromString(league.id || league.name)
 
   return (
-    <div className="bg-surface border border-line rounded-[14px] mb-2.5 overflow-hidden">
-      <button
+    <div className={`bg-surface border rounded-[14px] mb-2.5 overflow-hidden ${isJoined ? 'border-success/30' : 'border-line'}`}>
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(o => !o)}
-        className="w-full text-left flex items-center gap-3 px-[14px] py-3 active:bg-alt/40 transition-colors"
+        onKeyDown={e => e.key === 'Enter' && setOpen(o => !o)}
+        className="w-full text-left flex items-center gap-3 px-[14px] py-3 active:bg-alt/40 transition-colors cursor-pointer"
       >
         <div
           className="w-11 h-11 rounded-[12px] flex items-center justify-center text-white shrink-0"
@@ -214,6 +217,18 @@ function PublicLeagueCard({ league, navigate }) {
             <span className="dot-pulse w-[5px] h-[5px] rounded-full bg-success" />
             LIVE
           </span>
+        ) : isJoined ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px]">
+            <Check size={10} />
+            JOINED
+          </span>
+        ) : canJoin ? (
+          <button
+            onClick={e => { e.stopPropagation(); onJoin() }}
+            className="inline-flex items-center text-[10px] font-bold text-accent bg-accent/12 px-[9px] py-[5px] rounded-md tracking-[0.4px] active:opacity-70 transition-opacity"
+          >
+            JOIN
+          </button>
         ) : (
           <ChevronDown
             size={16}
@@ -221,7 +236,7 @@ function PublicLeagueCard({ league, navigate }) {
             style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
           />
         )}
-      </button>
+      </div>
 
       {open && (
         <div className="border-t border-line px-2.5 py-2">
@@ -594,6 +609,61 @@ function CreateLeagueModal({ onClose, onCreated }) {
   )
 }
 
+// ── Join League confirmation modal ────────────────────────────────────────────
+
+function JoinConfirmModal({ league, onClose, onConfirm, joining }) {
+  const hue = hueFromString(league.id || league.name)
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-[440px] bg-surface rounded-t-2xl p-6 pb-8 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <span className="font-display text-[20px] text-text leading-none tracking-wide">JOIN LEAGUE</span>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-alt text-dim active:opacity-70 transition-opacity"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 bg-alt rounded-[12px] px-4 py-3">
+          <div
+            className="w-10 h-10 rounded-[10px] flex items-center justify-center text-white shrink-0"
+            style={{ background: `oklch(0.55 0.15 ${hue})` }}
+          >
+            <Trophy size={18} />
+          </div>
+          <div>
+            <div className="text-[14px] font-bold text-text">{league.name}</div>
+            {league.city && <div className="text-[11px] text-dim mt-0.5">{league.city}</div>}
+          </div>
+        </div>
+
+        <div className="text-[12.5px] text-dim leading-relaxed">
+          You'll be added as a member and will be able to participate in tournaments.
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl text-[13px] font-bold text-dim bg-alt border border-line active:opacity-70 transition-opacity"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={joining}
+            className="flex-1 py-3 rounded-xl bg-accent text-white font-bold text-[14px] disabled:opacity-50 transition-opacity"
+          >
+            {joining ? 'Joining…' : 'Join League'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Landing page ──────────────────────────────────────────────────────────────
 
 export default function Landing() {
@@ -611,6 +681,8 @@ export default function Landing() {
   const [showNotifs,       setShowNotifs]       = useState(false)
   const [notifications,    setNotifications]    = useState([])
   const [toastNotif,       setToastNotif]       = useState(null)
+  const [joinPending,      setJoinPending]      = useState(null)
+  const [joining,          setJoining]          = useState(false)
 
   useEffect(() => {
     getPublicLeagues().then(setPublicLeagues).catch(console.error)
@@ -638,6 +710,13 @@ export default function Landing() {
     return () => unsubscribe?.()
   }, [profile?.id, profile?.notification_prefs])
 
+  const joinedLeagueIds = useMemo(() => new Set(myLeagues.map(l => l.id)), [myLeagues])
+
+  // Only show My Leagues section for admins / league creators
+  const showMyLeagues = isLoggedIn && (
+    isSuperAdmin || canCreateLeague || myLeagues.some(l => l.myRole === 'admin')
+  )
+
   // Flatten tournaments for chip counts (unfiltered)
   const allTourneys = useMemo(
     () => publicLeagues.flatMap(l => l.tournaments),
@@ -646,10 +725,10 @@ export default function Landing() {
   const liveCount = allTourneys.filter(t => tournamentDisplayStatus(t) === 'live').length
   const openCount = allTourneys.filter(t => tournamentDisplayStatus(t) === 'open').length
 
-  // Apply search + status filter
+  // Apply search + status filter, pin joined leagues to top
   const visibleLeagues = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return publicLeagues.map(l => {
+    const filtered = publicLeagues.map(l => {
       let trs = l.tournaments
       if (filter === 'live') trs = trs.filter(t => tournamentDisplayStatus(t) === 'live')
       if (filter === 'open') trs = trs.filter(t => tournamentDisplayStatus(t) === 'open')
@@ -659,8 +738,9 @@ export default function Landing() {
       }
       return { ...l, tournaments: trs }
     }).filter(l => l.tournaments.length || (filter === 'all' && !q))
-      .slice(0, 1)
-  }, [publicLeagues, query, filter])
+    filtered.sort((a, b) => (joinedLeagueIds.has(b.id) ? 1 : 0) - (joinedLeagueIds.has(a.id) ? 1 : 0))
+    return filtered.slice(0, 1)
+  }, [publicLeagues, query, filter, joinedLeagueIds])
 
   const displayName   = profile?.full_name?.split(' ')[0] || 'Player'
   const visibleNotifs = notifications.filter(n => isNotifAllowed(n.type, profile?.notification_prefs))
@@ -679,6 +759,20 @@ export default function Landing() {
     setMyLeagues(prev => [{ ...newLeague, myRole: 'admin', myRoles: ['admin'] }, ...prev])
     setShowCreateLeague(false)
     navigate(`/league/${newLeague.id}`)
+  }
+
+  async function handleJoinConfirm() {
+    if (!joinPending) return
+    setJoining(true)
+    try {
+      await joinLeague(joinPending.id)
+      setMyLeagues(prev => [...prev, { ...joinPending, myRole: 'member', myRoles: ['member'] }])
+      setJoinPending(null)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setJoining(false)
+    }
   }
 
   if (authLoading) {
@@ -703,6 +797,14 @@ export default function Landing() {
       <CreateLeagueModal
         onClose={() => setShowCreateLeague(false)}
         onCreated={handleLeagueCreated}
+      />
+    )}
+    {joinPending && (
+      <JoinConfirmModal
+        league={joinPending}
+        onClose={() => setJoinPending(null)}
+        onConfirm={handleJoinConfirm}
+        joining={joining}
       />
     )}
 
@@ -815,8 +917,8 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* ── My Leagues section (logged-in only) ── */}
-        {isLoggedIn && (
+        {/* ── My Leagues section (admins / league creators only) ── */}
+        {showMyLeagues && (
           <MyLeaguesSection
             leagues={myLeagues}
             loading={myLeaguesLoading}
@@ -842,7 +944,14 @@ export default function Landing() {
             <EmptyState query={query} />
           ) : (
             visibleLeagues.map(l => (
-              <PublicLeagueCard key={l.id} league={l} navigate={navigate} />
+              <PublicLeagueCard
+                key={l.id}
+                league={l}
+                navigate={navigate}
+                isJoined={joinedLeagueIds.has(l.id)}
+                canJoin={isLoggedIn && !joinedLeagueIds.has(l.id)}
+                onJoin={() => setJoinPending(l)}
+              />
             ))
           )}
         </div>

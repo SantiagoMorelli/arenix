@@ -164,7 +164,7 @@ export default function FreePlaySession() {
         session={session}
         isAdmin={isAdmin}
         isFinished={isFinished}
-        onBack={() => navigate('/free-play')}
+        onBack={() => navigate('/')}
         onEditSession={() => setShowEditSession(true)}
         onCopyLink={handleCopyLink}
         copied={copied}

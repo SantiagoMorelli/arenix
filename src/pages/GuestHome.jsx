@@ -62,11 +62,11 @@ export default function GuestHome() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-bg text-text flex flex-col">
-      <div className="flex-1 flex flex-col px-5 pt-10 pb-8 max-w-[430px] mx-auto w-full">
+    <div className="screen bg-bg text-text">
 
-        {/* ── Hero ──────────────────────────────────────────────────── */}
-        <div className="flex flex-col items-center text-center mb-8">
+      {/* ── Hero (fixed top) ──────────────────────────────────────── */}
+      <div className="screen__top bg-bg px-5 pt-10 pb-2 max-w-[430px] mx-auto w-full">
+        <div className="flex flex-col items-center text-center">
           <div className="mb-5">
             <BeachBallIllustration />
           </div>
@@ -81,52 +81,58 @@ export default function GuestHome() {
             {' '}<span className="text-text font-semibold">scored live, shared with your crew.</span>
           </div>
         </div>
-
-        {/* ── Features ──────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2.5 mb-8">
-          <Feature
-            icon={TrophyIcon}
-            title="Run tournaments"
-            description="Group stages, knockout brackets, and full ELO-based league standings."
-          />
-          <Feature
-            icon={LiveIcon}
-            title="Score live"
-            description="Track every point as it happens and share the scoreboard in real time."
-          />
-          <Feature
-            icon={ShareIcon}
-            title="Share results"
-            description="Send a link to anyone — they can follow your league or free play session without an account."
-          />
-        </div>
-
-        {/* ── CTAs ──────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-3 mb-6">
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[15px] border-0 cursor-pointer active:opacity-80 transition-opacity"
-          >
-            Log in
-          </button>
-          <button
-            onClick={() => navigate('/signup')}
-            className="w-full min-h-[50px] rounded-xl bg-surface border border-line text-text font-bold text-[15px] cursor-pointer active:opacity-80 transition-opacity"
-          >
-            Create account
-          </button>
-        </div>
-
-        {/* ── Invite link hint ──────────────────────────────────────── */}
-        <div className="flex items-start gap-2.5 bg-alt border border-line rounded-[14px] px-4 py-3.5">
-          <span className="text-dim shrink-0 mt-0.5"><LinkIcon size={15} /></span>
-          <p className="text-[12px] text-dim leading-snug">
-            Got an invite link? Open it in your browser to view a public league
-            or join a free play session — no account needed to browse.
-          </p>
-        </div>
-
       </div>
+
+      {/* ── Scrollable body ───────────────────────────────────────── */}
+      <main className="screen__body">
+        <div className="px-5 pt-6 pb-8 max-w-[430px] mx-auto w-full flex flex-col">
+
+          {/* ── Features ────────────────────────────────────────── */}
+          <div className="flex flex-col gap-2.5 mb-8">
+            <Feature
+              icon={TrophyIcon}
+              title="Run tournaments"
+              description="Group stages, knockout brackets, and full ELO-based league standings."
+            />
+            <Feature
+              icon={LiveIcon}
+              title="Score live"
+              description="Track every point as it happens and share the scoreboard in real time."
+            />
+            <Feature
+              icon={ShareIcon}
+              title="Share results"
+              description="Send a link to anyone — they can follow your league or free play session without an account."
+            />
+          </div>
+
+          {/* ── CTAs ────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-3 mb-6">
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[15px] border-0 cursor-pointer active:opacity-80 transition-opacity"
+            >
+              Log in
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="w-full min-h-[50px] rounded-xl bg-surface border border-line text-text font-bold text-[15px] cursor-pointer active:opacity-80 transition-opacity"
+            >
+              Create account
+            </button>
+          </div>
+
+          {/* ── Invite link hint ────────────────────────────────── */}
+          <div className="flex items-start gap-2.5 bg-alt border border-line rounded-[14px] px-4 py-3.5">
+            <span className="text-dim shrink-0 mt-0.5"><LinkIcon size={15} /></span>
+            <p className="text-[12px] text-dim leading-snug">
+              Got an invite link? Open it in your browser to view a public league
+              or join a free play session — no account needed to browse.
+            </p>
+          </div>
+
+        </div>
+      </main>
     </div>
   )
 }

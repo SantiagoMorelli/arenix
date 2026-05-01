@@ -1,7 +1,7 @@
 # Handoff: Arenix Mobile App
 
 ## Overview
-Arenix is a beach volleyball tournament manager. This handoff covers the **Home dashboard** and supporting screens (League, Tournament, Live Match, Profile, Free Play, Notifications, Settings). The goal is to replicate these designs in the existing Arenix codebase (**React 19 + Vite + Tailwind v4**) — pixel-perfect, same colors, same typography, same iconography.
+Arenix is a beach volleyball tournament manager. This handoff covers the **Landing screen**, **Home dashboard**, and supporting screens (League, Tournament, Live Match, Profile, Free Play, Notifications, Settings). The goal is to replicate these designs in the existing Arenix codebase (**React 19 + Vite + Tailwind v4**) — pixel-perfect, same colors, same typography, same iconography.
 
 ## About the Design Files
 The HTML files in this bundle are **design references** — high-fidelity prototypes showing intended look, layout, and interactions. **Do not ship the HTML directly.** Recreate each screen as React components in your existing Arenix codebase, using Tailwind v4 utilities and your existing component patterns (`src/components/ui-new.jsx`).
@@ -85,6 +85,40 @@ Use **Lucide React** (`lucide-react`). The prototype uses Feather-style icons; L
 ---
 
 ## Screens
+
+### 0. Landing
+**Purpose:** Public entry point. Same screen serves logged-out (browse-only) and logged-in (returning user) states. Adapts based on auth.
+
+**Auth states**
+- **Logged out** — brand bar shows `Log in` (ghost) and `Sign up` (accent) buttons. Footer shows an auth nudge card ("Ready to play?" with two CTAs). No Free Play section.
+- **Logged in** — brand bar shows notifications bell (with badge) + avatar (38px, taps → profile). Hero greeting changes to "Welcome back, {firstName}." Free Play section appears below the league. No footer nudge.
+
+**Layout (top to bottom)**
+1. **Brand bar** (padding `14px 16px 6px`)
+   - Left: `LandingMark` logo (26px) + wordmark "ARENIX" (Bebas 22px, letter-spacing 1.5).
+   - Right: auth-state-dependent (see above).
+2. **Hero greeting** — short headline + sub.
+   - Logged out: "Browse public leagues and open tournaments — no account needed."
+   - Logged in: "Welcome back, {firstName}. Jump back in, or browse open tournaments near you."
+3. **Search + filter chips** — search input (placeholder "Search leagues, tournaments…"), then 3 chips: `All` / `Live {n}` / `Open {n}`. Counts come from the **full** tournament list, not the filtered one.
+4. **Featured league** label (`Featured league` / right-aligned `{N} total · worldwide`) + **one** `PublicLeagueCard` (use `.slice(0, 1)` — only the first matching league shows).
+   - Card is expandable; tournaments inside are tappable. Tapping a tournament pushes `League` then `Tournament` (so back returns League → Landing).
+5. **Auth-nudge footer card** (logged-out only) — gradient `accentSoft → surface`, accentLine border. Heading "Ready to play?" + body + two `Btn`s (Log in ghost / Create account primary, both `flex: 1`). Below: tiny center-aligned tagline "Arenix · Beach volley, anywhere".
+6. **Free Play section** (logged-in only) — below the league card. **Collapsible**:
+   - Header row: `+` button (38×38, free-tinted bg, tappable; `e.stopPropagation()` so it doesn't also toggle expand) + label "Free Play sessions" + hint sub + chevron-down (rotates 180° when expanded).
+   - **Tapping the row body toggles expand/collapse.** Tapping the `+` icon — and **only** the `+` icon — navigates to the Free Play creator.
+   - Collapsed state: shows **1** session (priority order: live > upcoming > completed). Hint reads "Tap to see {n} more · + to create".
+   - Expanded: shows all sessions in that priority order.
+   - Each session row: 36×36 status-tinted icon tile, name + when, status badge on right (`LIVE` ok-green pulses, `UPCOMING` free-teal, `COMPLETED` dim).
+
+**Search/filter behavior**
+- Search filters leagues by `name` or `city`; if no league match, falls into per-tournament filter (`tournament.name` includes query).
+- Status filter (`live` / `open`) prunes tournaments inside each league.
+- Filter chip counts are derived from the **unfiltered** tournament list.
+
+**Auth sheet** — logged-out CTAs (`Log in` / `Sign up` / footer card buttons) open a bottom-sheet auth modal (`AuthSheet`). Reuse the existing auth flow in your repo — don't rebuild it. The two entry modes (`login` / `signup`) just preselect the tab inside the sheet.
+
+**Bottom nav** — the landing screen has **no** bottom nav while logged-out; logged-in inherits the app shell's nav.
 
 ### 1. Home Dashboard
 **Purpose:** Entry point. Surface the user's league, give one-tap access to live games, free play, and recent activity.
@@ -217,10 +251,10 @@ The remaining sections describe the surfaces that only appear in the admin view.
 
 ### 4. Tournament Setup Wizard
 4-step wizard with progress bar (4px alt track, accent fill).
-1. **Name + date + format.**
+1. **Name + dates + format.** Input field, two date tiles, 3 radio cards (Round robin / Group + Knockout / Single elim).
 2. **Players** (8 selected of 10). Selectable cards with checkbox.
-3. **Team building.**
-4. **Review.**
+3. **Team building.** 3 radio cards (Auto by ELO / Manual / Random) + preview of 4 generated teams.
+4. **Review.** Key/value summary card. Big launch button.
 Footer: Continue / Launch button (full-width, ok-green on final step).
 
 ### 5. Live Match Flow
@@ -297,6 +331,7 @@ The prototype uses an in-memory router with a stack: `push`, `pop`, `replace`. I
 - `src/data.jsx` — mock data shape — **use as your API contract reference**
 - `src/icons.jsx` — SVG icon set (mapping to Lucide above)
 - `src/shared.jsx` — primitives (Card, Btn, etc.)
+- `src/landing.jsx` — Landing screen (logged-out + logged-in states, Free Play section)
 - `src/home.jsx` — Home (3 variants: hero, split, feed). Use **hero** for the real app.
 - `src/league.jsx` — League detail
 - `src/tournament.jsx` — Tournament detail + setup wizard
@@ -307,10 +342,11 @@ The prototype uses an in-memory router with a stack: `push`, `pop`, `replace`. I
 ## Implementation Order (recommended)
 1. Add design tokens to `tailwind.config.js`. Import fonts.
 2. Build the primitives (`Card`, `Btn`, `Avatar`, `Badge`, `Label`, `PageHeader`, `BottomNav`).
-3. Port Home (hero variant). Verify visual match before moving on.
-4. League → Tournament → Live match → Result.
-5. Profile, Notifications, Settings, Free Play.
-6. Tournament setup wizard last (most state-heavy).
+3. Port **Landing** (handles both auth states — set up routing + auth gate first).
+4. Port Home (hero variant). Verify visual match before moving on.
+5. League → Tournament → Live match → Result.
+6. Profile, Notifications, Settings, Free Play.
+7. Tournament setup wizard last (most state-heavy).
 
 ## Tips for Claude Code
 - Open one screen at a time. Pass: a screenshot + the corresponding `src/*.jsx` from this bundle + the target file path in your repo.

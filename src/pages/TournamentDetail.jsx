@@ -267,7 +267,7 @@ export default function TournamentDetail() {
       <TournamentHeader
         tournament={tournament}
         league={league}
-        onBack={() => navigate(`/league/${id}`)}
+        onBack={() => navigate('/')}
         isAdmin={isAdmin && !isGuest}
         onDelete={handleDeleteTournament}
         deleting={deleting}

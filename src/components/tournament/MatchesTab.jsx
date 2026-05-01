@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { teamName, roundLabel } from '../../lib/tournament'
 
-export default function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore, players = [] }) {
+export default function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore, players = [], initialSubTab }) {
   const { groups = [], knockout = null, phase } = tournament
   const hasGroups = groups.length > 0
   const isFreePlay = !hasGroups
@@ -12,6 +12,7 @@ export default function MatchesTab({ tournament, onStartMatch, onMatchClick, can
 
   const [activeSubTab, setActiveSubTab] = useState(() => {
     if (isFreePlay) return 'all'
+    if (initialSubTab && allTabs.some(t => t.id === initialSubTab)) return initialSubTab
     if ((phase === 'knockout' || phase === 'completed') && knockout) return 'knockout'
     return allTabs[0]?.id || 'all'
   })

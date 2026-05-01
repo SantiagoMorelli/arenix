@@ -99,6 +99,15 @@ export default function TournamentDetail() {
     )
   }
 
+  // ── Derive the MatchesTab sub-tab id for a given match ────────────────────
+  const subTabForMatch = (match) => {
+    if (!match || !tournament) return undefined
+    const g = tournament.groups?.find(gr => gr.matches?.some(m => m.id === match.id))
+    if (g) return `g_${g.id}`
+    const inKnockout = tournament.knockout?.rounds?.some(r => r.matches?.some(m => m.id === match.id))
+    return inKnockout ? 'knockout' : undefined
+  }
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleRenameTeam = async (teamId, newName) => {
     await renameTeam(teamId, newName)
@@ -126,7 +135,9 @@ export default function TournamentDetail() {
       return
     }
     claimMatchScorer(selectedMatch.id, profile?.id)
-    navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
+    navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`, {
+      state: { tab: 'matches', subTab: subTabForMatch(selectedMatch) },
+    })
   }
 
   const handleSaveManualScore = async () => {
@@ -311,6 +322,7 @@ export default function TournamentDetail() {
             onMatchClick={m => setSelectedStatsMatch(m)}
             canScore={canScore}
             players={leaguePlayers}
+            initialSubTab={location.state?.subTab}
           />
         )}
         {activeTab === 'positions' && (
@@ -354,7 +366,9 @@ export default function TournamentDetail() {
           onContinue={() => {
             claimMatchScorer(selectedMatch.id, profile?.id)
             setConflictScorer(null)
-            navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
+            navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`, {
+              state: { tab: 'matches', subTab: subTabForMatch(selectedMatch) },
+            })
           }}
         />
       )}

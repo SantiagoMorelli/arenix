@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
@@ -197,11 +197,24 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
 export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
+  const location = useLocation()
   const { showError } = useToast()
 
   const { league, loading: leagueLoading, refetch } = useLeague(id)
   const { canScore, isAdmin, loading: roleLoading }  = useLeagueRole(id)
   const tournament = league?.tournaments?.find(t => t.id === tid) || null
+
+  // ── Derive the sub-tab to return to (group or knockout) ───────────────────
+  // Prefer what was passed in via location.state; fall back to scanning the
+  // tournament data (handles page-refresh / direct deep-link cases).
+  const getReturnSubTab = () => {
+    if (location.state?.subTab) return location.state.subTab
+    if (!tournament) return undefined
+    const g = tournament.groups?.find(gr => gr.matches?.some(m => m.id === mid))
+    if (g) return `g_${g.id}`
+    const inKnockout = tournament.knockout?.rounds?.some(r => r.matches?.some(m => m.id === mid))
+    return inKnockout ? 'knockout' : undefined
+  }
 
   // Get all matches flat to pass to the hook
   const allMatches = [
@@ -331,7 +344,9 @@ export default function LiveMatch() {
     }
 
     try { localStorage.removeItem(SAVE_KEY) } catch { /* ignored */ }
-    navigate(`/league/${id}/tournament/${tid}`)
+    navigate(`/league/${id}/tournament/${tid}`, {
+      state: { tab: 'matches', subTab: getReturnSubTab() },
+    })
   }
 
   // Show spinner while league or role data is loading
@@ -350,7 +365,9 @@ export default function LiveMatch() {
         <div className="text-[18px] font-bold">Access Denied</div>
         <div className="text-[13px] text-dim">Only scorers and admins can record match scores.</div>
         <button
-          onClick={() => navigate(`/league/${id}/tournament/${tid}`)}
+          onClick={() => navigate(`/league/${id}/tournament/${tid}`, {
+            state: { tab: 'matches', subTab: getReturnSubTab() },
+          })}
           className="mt-4 text-[13px] text-accent font-semibold bg-transparent border-0 cursor-pointer"
         >
           ← Back to tournament
@@ -399,7 +416,7 @@ export default function LiveMatch() {
   }
 
   if (!live.gameStarted) {
-    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`)} onScanQR={() => setShowQRImport(true)} />
+    return <LiveMatchSetup live={live} tournament={tournament} onBack={() => navigate(`/league/${id}/tournament/${tid}`, { state: { tab: 'matches', subTab: getReturnSubTab() } })} onScanQR={() => setShowQRImport(true)} />
   }
 
   // ── In-game (delegates to shared LiveScoreboard) ──────────────────────────

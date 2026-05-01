@@ -23,7 +23,6 @@ import { useToast } from '../components/ToastContext'
 import TournamentHeader from '../components/tournament/TournamentHeader'
 import StandingsTab from '../components/tournament/StandingsTab'
 import MatchesTab from '../components/tournament/MatchesTab'
-import PositionsTab from '../components/tournament/PositionsTab'
 import MatchStatsOverlay from '../components/tournament/MatchStatsOverlay'
 import StartMatchModal from '../components/tournament/StartMatchModal'
 import ScorerConflictModal from '../components/tournament/ScorerConflictModal'
@@ -32,7 +31,9 @@ export default function TournamentDetail() {
   const navigate    = useNavigate()
   const { id, tid } = useParams()
   const location    = useLocation()
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'standings')
+  const [activeTab, setActiveTab] = useState(
+    location.state?.tab === 'positions' ? 'standings' : (location.state?.tab || 'standings')
+  )
   const { showError } = useToast()
 
   const { league, loading, refetch } = useLeague(id)
@@ -296,7 +297,6 @@ export default function TournamentDetail() {
         items={[
           { id: 'standings', label: 'Standings' },
           { id: 'matches',   label: 'Matches'   },
-          { id: 'positions', label: 'Positions' },
         ]}
         active={activeTab}
         onChange={setActiveTab}
@@ -313,6 +313,9 @@ export default function TournamentDetail() {
             players={leaguePlayers}
             tbOptions={tbOptions}
             onTbOptionsChange={setTbOptions}
+            currentUserId={isGuest ? null : profile?.id}
+            isAdmin={isGuest ? false : isAdmin}
+            onRenameTeam={handleRenameTeam}
           />
         )}
         {activeTab === 'matches' && (
@@ -323,17 +326,6 @@ export default function TournamentDetail() {
             canScore={canScore}
             players={leaguePlayers}
             initialSubTab={location.state?.subTab}
-          />
-        )}
-        {activeTab === 'positions' && (
-          <PositionsTab
-            tournament={tournament}
-            leaguePlayers={leaguePlayers}
-            currentUserId={profile?.id}
-            isAdmin={isGuest ? false : isAdmin}
-            onRenameTeam={handleRenameTeam}
-            tbOptions={tbOptions}
-            onTbOptionsChange={setTbOptions}
           />
         )}
       </main>

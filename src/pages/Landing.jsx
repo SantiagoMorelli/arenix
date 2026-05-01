@@ -5,7 +5,7 @@ import {
   ChevronDown, Plus, Bell, Check,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { getPublicLeagues } from '../services/leagueService'
+import { getPublicLeagues, getMyLeagues, createLeague } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
 import {
   getMyNotifications,
@@ -371,20 +371,246 @@ function FreePlaySection({ sessions, navigate }) {
   )
 }
 
+// ── My League row ─────────────────────────────────────────────────────────────
+
+function MyLeagueRow({ league, isSuperAdmin, navigate }) {
+  const hue = hueFromString(league.id || league.name)
+  const isAdmin = isSuperAdmin || league.myRoles?.includes('admin') || league.myRole === 'admin'
+
+  function handleTournamentCreate(e) {
+    e.stopPropagation()
+    navigate(`/league/${league.id}/tournament/new`)
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/league/${league.id}`)}
+      onKeyDown={e => e.key === 'Enter' && navigate(`/league/${league.id}`)}
+      className="flex items-center gap-3 px-[14px] py-[11px] cursor-pointer active:bg-alt/40 transition-colors border-b border-line last:border-b-0"
+    >
+      <div
+        className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white shrink-0"
+        style={{ background: `oklch(0.55 0.15 ${hue})` }}
+      >
+        <Trophy size={16} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-semibold text-text truncate">{league.name}</div>
+        <div className="text-[11px] text-dim mt-0.5 capitalize">{league.myRole || 'member'}</div>
+      </div>
+      {isAdmin && (
+        <button
+          onClick={handleTournamentCreate}
+          aria-label={`New tournament in ${league.name}`}
+          className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 text-accent bg-accent/10 border border-accent/20 active:opacity-70 transition-opacity"
+        >
+          <Plus size={15} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── My Leagues section (logged-in only) ───────────────────────────────────────
+
+function MyLeaguesSection({ leagues, loading, isSuperAdmin, canCreateLeague, navigate, onCreateLeague }) {
+  const [expanded, setExpanded] = useState(true)
+  const canCreate = isSuperAdmin || canCreateLeague
+
+  function handleCreateLeague(e) {
+    e.stopPropagation()
+    onCreateLeague()
+  }
+
+  let hint
+  if (loading) hint = 'Loading…'
+  else if (expanded) hint = canCreate ? 'Tap + to create a new league' : 'Your active leagues'
+  else hint = leagues.length > 0 ? `Tap to see ${leagues.length} · ${canCreate ? '+ to create' : ''}`.trim().replace(/ ·\s*$/, '') : (canCreate ? 'Tap + to create a new league' : 'No leagues yet')
+
+  return (
+    <div className="px-4 pb-[18px]">
+      <div className="flex items-baseline justify-between mb-2">
+        <span className="text-[11px] font-bold uppercase tracking-[1.2px] text-accent">My Leagues</span>
+        <span className="text-[10px] text-dim">{leagues.length} leagues</span>
+      </div>
+
+      <div className="bg-surface border border-line rounded-[14px] overflow-hidden">
+        {/* Collapsible header row */}
+        <div
+          role="button"
+          onClick={() => setExpanded(v => !v)}
+          className="flex items-center gap-3 px-[14px] py-3 cursor-pointer active:bg-alt/40 transition-colors border-b border-line"
+          style={{ background: 'color-mix(in srgb, var(--c-accent) 6%, transparent)' }}
+        >
+          {canCreate ? (
+            <button
+              onClick={handleCreateLeague}
+              aria-label="Create League"
+              className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center shrink-0 text-accent border border-accent/30 active:opacity-70 transition-opacity"
+              style={{ background: 'color-mix(in srgb, var(--c-accent) 18%, transparent)' }}
+            >
+              <Plus size={20} />
+            </button>
+          ) : (
+            <div className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center shrink-0 text-accent bg-accent/10">
+              <Trophy size={20} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-bold text-text">My leagues</div>
+            <div className="text-[11px] text-dim mt-0.5">{hint}</div>
+          </div>
+          <span
+            className="inline-flex items-center justify-center w-6 h-6 text-dim transition-transform duration-150"
+            style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            <ChevronDown size={16} />
+          </span>
+        </div>
+
+        {expanded && (
+          leagues.length === 0 ? (
+            <div className="text-center text-[11px] text-dim py-5 px-4">
+              {loading ? 'Loading your leagues…' : "You haven't joined any leagues yet."}
+            </div>
+          ) : (
+            leagues.map(l => (
+              <MyLeagueRow key={l.id} league={l} isSuperAdmin={isSuperAdmin} navigate={navigate} />
+            ))
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Create League modal ────────────────────────────────────────────────────────
+
+function CreateLeagueModal({ onClose, onCreated }) {
+  const [name,       setName]       = useState('')
+  const [location,   setLocation]   = useState('')
+  const [visibility, setVisibility] = useState('public')
+  const [saving,     setSaving]     = useState(false)
+  const [error,      setError]      = useState(null)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      const league = await createLeague({
+        name:       name.trim(),
+        location:   location.trim(),
+        visibility,
+        season:     String(new Date().getFullYear()),
+      })
+      onCreated(league)
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Try again.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-[440px] bg-surface rounded-t-2xl p-6 pb-8 flex flex-col gap-5">
+
+        <div className="flex items-center justify-between">
+          <span className="font-display text-[20px] text-text leading-none tracking-wide">NEW LEAGUE</span>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-alt text-dim active:opacity-70 transition-opacity"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-dim uppercase tracking-wide">
+              League name <span className="text-error">*</span>
+            </label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Miami Beach League"
+              autoFocus
+              className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim focus:outline-none focus:border-accent"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-dim uppercase tracking-wide">
+              Location <span className="text-[10px] font-normal normal-case text-dim">(optional)</span>
+            </label>
+            <input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="City, Country"
+              className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim focus:outline-none focus:border-accent"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-dim uppercase tracking-wide">Visibility</label>
+            <div className="flex gap-2">
+              {['public', 'private'].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVisibility(v)}
+                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors capitalize ${
+                    visibility === v
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-bg text-dim border-line'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-[12px] text-error bg-error/10 border border-error/20 rounded-xl px-3 py-2.5">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={!name.trim() || saving}
+            className="w-full py-3 rounded-xl bg-accent text-white font-bold text-[14px] disabled:opacity-50 transition-opacity"
+          >
+            {saving ? 'Creating…' : 'Create League'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── Landing page ──────────────────────────────────────────────────────────────
 
 export default function Landing() {
   const navigate = useNavigate()
-  const { session, profile, loading: authLoading } = useAuth()
+  const { session, profile, loading: authLoading, isSuperAdmin, canCreateLeague } = useAuth()
   const isLoggedIn = !!session
 
-  const [publicLeagues, setPublicLeagues] = useState([])
-  const [freePlays,     setFreePlays]     = useState([])
-  const [query,         setQuery]         = useState('')
-  const [filter,        setFilter]        = useState('all')
-  const [showNotifs,    setShowNotifs]    = useState(false)
-  const [notifications, setNotifications] = useState([])
-  const [toastNotif,    setToastNotif]    = useState(null)
+  const [publicLeagues,    setPublicLeagues]    = useState([])
+  const [freePlays,        setFreePlays]        = useState([])
+  const [myLeagues,        setMyLeagues]        = useState([])
+  const [myLeaguesLoading, setMyLeaguesLoading] = useState(false)
+  const [showCreateLeague, setShowCreateLeague] = useState(false)
+  const [query,            setQuery]            = useState('')
+  const [filter,           setFilter]           = useState('all')
+  const [showNotifs,       setShowNotifs]       = useState(false)
+  const [notifications,    setNotifications]    = useState([])
+  const [toastNotif,       setToastNotif]       = useState(null)
 
   useEffect(() => {
     getPublicLeagues().then(setPublicLeagues).catch(console.error)
@@ -394,6 +620,11 @@ export default function Landing() {
     if (!isLoggedIn) return
     getFreePlays().then(setFreePlays).catch(console.error)
     getMyNotifications().then(setNotifications).catch(console.error)
+    setMyLeaguesLoading(true)
+    getMyLeagues()
+      .then(setMyLeagues)
+      .catch(console.error)
+      .finally(() => setMyLeaguesLoading(false))
   }, [isLoggedIn])
 
   useEffect(() => {
@@ -444,6 +675,12 @@ export default function Landing() {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
+  function handleLeagueCreated(newLeague) {
+    setMyLeagues(prev => [{ ...newLeague, myRole: 'admin', myRoles: ['admin'] }, ...prev])
+    setShowCreateLeague(false)
+    navigate(`/league/${newLeague.id}`)
+  }
+
   if (authLoading) {
     return (
       <div className="flex h-screen bg-bg items-center justify-center">
@@ -462,6 +699,12 @@ export default function Landing() {
       onMarkAllRead={handleMarkAllRead}
       onRead={handleRead}
     />
+    {showCreateLeague && (
+      <CreateLeagueModal
+        onClose={() => setShowCreateLeague(false)}
+        onCreated={handleLeagueCreated}
+      />
+    )}
 
     <div className="min-h-screen bg-bg text-text flex flex-col">
       <div className="flex-1 overflow-y-auto">
@@ -568,6 +811,18 @@ export default function Landing() {
             </FilterChip>
           </div>
         </div>
+
+        {/* ── My Leagues section (logged-in only) ── */}
+        {isLoggedIn && (
+          <MyLeaguesSection
+            leagues={myLeagues}
+            loading={myLeaguesLoading}
+            isSuperAdmin={isSuperAdmin}
+            canCreateLeague={canCreateLeague}
+            navigate={navigate}
+            onCreateLeague={() => setShowCreateLeague(true)}
+          />
+        )}
 
         {/* ── Featured league section ── */}
         <div className="flex items-baseline justify-between px-4 pt-2 pb-0">

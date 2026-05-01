@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { signUp } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 
 const Svg = ({ children, size = 20 }) => (
@@ -33,11 +33,7 @@ export default function Signup() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } },
-    })
+    const { error } = await signUp({ email, password, fullName: name })
     setLoading(false)
     if (error) { setError(error.message); return }
     setDone(true)

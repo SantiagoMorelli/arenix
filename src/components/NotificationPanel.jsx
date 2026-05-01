@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NOTIF_META, formatRelativeTime, markRead, getNotificationTarget } from '../services/notificationService'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 const BellEmptyIcon = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
@@ -10,7 +12,18 @@ const BellEmptyIcon = () => (
 )
 
 export default function NotificationPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onRead }) {
-  const navigate = useNavigate()
+  const navigate      = useNavigate()
+  const panelRef      = useRef(null)
+  // "Mark all read" button is the preferred initial focus; falls back to the
+  // panel itself (tabIndex={-1}) when there are no unread notifications.
+  const markAllBtnRef = useRef(null)
+
+  useFocusTrap(panelRef, {
+    active: isOpen,
+    onEscape: onClose,
+    initialFocusRef: notifications.some(n => !n.read) ? markAllBtnRef : panelRef,
+  })
+
   if (!isOpen) return null
 
   async function handleTap(notif) {
@@ -23,6 +36,13 @@ export default function NotificationPanel({ isOpen, onClose, notifications = [],
     if (target) navigate(target.path, target.state ? { state: target.state } : undefined)
   }
 
+  function handleRowKeyDown(e, notif) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleTap(notif)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
 
@@ -30,13 +50,21 @@ export default function NotificationPanel({ isOpen, onClose, notifications = [],
       <div className="absolute inset-0 bg-black/35" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative z-10 bg-bg rounded-b-[20px] max-h-[85%] flex flex-col shadow-[0_12px_40px_rgba(0,0,0,0.3)]">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Notifications"
+        tabIndex={-1}
+        className="relative z-10 bg-bg rounded-b-[20px] max-h-[85%] flex flex-col shadow-[0_12px_40px_rgba(0,0,0,0.3)] outline-none"
+      >
 
         {/* Header */}
         <div className="flex justify-between items-center px-4 pt-3.5 pb-2.5">
           <span className="text-[16px] font-bold text-text">Notifications</span>
           {notifications.some(n => !n.read) && (
             <button
+              ref={markAllBtnRef}
               onClick={onMarkAllRead}
               className="text-[11px] font-semibold text-accent cursor-pointer bg-transparent border-0"
             >
@@ -58,8 +86,11 @@ export default function NotificationPanel({ isOpen, onClose, notifications = [],
               return (
                 <div
                   key={n.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleTap(n)}
-                  className={`flex gap-2.5 px-2 py-2.5 rounded-[10px] mb-0.5 cursor-pointer ${!n.read ? 'bg-accent/15' : ''}`}
+                  onKeyDown={(e) => handleRowKeyDown(e, n)}
+                  className={`flex gap-2.5 px-2 py-2.5 rounded-[10px] mb-0.5 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${!n.read ? 'bg-accent/15' : ''}`}
                 >
                   <div className={`w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center text-[16px] ${meta.iconBg}`}>
                     {meta.emoji}

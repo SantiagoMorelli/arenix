@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
@@ -6,10 +6,8 @@ import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import LiveScoreboard from '../components/LiveScoreboard'
-import QRImportModal from '../components/QRImportModal'
-import { TR } from '../lib/i18n'
-
-const t = (key) => TR[key] ?? key
+const QRImportModal = lazy(() => import('../components/QRImportModal'))
+import { useToast } from '../components/ToastContext'
 
 function teamName(teams, id) {
   return teams.find(t => t.id === id)?.name || '?'
@@ -199,6 +197,7 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
 export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
+  const { showError } = useToast()
 
   const { league, loading: leagueLoading, refetch } = useLeague(id)
   const { canScore, isAdmin, loading: roleLoading }  = useLeagueRole(id)
@@ -220,7 +219,6 @@ export default function LiveMatch() {
     // effect fires with a populated tournamentMatches array (it only re-runs
     // when preloadMatchId changes, so null → mid triggers correct population).
     preloadMatchId: tournament ? mid : null,
-    t,
     setsPerMatch: tournament?.setsPerMatch || 1
   })
 
@@ -327,6 +325,7 @@ export default function LiveMatch() {
       }
     } catch (err) {
       console.error('Failed to save match result:', err)
+      showError(err, 'Failed to save match result')
       setIsSaving(false)
       return
     }
@@ -371,7 +370,11 @@ export default function LiveMatch() {
   // ── Modals / Overlays ──
 
   if (showQRImport) {
-    return <QRImportModal onImport={handleQRImport} onClose={() => setShowQRImport(false)} />
+    return (
+      <Suspense fallback={null}>
+        <QRImportModal onImport={handleQRImport} onClose={() => setShowQRImport(false)} />
+      </Suspense>
+    )
   }
 
   if (live.showRestore) {

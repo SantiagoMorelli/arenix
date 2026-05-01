@@ -34,7 +34,6 @@ src/
 │   └── LeagueLayout.jsx         ← /league/:id/* shell
 ├── lib/
 │   ├── supabase.js              ← single client (env-validated)
-│   ├── i18n.js                  ← translation keys (English only)
 │   ├── utils.js                 ← uid(), now(), LEVELS
 │   └── standings.js             ← ranking math
 ├── services/                    ← ALL Supabase reads/writes go here

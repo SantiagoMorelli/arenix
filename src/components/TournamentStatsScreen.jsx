@@ -1,36 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
+import { calcOverallStandings } from '../lib/standings'
+import { getAllMatches } from '../lib/tournament'
+import TieBreakerControls from './standings/TieBreakerControls'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getAllMatches(tournament) {
-  return [
-    ...(tournament.groups || []).flatMap(g => g.matches.map(m => ({ ...m, label: g.name }))),
-    ...(tournament.knockout?.rounds || []).flatMap(r =>
-      r.matches.map(m => ({ ...m, label: r.name }))
-    ),
-    ...(tournament.matches || []).map((m, i) => ({ ...m, label: `Match ${i + 1}` })),
-  ]
-}
-
-function calcOverallStandings(teams, matches, players = []) {
-  return teams.map(tm => {
-    let wins = 0, losses = 0, pf = 0, pa = 0
-    ;(matches || [])
-      .filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
-      .forEach(m => {
-        const scored   = m.team1 === tm.id ? m.score1 : m.score2
-        const conceded = m.team1 === tm.id ? m.score2 : m.score1
-        pf += scored; pa += conceded
-        if (scored > conceded) wins++; else losses++
-      })
-    const playerNames = (tm.players || []).map(pid => {
-      const p = players.find(x => x.id === pid)
-      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-    }).join(' · ')
-    return { id: tm.id, name: tm.name, playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins }
-  }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
-}
 
 function computePlayerStats(allMatches) {
   const stats = {}
@@ -286,22 +260,29 @@ function Awards({ playerStats, leaguePlayers }) {
   )
 }
 
-function StandingsSection({ tournament, leaguePlayers }) {
+function StandingsSection({ tournament, leaguePlayers, tbOptions }) {
   const allMatches = getAllMatches(tournament)
-  const rows = calcOverallStandings(tournament.teams, allMatches, leaguePlayers)
+  const rows = calcOverallStandings(tournament.teams, allMatches, leaguePlayers, tbOptions)
 
   return (
     <div className="px-4">
       <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
-        <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
-          <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
-          <span className="flex-1  text-[10px] font-bold text-dim">TEAM</span>
-          <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
-          <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
-          <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
-          <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
-          <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
-          <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
+        <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
+            <span className="text-[10px] font-bold text-dim">TEAM</span>
+          </div>
+          <div className="flex items-center">
+            {tbOptions?.tieBreakerMode !== 'id' && (
+              <span className="mr-3 text-[10px] font-bold text-dim uppercase">TB: {tbOptions?.tieBreakerMode}</span>
+            )}
+            <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
+            <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
+            <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
+            <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
+            <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
+            <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
+          </div>
         </div>
         {rows.map((row, i) => (
           <div
@@ -309,18 +290,18 @@ function StandingsSection({ tournament, leaguePlayers }) {
             className={`flex items-center px-3.5 py-2.5 ${i < rows.length - 1 ? 'border-b border-line' : ''} ${i === 0 ? 'bg-accent/15' : ''}`}
           >
             <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>{i + 1}</span>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden pr-2">
               <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
               {row.playerNames && <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>}
             </div>
-            <span className="w-6 text-center text-[13px] font-semibold text-success">{row.wins}</span>
-            <span className="w-6 text-center text-[13px] font-semibold text-error">{row.losses}</span>
-            <span className="w-7 text-center text-[13px] font-semibold text-text">{row.pf}</span>
-            <span className="w-7 text-center text-[13px] font-semibold text-text">{row.pa}</span>
-            <span className={`w-7 text-center text-[13px] font-semibold ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
+            <span className="w-6 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
+            <span className="w-6 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
+            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pf}</span>
+            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pa}</span>
+            <span className={`w-7 text-center text-[13px] font-semibold flex-shrink-0 ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
               {row.pd > 0 ? '+' + row.pd : row.pd}
             </span>
-            <span className="w-8 text-center text-[13px] font-bold text-accent">{row.pts}</span>
+            <span className="w-8 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
           </div>
         ))}
       </div>
@@ -403,6 +384,7 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
   const allMatches = useMemo(() => getAllMatches(tournament), [tournament])
   const playerStats = useMemo(() => computePlayerStats(allMatches), [allMatches])
   const records = useMemo(() => computeMatchRecords(allMatches), [allMatches])
+  const [tbOptions, setTbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
 
   return (
     <div className="absolute inset-0 z-[110] bg-bg flex flex-col overflow-hidden">
@@ -448,10 +430,13 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
 
         {/* Final Standings */}
         <div className="mb-5">
-          <div className="px-4 mb-3">
+          <div className="px-4 mb-3 flex items-center justify-between">
             <SectionLabel>Final Standings</SectionLabel>
           </div>
-          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} />
+          <div className="px-4 mb-3">
+            <TieBreakerControls teams={tournament.teams} value={tbOptions} onChange={setTbOptions} accent="accent" />
+          </div>
+          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={tbOptions} />
         </div>
 
         <div className="h-px bg-line mx-4 mb-5" />

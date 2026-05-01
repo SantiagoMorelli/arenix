@@ -10,7 +10,6 @@ const ScoreBoard = ({
   nextSrv,    // { team, playerId }  — next server
   serveRotation, // pre-computed array
   points,
-  t,
 }) => {
   const getTeam   = id => teams.find(tm => tm.id === id);
   const getPlayer = id => players.find(p => p.id === id);
@@ -58,7 +57,7 @@ const ScoreBoard = ({
               isTeam1 ? "bg-accent/20" : "bg-free/20"
             }`}>
               <span className={`text-[9px] font-bold uppercase ${isTeam1 ? "text-accent" : "text-free"}`}>
-                🏐 {t("serving")}
+               🏐 SERVING
               </span>
               <span className="text-[11px] font-bold text-[#E8ECF1]">
                 {playerName(srv.playerId)}
@@ -66,7 +65,7 @@ const ScoreBoard = ({
             </div>
           ) : (
             <div className="text-[11px] text-[#7A8EA0] text-center leading-snug">
-              {t("ifScores")}<br />
+              If scores:<br />
               <b className="text-[12px] text-[#7A8EA0]/80">
                 {playerName(nextSrv.team === col.teamNum ? nextSrv.playerId : slotsForTeam[0]?.playerId)}
               </b>
@@ -85,7 +84,7 @@ const ScoreBoard = ({
         <div className="font-display text-[24px] text-[#7A8EA0]/30">VS</div>
         {points > 0 && points % 7 !== 0 && (
           <div className="text-[10px] font-semibold text-accent mt-1.5">
-            {t("changeIn")} {7 - (points % 7)} pts
+            Switch in {7 - (points % 7)} pts
           </div>
         )}
       </div>

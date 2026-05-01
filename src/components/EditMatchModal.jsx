@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { SAVE_KEY } from '../hooks/useLiveGame'
 import { reopenMatch, quickEditMatchScores } from '../services/tournamentService'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 function teamName(teams, id) {
   return teams?.find(t => t.id === id)?.name || '?'
@@ -72,6 +73,10 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
   const [reopening, setReopening] = useState(false)
   const [error,    setError]      = useState(null)
 
+  const dialogRef  = useRef(null)
+  const saveBtnRef = useRef(null)
+  useFocusTrap(dialogRef, { onEscape: onClose, initialFocusRef: saveBtnRef })
+
   const adjust = (setIdx, team, delta) => {
     setEditSets(prev => prev.map((s, i) => {
       if (i !== setIdx) return s
@@ -136,11 +141,17 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
 
   return (
     <div className="absolute inset-0 z-[110] bg-bg/90 backdrop-blur-sm flex items-end justify-center p-4 pb-6">
-      <div className="bg-surface rounded-[20px] w-full max-w-[380px] border border-line shadow-2xl overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-match-title"
+        className="bg-surface rounded-[20px] w-full max-w-[380px] border border-line shadow-2xl overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-line bg-alt">
           <div>
-            <div className="text-[14px] font-bold text-text">Edit Match Result</div>
+            <div id="edit-match-title" className="text-[14px] font-bold text-text">Edit Match Result</div>
             <div className="text-[11px] text-dim mt-0.5">{t1Name} vs {t2Name}</div>
           </div>
           <button
@@ -241,6 +252,7 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
           {/* Action buttons */}
           <div className="flex flex-col gap-2.5 mt-1">
             <button
+              ref={saveBtnRef}
               onClick={handleSave}
               disabled={!canSave}
               className="w-full min-h-[44px] rounded-xl bg-accent text-white font-bold text-[14px] border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"

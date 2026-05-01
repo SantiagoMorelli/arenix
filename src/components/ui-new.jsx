@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 /**
  * New Tailwind-based UI primitives.
  * These will replace the old inline-style components in ui.jsx (kept untouched for now).
@@ -123,6 +125,25 @@ export function SectionLabel({ children, color = 'dim' }) {
   )
 }
 
+/* ─── Label ──────────────────────────────────────────────────────────────── */
+/**
+ * Accessible form label.
+ * Props:
+ *   htmlFor   string  — id of the associated input
+ *   children  ReactNode
+ *   className string  — optional extra classes
+ */
+export function Label({ htmlFor, children, className = '' }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={`text-[11px] font-semibold tracking-[0.4px] uppercase text-dim mb-1 block ${className}`}
+    >
+      {children}
+    </label>
+  )
+}
+
 /* ─── BottomNav ───────────────────────────────────────────────────────────── */
 /**
  * Props:
@@ -195,6 +216,58 @@ export function PillTabs({ items, active, onChange, accent = 'accent', className
   )
 }
 
+/* ─── AppToast ────────────────────────────────────────────────────────────── */
+/**
+ * Imperative error/success/info toast. Separate from NotificationToast which
+ * handles inbound push notifications with tap-to-navigate behaviour.
+ *
+ * Props:
+ *   toast      { id, variant, title, body? } | null
+ *     variant  "error" | "success" | "info"
+ *   onDismiss  fn — called when the toast auto-dismisses or is tapped
+ */
+const TOAST_VARIANTS = {
+  error:   { icon: '⚠️', chipCls: 'bg-error/15 text-error',   autoDismissMs: 5000 },
+  success: { icon: '✓',  chipCls: 'bg-success/15 text-success', autoDismissMs: 3500 },
+  info:    { icon: 'ℹ',  chipCls: 'bg-accent/15 text-accent', autoDismissMs: 3500 },
+}
+
+export function AppToast({ toast, onDismiss }) {
+  const timerRef = useRef(null)
+  const visible  = !!toast
+  const meta     = toast ? (TOAST_VARIANTS[toast.variant] ?? TOAST_VARIANTS.info) : null
+
+  useEffect(() => {
+    if (!toast) return
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(onDismiss, meta.autoDismissMs)
+    return () => clearTimeout(timerRef.current)
+  }, [toast, onDismiss, meta?.autoDismissMs])
+
+  return (
+    <div
+      className={`fixed top-4 left-4 right-4 z-[60] transition-all duration-300 ease-out ${
+        visible ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0 pointer-events-none'
+      }`}
+    >
+      {toast && (
+        <div
+          onClick={onDismiss}
+          className="bg-surface border border-line rounded-2xl px-3 py-2.5 flex gap-2.5 items-center shadow-[0_8px_32px_rgba(0,0,0,0.35)] cursor-pointer"
+        >
+          <div className={`w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center text-[16px] ${meta.chipCls}`}>
+            {meta.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-bold text-text leading-snug">{toast.title}</div>
+            {toast.body && <div className="text-[11px] text-dim truncate">{toast.body}</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── IconButton ──────────────────────────────────────────────────────────── */
 /**
  * Props:
@@ -202,11 +275,12 @@ export function PillTabs({ items, active, onChange, accent = 'accent', className
  *   onClick   fn
  *   badge     number      — optional notification count shown as red dot
  */
-export function IconButton({ children, onClick, badge }) {
+export function IconButton({ children, onClick, badge, ariaLabel }) {
   return (
     <div className="relative inline-flex">
       <button
         onClick={onClick}
+        aria-label={ariaLabel}
         className="
           w-[38px] h-[38px] rounded-xl
           bg-alt

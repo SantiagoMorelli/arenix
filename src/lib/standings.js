@@ -40,22 +40,110 @@ export function h2hStats(idA, idB, matches) {
   return s
 }
 
+/* ─── Mini-league h2h across a set of tied teams ──────────────────────────── */
+/**
+ * Compute head-to-head pts and gd for each team in `tiedIds`, but only
+ * counting matches played exclusively between teams in that set.
+ * Returns { [teamId]: { pts, gd } }.
+ *
+ * Used for 3+ way ties (mini-league / round-robin sub-table).
+ */
+export function h2hMiniLeague(tiedIds, matches) {
+  const idSet = new Set(tiedIds)
+  const stats = {}
+  tiedIds.forEach(id => { stats[id] = { pts: 0, gd: 0 } })
+  ;(matches || [])
+    .filter(m => m.played && idSet.has(m.team1) && idSet.has(m.team2))
+    .forEach(m => {
+      const diff = m.score1 - m.score2
+      stats[m.team1].gd += diff
+      stats[m.team2].gd -= diff
+      if (m.score1 > m.score2) stats[m.team1].pts += 1
+      else stats[m.team2].pts += 1
+    })
+  return stats
+}
+
+/* ─── Re-sort equal-pts runs using head-to-head tie-breakers ──────────────── */
+/**
+ * Takes a rows array already sorted by pts desc, then re-sorts every run of
+ * rows with equal pts using FIVB-style tie-breakers:
+ *   h2h pts desc → h2h gd desc → pd desc → pf desc → wins desc
+ *
+ * Each row must have: { id, pts, pd, pf, wins }.
+ * `matches` is the full pool of played matches used to compute h2h.
+ *
+ * Smoke scenarios (expected results):
+ *   2-way tie: A beat B → A ranks above B regardless of PD.
+ *   3-way acyclic: A>B, A>C, B>C  → A, B, C.
+ *   3-way cycle (A>B, B>C, C>A, equal h2h gd): falls through to pd/pf.
+ *   Tied teams that never faced each other: h2h pts/gd = 0, falls to pd/pf.
+ */
+export function applyH2HTieBreakers(rows, matches, options = {}) {
+  const { tieBreakerMode = 'id', seedMap = {}, drawMap = {} } = options
+  const out = [...rows]
+  let i = 0
+  while (i < out.length) {
+    let j = i + 1
+    while (j < out.length && out[j].pts === out[i].pts) j++
+    // out[i..j-1] is a run of equal-pts rows
+    if (j - i >= 2) {
+      const run = out.slice(i, j)
+      const tiedIds = run.map(r => r.id)
+      const h2h = h2hMiniLeague(tiedIds, matches)
+      run.sort((a, b) => {
+        const diff = 
+          (h2h[b.id].pts - h2h[a.id].pts) ||
+          (h2h[b.id].gd  - h2h[a.id].gd)  ||
+          (b.pd - a.pd)                     ||
+          (b.pf - a.pf)                     ||
+          (b.wins - a.wins)
+        
+        if (diff !== 0) return diff
+        
+        // Exact equality across all performance metrics.
+        // Resolve using the final deterministic tie-breaker mode.
+        if (tieBreakerMode === 'seed') {
+          const sa = seedMap[a.id] ?? Infinity
+          const sb = seedMap[b.id] ?? Infinity
+          if (sa !== sb) return sa - sb
+        }
+        
+        if (tieBreakerMode === 'draw') {
+          const da = drawMap[a.id] ?? Infinity
+          const db = drawMap[b.id] ?? Infinity
+          if (da !== db) return da - db
+        }
+        
+        // Fallback: 'name' or 'id' to guarantee determinism
+        const nameA = a.name || ''
+        const nameB = b.name || ''
+        return nameA.localeCompare(nameB) || a.id.localeCompare(b.id)
+      })
+      out.splice(i, j - i, ...run)
+    }
+    i = j
+  }
+  return out
+}
+
 /* ─── Team standings over a flat list of matches ──────────────────────────── */
 /**
  * Compute W/L/PF/PA/PD/PTS per team over the supplied matches.
  *   teams   — array of team objects
  *   matches — array of match objects (only `played` ones count)
  *   players — array of player objects (optional; used to build playerNames)
- * Returns array of rows sorted by PTS → PD → PF → Wins.
+ * Returns array of rows sorted by PTS → H2H pts → H2H gd → PD → PF → Wins.
  */
-export function calcOverallStandings(teams, matches, players = []) {
-  return teams
+export function calcOverallStandings(teams, matches, players = [], options = {}) {
+  const pool = matches || []
+  const rows = teams
     .map(tm => {
       let wins = 0,
         losses = 0,
         pf = 0,
         pa = 0
-      ;(matches || [])
+      pool
         .filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
         .forEach(m => {
           const scored = m.team1 === tm.id ? m.score1 : m.score2
@@ -82,10 +170,8 @@ export function calcOverallStandings(teams, matches, players = []) {
         pts: wins,
       }
     })
-    .sort(
-      (a, b) =>
-        b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins
-    )
+    .sort((a, b) => b.pts - a.pts)
+  return applyH2HTieBreakers(rows, pool, options)
 }
 
 /* ─── Player standings over a flat list of matches ────────────────────────── */

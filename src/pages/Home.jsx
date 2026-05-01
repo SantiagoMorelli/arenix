@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import GuestHome from './GuestHome'
 import { getMyLeagues, getLeagueById, createLeague } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
-import { BottomNav, IconButton, AppBadge } from '../components/ui-new'
+import { BottomNav, IconButton, AppBadge, Label } from '../components/ui-new'
 import NotificationPanel from '../components/NotificationPanel'
 import NotificationToast from '../components/NotificationToast'
 import {
@@ -330,15 +330,20 @@ export default function Home() {
               </div>
             </div>
             <div className="flex gap-2">
-              <IconButton badge={unreadCount > 0 ? unreadCount : undefined} onClick={() => setShowNotifs(v => !v)}>
+              <IconButton
+                ariaLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+                aria-expanded={showNotifs}
+                badge={unreadCount > 0 ? unreadCount : undefined}
+                onClick={() => setShowNotifs(v => !v)}
+              >
                 <BellIcon />
               </IconButton>
               {canCreate && (
-                <IconButton onClick={() => setShowCreate(true)}>
+                <IconButton ariaLabel="Create league" onClick={() => setShowCreate(true)}>
                   <PlusIcon size={18} />
                 </IconButton>
               )}
-              <IconButton onClick={() => navigate('/settings')}>
+              <IconButton ariaLabel="Settings" onClick={() => navigate('/settings')}>
                 <GearIcon />
               </IconButton>
             </div>
@@ -481,25 +486,39 @@ export default function Home() {
       {/* ── Create League modal ── */}
       {showCreate && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-4">
-          <div className="bg-surface border border-line rounded-[14px] w-full max-w-[420px] p-5">
-            <div className="text-[17px] font-bold text-text mb-4">New League</div>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-league-title"
+            className="bg-surface border border-line rounded-[14px] w-full max-w-[420px] p-5"
+          >
+            <div id="new-league-title" className="text-[17px] font-bold text-text mb-4">New League</div>
             <form onSubmit={handleCreateLeague} className="flex flex-col gap-3">
-              <input
-                autoFocus
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                placeholder="League name"
-                className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
-              />
-              <input
-                value={newLocation}
-                onChange={e => setNewLocation(e.target.value)}
-                placeholder="Location (optional)"
-                className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
-              />
-              <div className="flex gap-2">
+              <div>
+                <Label htmlFor="new-league-name">League name</Label>
+                <input
+                  id="new-league-name"
+                  autoFocus
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="e.g. Friday Night Padel"
+                  className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-league-location">Location</Label>
+                <input
+                  id="new-league-location"
+                  value={newLocation}
+                  onChange={e => setNewLocation(e.target.value)}
+                  placeholder="Optional"
+                  className="w-full bg-bg border border-line rounded-xl px-4 py-3 text-[14px] text-text placeholder:text-dim outline-none focus:border-accent"
+                />
+              </div>
+              <div role="group" aria-label="League visibility" className="flex gap-2">
                 <button
                   type="button"
+                  aria-pressed={newVisibility === 'public'}
                   onClick={() => setNewVisibility('public')}
                   className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
                     newVisibility === 'public'
@@ -511,6 +530,7 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={newVisibility === 'private'}
                   onClick={() => setNewVisibility('private')}
                   className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
                     newVisibility === 'private'

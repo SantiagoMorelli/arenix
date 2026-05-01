@@ -6,10 +6,11 @@ import {
   createFreePlayTeam,
   notifyPlayersAddedToFreePlay,
 } from '../services/freePlayService'
-import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues } from '../services/leagueService'
 import { getLeaguePlayers } from '../services/playerService'
 import { AppBadge, AppButton } from '../components/ui-new'
+import { useToast } from '../components/ToastContext'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -117,6 +118,8 @@ function TeamModal({ players, team, onSave, onClose }) {
 // ═════════════════════════════════════════════════════════════════════════════
 export default function FreePlayWizard() {
   const navigate = useNavigate()
+  const { showError } = useToast()
+  const { session: authSession } = useAuth()
   const totalSteps = 3
 
   // Global wizard state
@@ -286,14 +289,15 @@ export default function FreePlayWizard() {
         .map(p => p.leaguePlayerId)
         .filter(Boolean)
       if (leaguePlayerIds.length > 0) {
-        const { data: { user } } = await supabase.auth.getUser()
-        notifyPlayersAddedToFreePlay(session, leaguePlayerIds, user?.id).catch(console.error)
+        const userId = authSession?.user?.id
+        notifyPlayersAddedToFreePlay(session, leaguePlayerIds, userId).catch(console.error)
       }
 
       // 5) Go to Matches tab
       navigate(`/free-play/${session.id}`, { state: { tab: 'matches' } })
     } catch (err) {
       console.error(err)
+      showError(err, 'Failed to create session')
       setSaveErr(err?.message || 'Failed to create session')
       setSaving(false)
     }

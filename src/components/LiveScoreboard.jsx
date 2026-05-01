@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import GameStats from './GameStats'
-import QRExportModal from './QRExportModal'
+const QRExportModal = lazy(() => import('./QRExportModal'))
 import { useBattery } from '../hooks/useBattery'
 import { useWakeLock } from '../hooks/useWakeLock'
 
@@ -142,7 +142,7 @@ export default function LiveScoreboard({
   if (live.pendingPlayerSelect) {
     const isError = live.pendingPlayerSelect.ptId === 'error'
     const teamNum = isError ? (live.pendingPlayerSelect.teamNum === 1 ? 2 : 1) : live.pendingPlayerSelect.teamNum
-    const roster = live.serveRotation().filter(r => r.team === teamNum)
+    const roster = live.serveRotation.filter(r => r.team === teamNum)
     return (
       <div className="absolute inset-0 z-50 bg-bg flex flex-col pt-12 pb-6 px-4">
         <div className="text-center mb-10">
@@ -222,8 +222,8 @@ export default function LiveScoreboard({
   }
 
   // ── In-game scoreboard ───────────────────────────────────────────────────
-  const currentSrv = live.currentServer()
-  const rot = live.serveRotation()
+  const currentSrv = live.currentServer
+  const rot = live.serveRotation
   const nextSrv = rot[(live.serveIndex + 1) % rot.length]
 
   const renderServerInfo = (teamNum) => {
@@ -470,7 +470,9 @@ export default function LiveScoreboard({
 
       {/* QR Export overlay */}
       {enableQR && showQRExport && getQRPayload && (
-        <QRExportModal payload={getQRPayload()} onClose={() => setShowQRExport(false)} />
+        <Suspense fallback={null}>
+          <QRExportModal payload={getQRPayload()} onClose={() => setShowQRExport(false)} />
+        </Suspense>
       )}
 
       {/* onRequestBack is currently unused by the scoreboard itself; tournament

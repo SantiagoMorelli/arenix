@@ -9,6 +9,7 @@ import { buildInviteLink, buildViewLink, regenerateInviteCode, addMemberRole, re
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 import LeaguePlayersTab from '../components/LeaguePlayersTab'
 import { createNotification } from '../services/notificationService'
+import { useToast } from '../components/ToastContext'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -161,6 +162,7 @@ const GUEST_NAV_ITEMS = [
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) {
   const navigate                   = useNavigate()
+  const { showError }              = useToast()
   const [copying,     setCopying]  = useState(false)
   const [copyingView, setCopyingView] = useState(false)
   const [regen,       setRegen]    = useState(false)
@@ -272,7 +274,7 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
       await leaveLeague(league.id)
       navigate('/')
     } catch (err) {
-      alert(err.message || 'Failed to leave league.')
+      showError(err, 'Failed to leave league.')
       setLeaving(false)
     }
   }
@@ -553,6 +555,7 @@ export default function LeagueDetail() {
   const { id }               = useParams()
   const location             = useLocation()
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'rankings')
+  const { showError }        = useToast()
 
   const { league, loading, error, refetch } = useLeague(id)
   const { isAdmin, isSuperAdmin }            = useLeagueRole(id)
@@ -573,7 +576,7 @@ export default function LeagueDetail() {
       await addPlayer(id, data)
       refetch()
     } catch (err) {
-      alert(err.message || 'Failed to add player.')
+      showError(err, 'Failed to add player.')
     }
   }
 
@@ -606,7 +609,7 @@ export default function LeagueDetail() {
 
       refetch()
     } catch (err) {
-      alert(err.message || 'Failed to update player.')
+      showError(err, 'Failed to update player.')
     }
   }
 
@@ -615,7 +618,7 @@ export default function LeagueDetail() {
       await deletePlayer(playerId)
       refetch()
     } catch (err) {
-      alert(err.message || 'Failed to delete player.')
+      showError(err, 'Failed to delete player.')
     }
   }
 

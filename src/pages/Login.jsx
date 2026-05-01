@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { signInWithPassword, signInWithGoogle } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 
 const Svg = ({ children, size = 20 }) => (
@@ -34,7 +34,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await signInWithPassword({ email, password })
     setLoading(false)
     if (error) { setError(error.message); return }
     navigate(nextPath, { replace: true })
@@ -42,9 +42,8 @@ export default function Login() {
 
   async function handleGoogle() {
     setError('')
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + nextPath },
+    const { error } = await signInWithGoogle({
+      redirectTo: window.location.origin + nextPath,
     })
     if (error) setError(error.message)
   }

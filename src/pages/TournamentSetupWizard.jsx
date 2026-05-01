@@ -5,6 +5,7 @@ import { useLeagueRole } from '../hooks/useLeagueRole'
 import { createTournament } from '../services/tournamentService'
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
+import { useToast } from '../components/ToastContext'
 
 const FORMAT_OPTIONS = [
   { id: 'group',    label: 'Group + Knockout' },
@@ -52,20 +53,50 @@ function interleave(...arrs) {
 function buildTeamGroups(pool, params, teamSize) {
   const n = Math.floor(pool.length / teamSize)
   if (n < 1) return []
-  const byLevel = arr => [...arr].sort((a, b) => (LEVEL_SCORE[b.level] || 1) - (LEVEL_SCORE[a.level] || 1))
-  const rand    = arr => [...arr].sort(() => Math.random() - 0.5)
-  const M = p => p.sex === 'M', F = p => p.sex === 'F', O = p => p.sex !== 'M' && p.sex !== 'F'
+
+  const rand = arr => [...arr].sort(() => Math.random() - 0.5)
+
+  // Map linked-profile gender strings to the canonical sex codes used in player rows
+  const PROFILE_TO_SEX = { male: 'M', female: 'F', other: 'X' }
+  const sexOf = p => p.sex || PROFILE_TO_SEX[p.gender] || null
+
+  // Sex predicates — fall back to linked profile gender so linked users are never
+  // silently bucketed as "Other" just because their players.sex column is null.
+  const M = p => sexOf(p) === 'M'
+  const F = p => sexOf(p) === 'F'
+  const O = p => sexOf(p) !== 'M' && sexOf(p) !== 'F'
+
+  // Sort descending by level but shuffle within each tier so every Regenerate
+  // call produces a different valid arrangement (fixes deterministic output).
+  const byLevel = arr => {
+    const tiers = { advanced: [], intermediate: [], beginner: [], unknown: [] }
+    for (const p of arr) {
+      const key = Object.prototype.hasOwnProperty.call(LEVEL_SCORE, p.level) ? p.level : 'unknown'
+      tiers[key].push(p)
+    }
+    return [
+      ...rand(tiers.advanced),
+      ...rand(tiers.intermediate),
+      ...rand(tiers.beginner),
+      ...rand(tiers.unknown),
+    ]
+  }
+
   let sorted
   if      (params.length === 0)                          sorted = rand(pool)
   else if (params[0] === 'sex'   && params.length === 1) sorted = interleave(rand(pool.filter(M)), rand(pool.filter(F)), rand(pool.filter(O)))
   else if (params[0] === 'level' && params.length === 1) sorted = byLevel(pool)
   else if (params[0] === 'sex')                          sorted = interleave(byLevel(pool.filter(M)), byLevel(pool.filter(F)), byLevel(pool.filter(O)))
   else                                                   sorted = [...pool].sort((a, b) => {
-    const ld = (LEVEL_SCORE[b.level] || 1) - (LEVEL_SCORE[a.level] || 1)
-    if (ld !== 0) return ld
-    const s = x => x.sex === 'M' ? 0 : x.sex === 'F' ? 1 : 2
+    // Level-primary: sort by tier desc (unknown → bottom), then shuffle within
+    // same tier via sex ordering M < F < other for a stable tiebreak.
+    const la = LEVEL_SCORE[a.level] || 0
+    const lb = LEVEL_SCORE[b.level] || 0
+    if (lb !== la) return lb - la
+    const s = x => sexOf(x) === 'M' ? 0 : sexOf(x) === 'F' ? 1 : 2
     return s(a) - s(b)
   })
+
   const useSexBalance = params[0] === 'sex'
   return useSexBalance ? seqDraft(sorted, n, teamSize) : snakeDraft(sorted, n, teamSize)
 }
@@ -128,6 +159,7 @@ function buildPreviewGroups(teamList, numGroups) {
 export default function TournamentSetupWizard() {
   const navigate  = useNavigate()
   const { id }    = useParams()
+  const { showError } = useToast()
 
   const { league } = useLeague(id)
   const { isAdmin } = useLeagueRole(id)
@@ -285,6 +317,7 @@ export default function TournamentSetupWizard() {
       navigate(`/league/${id}/tournament/${tournament.id}`)
     } catch (err) {
       console.error('Failed to create tournament:', err)
+      showError(err, 'Failed to create tournament')
       setSaving(false)
     }
   }
@@ -410,13 +443,6 @@ export default function TournamentSetupWizard() {
               </div>
             </div>
 
-            <button
-              onClick={() => setStep(1)}
-              disabled={!name.trim()}
-              className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
-            >
-              Continue
-            </button>
           </div>
         )}
 
@@ -463,13 +489,6 @@ export default function TournamentSetupWizard() {
                   )
                 })}
             </div>
-            <button
-              onClick={() => setStep(2)}
-              disabled={pickedPlayers.length < teamSize}
-              className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
-            >
-              Continue
-            </button>
           </div>
         )}
 
@@ -529,8 +548,13 @@ export default function TournamentSetupWizard() {
                 </div>
 
                 {/* Generate / Regenerate button */}
+                {invitedPlayers.length < teamSize * 2 && (
+                  <div className="text-[12px] text-dim bg-alt rounded-xl px-3.5 py-2.5 leading-relaxed">
+                    Need at least <strong>{teamSize * 2}</strong> players for team size <strong>{teamSize}</strong>. Currently invited: <strong>{invitedPlayers.length}</strong>.
+                  </div>
+                )}
                 {proposedTeams.length === 0 && !confirmedAuto ? (
-                  <button onClick={propose} disabled={invitedPlayers.length < teamSize}
+                  <button onClick={propose} disabled={invitedPlayers.length < teamSize * 2}
                     className="w-full min-h-[50px] rounded-xl bg-accent text-white font-bold text-[14px] border-0 cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
                     <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -538,7 +562,7 @@ export default function TournamentSetupWizard() {
                     Generate teams
                   </button>
                 ) : (
-                  <button onClick={propose} disabled={invitedPlayers.length < teamSize}
+                  <button onClick={propose} disabled={invitedPlayers.length < teamSize * 2}
                     className="w-full min-h-[50px] rounded-xl bg-surface border border-line text-accent font-bold text-[14px] cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2">
                     <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -841,6 +865,24 @@ export default function TournamentSetupWizard() {
       </main>
 
       <div className="screen__bottom px-4 py-3.5 border-t border-line bg-surface">
+        {step === 0 && (
+          <button
+            onClick={() => setStep(1)}
+            disabled={!name.trim()}
+            className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+          >
+            Continue
+          </button>
+        )}
+        {step === 1 && (
+          <button
+            onClick={() => setStep(2)}
+            disabled={pickedPlayers.length < teamSize}
+            className="w-full min-h-[50px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer disabled:opacity-50"
+          >
+            Continue
+          </button>
+        )}
         {step === 2 && (
           <button
             onClick={() => setStep(3)}

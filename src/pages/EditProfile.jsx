@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
+import { uploadAvatar } from '../services/profileService'
 
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -126,15 +126,9 @@ export default function EditProfile() {
       let avatarUrl = profile?.avatar_url || null
 
       if (photoFile) {
-        const ext = photoFile.name.split('.').pop()
-        const path = `${profile.id}.${ext}`
-        const { error: uploadErr } = await supabase.storage
-          .from('avatars')
-          .upload(path, photoFile, { upsert: true })
+        const { publicUrl, error: uploadErr } = await uploadAvatar(profile.id, photoFile)
         if (uploadErr) throw uploadErr
-
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-        avatarUrl = urlData.publicUrl
+        avatarUrl = publicUrl
       }
 
       const { error: saveErr } = await updateProfile({

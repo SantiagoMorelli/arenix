@@ -1,6 +1,6 @@
 import React from "react";
 
-const PointLog = ({ log, logRef, team1Id, team2Id, teams, players, t }) => {
+const PointLog = ({ log, logRef, team1Id, team2Id, teams, players }) => {
   const getTeam   = id => teams.find(tm => tm.id === id);
   const getPlayer = id => {
     if (id && id.startsWith("free_")) return { id, name: id.slice(5) };
@@ -13,13 +13,13 @@ const PointLog = ({ log, logRef, team1Id, team2Id, teams, players, t }) => {
     <div className="bg-surface rounded-xl border border-line overflow-hidden">
       {/* Header */}
       <div className="px-3.5 py-2.5 bg-alt">
-        <span className="font-display text-[18px] text-accent tracking-wide">{t("history")}</span>
+        <span className="font-display text-[18px] text-accent tracking-wide">HISTORY</span>
       </div>
 
       {/* Log list */}
       <div ref={logRef} className="max-h-[160px] overflow-y-auto">
         {log.length === 0 && (
-          <div className="text-dim text-[13px] text-center py-4">{t("noPoints")}</div>
+          <div className="text-dim text-[13px] text-center py-4">No points yet</div>
         )}
 
         {[...log].reverse().map((entry) => {

@@ -12,7 +12,6 @@ const GameSetupScreen = ({
   setActiveTourMatchId,
   startGame,
   serveRotation, // pre-computed array from LiveScoreSection
-  t,
 }) => {
   const getPlayer = id => players.find(p => p.id === id);
   const getTeam   = id => teams.find(tm => tm.id === id);
@@ -87,7 +86,7 @@ const GameSetupScreen = ({
   return (
     <div className="flex flex-col gap-4">
       <h1 className="font-display text-[34px] text-accent tracking-[2px] mb-0">
-        {t("liveTitle")}
+        🏐 LIVE MATCH
       </h1>
 
       <div className="bg-surface rounded-xl border border-line p-4 flex flex-col gap-5">
@@ -151,7 +150,7 @@ const GameSetupScreen = ({
                 onChange={e => { setTeam1Id(e.target.value); setT1ServeOrder(teamPlayerIds(e.target.value)); }}
                 className="w-full bg-alt border border-line rounded-xl px-3 py-2.5 text-[14px] text-text cursor-pointer appearance-none"
               >
-                <option value="">{t("team1ph")}</option>
+                <option value="">Team 1...</option>
                 {teams.filter(tm => tm.id !== team2Id).map(tm => (
                   <option key={tm.id} value={tm.id}>{tm.name}</option>
                 ))}
@@ -167,7 +166,7 @@ const GameSetupScreen = ({
                 onChange={e => { setTeam2Id(e.target.value); setT2ServeOrder(teamPlayerIds(e.target.value)); }}
                 className="w-full bg-alt border border-line rounded-xl px-3 py-2.5 text-[14px] text-text cursor-pointer appearance-none"
               >
-                <option value="">{t("team2ph")}</option>
+                <option value="">Team 2...</option>
                 {teams.filter(tm => tm.id !== team1Id).map(tm => (
                   <option key={tm.id} value={tm.id}>{tm.name}</option>
                 ))}
@@ -238,7 +237,7 @@ const GameSetupScreen = ({
         {t1 && t2 && (
           <div>
             <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-1.5">
-              {t("initialSideOf")} {t1.name}
+              Initial side for {t1.name}
             </div>
             <div className="flex gap-1.5">
               {["left", "right"].map(s => (
@@ -251,7 +250,7 @@ const GameSetupScreen = ({
                       : "bg-transparent text-dim border-line"
                   }`}
                 >
-                  {s === "left" ? t("sideLeft") : t("sideRight")}
+                  {s === "left" ? "← Left" : "Right →"}
                 </button>
               ))}
             </div>
@@ -272,7 +271,7 @@ const GameSetupScreen = ({
           return (
             <div className="bg-alt rounded-xl px-3 py-2 border border-line">
               <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-1.5">
-                {t("serveOrderTitle")}
+                Serve order
               </div>
               <div className="flex gap-1 items-center flex-wrap">
                 {preview.map((slot, i) => {
@@ -299,7 +298,7 @@ const GameSetupScreen = ({
                 })}
                 <span className="text-[9px] text-dim italic ml-0.5">↻</span>
               </div>
-              <div className="text-[10px] text-dim mt-1.5">{t("serveOrderRepeat")}</div>
+              <div className="text-[10px] text-dim mt-1.5">Repeats cyclically</div>
             </div>
           );
         })()}
@@ -310,7 +309,7 @@ const GameSetupScreen = ({
           disabled={!canStart}
           className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-success text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-0 transition-opacity"
         >
-          {t("startMatch")}
+          Start match!
         </button>
 
       </div>

@@ -4,6 +4,7 @@ import { useFreePlay } from '../hooks/useFreePlay'
 import { useLiveGame, FP_SAVE_KEY } from '../hooks/useLiveGame'
 import LiveScoreboard from '../components/LiveScoreboard'
 import { saveFreePlayGame } from '../services/freePlayService'
+import { useToast } from '../components/ToastContext'
 
 const t = (key) => {
   const dict = {
@@ -204,6 +205,7 @@ export default function FreePlayLiveMatch() {
   const navigate      = useNavigate()
   const { id }        = useParams()
   const location      = useLocation()
+  const { showError } = useToast()
   const gameId        = location.state?.gameId
 
   const setsPerMatch  = location.state?.setsPerMatch  ?? 1
@@ -274,6 +276,7 @@ export default function FreePlayLiveMatch() {
       navigate(`/free-play/${id}`)
     } catch (err) {
       console.error('Failed to save free play result:', err)
+      showError(err, 'Failed to save match result')
       setIsSaving(false)
     }
   }

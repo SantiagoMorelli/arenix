@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 export default function QRImportModal({ onImport, onClose }) {
   const [error, setError] = useState(null)
-  const scannerRef = useRef(null)
+  const scannerRef   = useRef(null)
+  const dialogRef    = useRef(null)
+  const cancelBtnRef = useRef(null)
+  useFocusTrap(dialogRef, { onEscape: onClose, initialFocusRef: cancelBtnRef })
 
   useEffect(() => {
     const scanner = new Html5Qrcode('qr-import-reader', { verbose: false })
@@ -34,15 +38,22 @@ export default function QRImportModal({ onImport, onClose }) {
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 bg-bg flex flex-col">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="qr-import-title"
+      className="fixed inset-0 z-50 bg-bg flex flex-col"
+    >
       <div className="flex items-center justify-between px-4 py-3 bg-surface border-b border-line shrink-0">
         <button
+          ref={cancelBtnRef}
           onClick={onClose}
           className="text-[13px] font-bold text-dim border-0 bg-transparent cursor-pointer"
         >
           Cancel
         </button>
-        <div className="text-[14px] font-bold text-text">Scan QR Code</div>
+        <div id="qr-import-title" className="text-[14px] font-bold text-text">Scan QR Code</div>
         <div className="w-14" />
       </div>
 

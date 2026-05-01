@@ -3,853 +3,60 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
-import { saveMatchResult as supabaseSaveMatchResult, saveKnockoutRounds, updateTournamentPhase, advanceKnockoutAfterMatch, completeTournament, renameTeam, fetchMatchScorer, claimMatchScorer, deleteTournament } from '../services/tournamentService'
-import { uid } from '../lib/utils'
+import {
+  saveMatchResult as supabaseSaveMatchResult,
+  saveKnockoutRounds,
+  updateTournamentPhase,
+  advanceKnockoutAfterMatch,
+  completeTournament,
+  renameTeam,
+  fetchMatchScorer,
+  claimMatchScorer,
+  deleteTournament,
+} from '../services/tournamentService'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
-import GameStats from '../components/GameStats'
+import { buildKnockout } from '../lib/tournament'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
-import EditMatchModal from '../components/EditMatchModal'
 import { PillTabs } from '../components/ui-new'
+import { useToast } from '../components/ToastContext'
+import TournamentHeader from '../components/tournament/TournamentHeader'
+import StandingsTab from '../components/tournament/StandingsTab'
+import MatchesTab from '../components/tournament/MatchesTab'
+import PositionsTab from '../components/tournament/PositionsTab'
+import MatchStatsOverlay from '../components/tournament/MatchStatsOverlay'
+import StartMatchModal from '../components/tournament/StartMatchModal'
+import ScorerConflictModal from '../components/tournament/ScorerConflictModal'
 
-// ─── Inline icons ─────────────────────────────────────────────────────────────
-const Svg = ({ children, size = 20 }) => (
-  <svg
-    width={size} height={size} viewBox="0 0 24 24"
-    fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-  >
-    {children}
-  </svg>
-)
-const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
-const CloseIcon = () => <Svg><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Svg>
-
-// ─── Header status badge ──────────────────────────────────────────────────────
-function StatusBadge({ tournament }) {
-  const { phase, status } = tournament
-  if (status === 'completed')
-    return <span className="text-[10px] font-bold text-dim bg-alt px-2.5 py-1 rounded-lg shrink-0">Done</span>
-  if (['group', 'knockout', 'freeplay'].includes(phase))
-    return <span className="text-[10px] font-bold text-success bg-success/20 px-2.5 py-1 rounded-lg shrink-0">LIVE</span>
-  return <span className="text-[10px] font-bold text-accent bg-accent/15 px-2.5 py-1 rounded-lg shrink-0">SETUP</span>
-}
-
-// ─── Data helpers ─────────────────────────────────────────────────────────────
-function teamName(teams, id) {
-  return teams.find(t => t.id === id)?.name || '?'
-}
-
-// ─── Head-to-head stats between two teams ─────────────────────────────────────
-function h2hStats(idA, idB, matches) {
-  const s = { [idA]: { pts: 0, gd: 0 }, [idB]: { pts: 0, gd: 0 } }
-  ;(matches || [])
-    .filter(m => m.played &&
-      ((m.team1 === idA && m.team2 === idB) || (m.team1 === idB && m.team2 === idA)))
-    .forEach(m => {
-      const [s1, s2] = [m.score1, m.score2]
-      s[m.team1].gd += s1 - s2; s[m.team2].gd += s2 - s1
-      if (s1 > s2) s[m.team1].pts += 1; else s[m.team2].pts += 1 // W=1, L=0
-    })
-  return s
-}
-
-// ─── Standings calculator (Legacy compatible) ─────────────────────────────────
-function calcStandings(group) {
-  return group.teamIds.map(teamId => {
-    let mp = 0, pf = 0, pa = 0, played = 0, wins = 0, losses = 0
-    ;(group.matches || [])
-      .filter(m => m.played && (m.team1 === teamId || m.team2 === teamId))
-      .forEach(m => {
-        played++
-        const isT1 = m.team1 === teamId
-        const scored   = isT1 ? m.score1 : m.score2
-        const conceded = isT1 ? m.score2 : m.score1
-        pf += scored; pa += conceded
-        if (scored > conceded) { mp += 1; wins++   }
-        else                   {          losses++ }
-      })
-    return { teamId, played, wins, losses, pf, pa, pd: pf - pa, mp }
-  }).sort((a, b) => {
-    if (b.mp !== a.mp) return b.mp - a.mp   // Match Points (W=1)
-    if (b.pd !== a.pd) return b.pd - a.pd   // Point Difference
-    if (b.pf !== a.pf) return b.pf - a.pf   // Points For
-    // Head-to-head tiebreaker
-    const h = h2hStats(a.teamId, b.teamId, group.matches || [])
-    if (h[b.teamId].pts !== h[a.teamId].pts) return h[b.teamId].pts - h[a.teamId].pts
-    return h[b.teamId].gd - h[a.teamId].gd
-  })
-}
-
-// ─── Knockout bracket builder ─────────────────────────────────────────────────
-function buildKnockout(groups) {
-  // top2[i] = [{ teamId, position: 1|2, groupIdx }, ...]
-  const qualifiers = groups.flatMap((g, gi) => {
-    const standings = calcStandings(g)
-    return standings.slice(0, 2).map((s, pos) => ({ teamId: s.teamId, position: pos, groupIdx: gi }))
-  })
-
-  // Cross-seed: 1st of group i vs 2nd of group i+1 (wrap)
-  const n = groups.length
-  const firstPlace  = qualifiers.filter(q => q.position === 0)
-  const secondPlace = qualifiers.filter(q => q.position === 1)
-
-  // First round matches: 1st[i] vs 2nd[(i+1) % n]
-  const firstRoundMatches = firstPlace.map((fp, i) => ({
-    id: uid(),
-    team1: fp.teamId,
-    team2: secondPlace[(i + 1) % n].teamId,
-    played: false, winner: null, score1: 0, score2: 0,
-  }))
-
-  const totalQualifiers = firstRoundMatches.length * 2 // == qualifiers.length
-
-  // Build round structure
-  const rounds = []
-
-  // First round name
-  const firstRoundName =
-    totalQualifiers >= 16 ? "Round of 16" :
-    totalQualifiers >= 8  ? "Quarter-finals" :
-    "Semi-finals"
-
-  let currentMatches = firstRoundMatches
-  let currentId = totalQualifiers >= 16 ? "r16" : totalQualifiers >= 8 ? "qf" : "semi"
-  let currentName = firstRoundName
-
-  while (currentMatches.length > 1) {
-    rounds.push({ id: currentId, name: currentName, matches: currentMatches })
-
-    // Next round: TBD slots
-    const nextCount = Math.ceil(currentMatches.length / 2)
-    const nextMatches = Array.from({ length: nextCount }, () => ({
-      id: uid(), team1: null, team2: null, played: false, winner: null, score1: 0, score2: 0,
-    }))
-
-    currentMatches = nextMatches
-    if (currentId === "r16")   { currentId = "qf";    currentName = "Quarter-finals" }
-    else if (currentId === "qf"){ currentId = "semi";  currentName = "Semi-finals" }
-    else                        { currentId = "final"; currentName = "Final"; break }
-  }
-
-  // Always add Final as the last round
-  const finalMatch = {
-    id: uid(), team1: null, team2: null, played: false, winner: null, score1: 0, score2: 0,
-  }
-  rounds.push({ id: "final", name: "Final", matches: [finalMatch] })
-
-  // 3rd place match (between semi-final losers)
-  const thirdMatch = {
-    id: uid(), team1: null, team2: null, played: false, winner: null, score1: 0, score2: 0,
-  }
-  rounds.push({ id: "third_place", name: "3rd Place", matches: [thirdMatch] })
-
-  // If only 2 groups (4 qualifiers → 2 semi matches), fill the final directly from semis
-  // (handled by advanceKnockout in App.jsx)
-
-  // Special case: if the first round IS the semi-final, fill the final slots now
-  if (rounds[0].id === "semi") {
-    const semis = rounds[0].matches
-    if (semis.length === 2) {
-      // Final and 3rd place are TBD — will be filled by advanceKnockout
-    }
-  }
-
-  return { rounds }
-}
-
-function calcGroupStandings(group, teams, players = []) {
-  return group.teamIds.map(teamId => {
-    let wins = 0, losses = 0, pf = 0, pa = 0
-    group.matches
-      .filter(m => m.played && (m.team1 === teamId || m.team2 === teamId))
-      .forEach(m => {
-        const scored   = m.team1 === teamId ? m.score1 : m.score2
-        const conceded = m.team1 === teamId ? m.score2 : m.score1
-        pf += scored
-        pa += conceded
-        if (scored > conceded) wins++; else losses++
-      })
-    
-    const t = teams.find(x => x.id === teamId)
-    const playerNames = (t?.players || []).map(pid => {
-      const p = players.find(x => x.id === pid)
-      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-    }).join(' · ')
-    
-    return { id: teamId, name: teamName(teams, teamId), playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins }
-  }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
-}
-
-function calcOverallStandings(teams, matches, players = []) {
-  return teams.map(tm => {
-    let wins = 0, losses = 0, pf = 0, pa = 0
-    ;(matches || [])
-      .filter(m => m.played && (m.team1 === tm.id || m.team2 === tm.id))
-      .forEach(m => {
-        const scored   = m.team1 === tm.id ? m.score1 : m.score2
-        const conceded = m.team1 === tm.id ? m.score2 : m.score1
-        pf += scored
-        pa += conceded
-        if (scored > conceded) wins++; else losses++
-      })
-      
-    const playerNames = (tm.players || []).map(pid => {
-      const p = players.find(x => x.id === pid)
-      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-    }).join(' · ')
-
-    return { id: tm.id, name: tm.name, playerNames, wins, losses, pf, pa, pd: pf - pa, pts: wins }
-  }).sort((a, b) => b.pts - a.pts || b.pd - a.pd || b.pf - a.pf || b.wins - a.wins)
-}
-
-function getAllMatches(tournament) {
-  return [
-    ...(tournament.groups || []).flatMap(g =>
-      g.matches.map(m => ({ ...m, label: g.name }))
-    ),
-    ...(tournament.knockout?.rounds || []).flatMap(r =>
-      r.matches.map(m => ({ ...m, label: roundLabel(r.id) }))
-    ),
-    ...(tournament.matches || []).map((m, i) => ({ ...m, label: `Match ${i + 1}` })),
-  ]
-}
-
-function roundLabel(id) {
-  return (
-    { final: 'Final', semi: 'Semi-final', quarter: 'Quarter-final',
-      third_place: '3rd Place', r16: 'Round of 16' }[id] || id
-  )
-}
-
-// ─── Reusable standings table (W / L / PTS) ───────────────────────────────────
-function StandingsTable({ rows }) {
-  return (
-    <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
-      {/* Column headers */}
-      <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
-        <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
-        <span className="flex-1  text-[10px] font-bold text-dim">TEAM</span>
-        <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
-        <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
-        <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="text-center text-[13px] text-dim py-4">No data yet</div>
-      ) : rows.map((row, i) => (
-        <div
-          key={row.id}
-          className={`
-            flex items-center px-3.5 py-2.5
-            ${i < rows.length - 1 ? 'border-b border-line' : ''}
-            ${i === 0 ? 'bg-accent/15' : ''}
-          `}
-        >
-          <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>
-            {i + 1}
-          </span>
-          <div className="flex-1 overflow-hidden">
-            <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
-            {row.playerNames && (
-              <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>
-            )}
-          </div>
-          <span className="w-6 text-center text-[13px] font-semibold text-success">{row.wins}</span>
-          <span className="w-6 text-center text-[13px] font-semibold text-error">{row.losses}</span>
-          <span className="w-7 text-center text-[13px] font-semibold text-text">{row.pf}</span>
-          <span className="w-7 text-center text-[13px] font-semibold text-text">{row.pa}</span>
-          <span className={`w-7 text-center text-[13px] font-semibold ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
-            {row.pd > 0 ? '+' + row.pd : row.pd}
-          </span>
-          <span className="w-8 text-center text-[13px] font-bold text-accent">{row.pts}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ─── Knockout results (simple list per round) ─────────────────────────────────
-function KnockoutResults({ tournament, onMatchClick, players = [] }) {
-  const rounds = (tournament.knockout?.rounds || [])
-    .filter(r => r.matches.some(m => m.team1 && m.team2))
-
-  if (!rounds.length) return null
-
-  const pNames = id => {
-    const t = tournament.teams.find(x => x.id === id)
-    return (t?.players || []).map(pid => {
-      const p = players.find(x => x.id === pid)
-      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-    }).join(' · ')
-  }
-
-  return (
-    <div className="mt-5">
-      <div className="text-[12px] font-bold text-accent tracking-wide uppercase mb-2.5">
-        Knockout Stage
-      </div>
-
-      {rounds.map(round => (
-        <div key={round.id} className="mb-3">
-          <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-1.5">
-            {roundLabel(round.id)}
-          </div>
-
-          {round.matches
-            .filter(m => m.team1 && m.team2)
-            .map(m => {
-              const t1 = teamName(tournament.teams, m.team1)
-              const t2 = teamName(tournament.teams, m.team2)
-              const p1 = pNames(m.team1)
-              const p2 = pNames(m.team2)
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => m.played && onMatchClick && onMatchClick(m)}
-                  className={`flex items-center px-3.5 py-2.5 rounded-xl mb-1.5 border ${
-                    m.played && onMatchClick
-                      ? 'bg-surface border-line cursor-pointer hover:bg-alt transition-colors'
-                      : m.played
-                      ? 'bg-surface border-line'
-                      : 'bg-gradient-to-r from-surface to-alt border-accent/40'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <div className={`text-[13px] ${m.played && m.winner === m.team1 ? 'font-bold text-accent' : 'font-medium text-text'}`}>{t1}</div>
-                    {p1 && <div className="text-[10px] text-dim mt-0.5">{p1}</div>}
-                  </div>
-                  <span className="px-3 text-[14px] font-bold text-text flex-shrink-0">
-                    {m.played ? `${m.score1} – ${m.score2}` : 'VS'}
-                  </span>
-                  <div className="flex-1 text-right">
-                    <div className={`text-[13px] ${m.played && m.winner === m.team2 ? 'font-bold text-accent' : 'font-medium text-text'}`}>{t2}</div>
-                    {p2 && <div className="text-[10px] text-dim mt-0.5">{p2}</div>}
-                  </div>
-                </div>
-              )
-            })}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TAB: STANDINGS
-// — Groups first, then knockout (user's requested modification)
-// ═══════════════════════════════════════════════════════════════════════════════
-function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage, players }) {
-  const { phase, groups, teams, matches } = tournament
-  const hasGroups = (groups || []).length > 0
-
-  const allGroupMatchesPlayed = hasGroups && groups.every(g =>
-    g.matches.every(m => m.played)
-  )
-
-  if (phase === 'setup' && !hasGroups && !(matches || []).length) {
-    return (
-      <div className="px-4 text-[13px] text-dim text-center py-10">
-        Tournament hasn't started yet
-      </div>
-    )
-  }
-
-  // Free-play / round-robin (no groups)
-  if (!hasGroups) {
-    const rows = calcOverallStandings(teams, matches, players)
-    return (
-      <div className="px-4">
-        <StandingsTable rows={rows} />
-      </div>
-    )
-  }
-
-  // ── Group stage → show each group, then knockout below ────────────────────
-  return (
-    <div className="px-4">
-      {groups.map(group => (
-        <div key={group.id} className="mb-4">
-          <div className="text-[12px] font-bold text-accent tracking-wide uppercase mb-2.5">
-            {group.name}
-          </div>
-          <StandingsTable rows={calcGroupStandings(group, teams, players)} />
-        </div>
-      ))}
-
-      {/* Knockout results appear once the group stage is over */}
-      {(phase === 'knockout' || phase === 'completed') && (
-        <KnockoutResults tournament={tournament} onMatchClick={onMatchClick} players={players} />
-      )}
-
-      {/* Advance button — only for admins */}
-      {phase === 'group' && canManage && (
-        <div className="mt-2 mb-6">
-          <button
-            onClick={onGenerateKnockout}
-            disabled={!allGroupMatchesPlayed}
-            className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white border-0 transition-all ${
-              allGroupMatchesPlayed ? 'bg-free cursor-pointer hover:opacity-90' : 'bg-surface border border-line text-dim cursor-not-allowed'
-            }`}
-          >
-            {allGroupMatchesPlayed ? "⚡ Generate Knockout" : "⏳ Complete all group matches first"}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TAB: MATCHES
-// ═══════════════════════════════════════════════════════════════════════════════
-function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore, players = [] }) {
-  const { groups = [], knockout = null, phase } = tournament
-  const hasGroups = groups.length > 0
-  const isFreePlay = !hasGroups
-
-  // Setup tabs
-  const groupTabs = hasGroups ? groups.map(g => ({ id: `g_${g.id}`, label: g.name })) : []
-  const koTab = knockout ? [{ id: 'knockout', label: 'Knockout' }] : []
-  const allTabs = [...groupTabs, ...koTab]
-
-  // Default active subtab: first group, or knockout if we're past groups, or 'all' if free play
-  const [activeSubTab, setActiveSubTab] = useState(() => {
-    if (isFreePlay) return 'all'
-    if ((phase === 'knockout' || phase === 'completed') && knockout) return 'knockout'
-    return allTabs[0]?.id || 'all'
-  })
-
-  const tName = id => teamName(tournament.teams, id)
-  const playerNames = id => {
-    const t = tournament.teams.find(x => x.id === id)
-    return (t?.players || []).map(pid => {
-      const p = players.find(x => x.id === pid)
-      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-    }).join(' · ')
-  }
-
-  // Get matches based on active tab
-  let matchesToDisplay = []
-  let displayTitle = ''
-
-  if (isFreePlay) {
-    matchesToDisplay = (tournament.matches || []).map((m, i) => ({ ...m, label: `Match ${i + 1}` }))
-    displayTitle = 'Free Play Matches'
-  } else if (activeSubTab === 'knockout') {
-    matchesToDisplay = (knockout?.rounds || []).flatMap(r => 
-      r.matches.map(m => ({ ...m, label: roundLabel(r.id) }))
-    )
-    displayTitle = 'Knockout Matches'
-  } else {
-    const groupId = activeSubTab.replace('g_', '')
-    const group = groups.find(g => g.id === groupId)
-    matchesToDisplay = group ? group.matches.map(m => ({ ...m, label: group.name })) : []
-    displayTitle = group ? `${group.name} (Matches)` : ''
-  }
-
-  const pending   = matchesToDisplay.filter(m => !m.played && m.team1 && m.team2)
-  const completed = matchesToDisplay.filter(m => m.played)
-
-  return (
-    <div className="px-4">
-      {hasGroups && allTabs.length > 1 && (
-        <div className="mb-4 overflow-x-auto pb-1 no-scrollbar">
-          <div className="flex gap-2 min-w-max">
-            {allTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id)}
-                className={`
-                  px-4 py-2 rounded-xl text-[12px] font-bold cursor-pointer transition-all border-2
-                  ${activeSubTab === tab.id 
-                    ? 'bg-accent/10 border-accent text-accent' 
-                    : 'bg-surface border-line text-dim'}
-                `}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {displayTitle && (
-        <div className="font-display text-[22px] text-accent tracking-[2px] mb-4">
-          {displayTitle}
-        </div>
-      )}
-
-      {/* Pending */}
-      {pending.length > 0 && (
-        <div className="mb-4">
-          <div className="text-[11px] font-bold text-accent uppercase tracking-wide mb-2">
-            Pending ({pending.length})
-          </div>
-          {pending.map(m => (
-            <div
-              key={m.id}
-              className="bg-gradient-to-r from-surface to-alt rounded-xl p-3.5 mb-2.5 border border-accent/40"
-            >
-              <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-2.5">
-                {m.label} · UP NEXT
-              </div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1 text-center">
-                  <div className="text-[13px] font-bold text-text">{tName(m.team1)}</div>
-                  {playerNames(m.team1) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team1)}</div>}
-                </div>
-                <div className="text-[12px] font-bold text-dim px-3 py-1 bg-bg rounded-lg">VS</div>
-                <div className="flex-1 text-center">
-                  <div className="text-[13px] font-bold text-text">{tName(m.team2)}</div>
-                  {playerNames(m.team2) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team2)}</div>}
-                </div>
-              </div>
-              {canScore && (
-                <button
-                  onClick={() => onStartMatch(m)}
-                  className="w-full py-2.5 rounded-lg text-[12px] font-bold text-white bg-accent border-0 cursor-pointer"
-                >
-                  Start Match
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Completed */}
-      {completed.length > 0 && (
-        <div>
-          <div className="text-[11px] font-bold text-success uppercase tracking-wide mb-2">
-            Completed ({completed.length})
-          </div>
-          <div className="flex flex-col gap-2">
-            {completed.map(m => (
-              <div 
-                key={m.id} 
-                onClick={() => onMatchClick && onMatchClick(m)}
-                className="bg-surface rounded-xl px-3.5 py-3 border border-line cursor-pointer hover:bg-alt transition-colors"
-              >
-                <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-1.5">
-                  {m.label}
-                </div>
-                <div className="flex items-center">
-                  <div className="flex-1">
-                    <div className={`text-[13px] ${m.winner === m.team1 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                      {tName(m.team1)}
-                    </div>
-                    {playerNames(m.team1) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team1)}</div>}
-                  </div>
-                  <div className="flex items-center gap-1 px-3">
-                    <span className={`text-[16px] font-bold ${m.winner === m.team1 ? 'text-accent' : 'text-text'}`}>{m.score1}</span>
-                    <span className="text-[10px] text-dim">–</span>
-                    <span className={`text-[16px] font-bold ${m.winner === m.team2 ? 'text-accent' : 'text-text'}`}>{m.score2}</span>
-                  </div>
-                  <div className="flex-1 text-right">
-                    <div className={`text-[13px] ${m.winner === m.team2 ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                      {tName(m.team2)}
-                    </div>
-                    {playerNames(m.team2) && <div className="text-[10px] text-dim mt-0.5">{playerNames(m.team2)}</div>}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!pending.length && !completed.length && (
-        <div className="text-[13px] text-dim text-center py-10">No matches yet</div>
-      )}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TAB: POSITIONS
-// ═══════════════════════════════════════════════════════════════════════════════
-function PositionsTab({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
-  const { teams } = tournament
-  const [subTab, setSubTab] = useState('teams')
-
-  if (!teams || teams.length === 0) {
-    return <div className="px-4 text-[13px] text-dim text-center py-10">No teams yet</div>
-  }
-
-  return (
-    <div className="px-4">
-      {/* Inner Pill Tabs for Teams vs Players */}
-      <PillTabs
-        items={[
-          { id: 'teams', label: 'Teams' },
-          { id: 'players', label: 'Players' }
-        ]}
-        active={subTab}
-        onChange={setSubTab}
-      />
-
-      {subTab === 'teams' ? (
-        <TeamsPositionsTable tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={currentUserId} isAdmin={isAdmin} onRenameTeam={onRenameTeam} />
-      ) : (
-        <PlayersPositionsTable tournament={tournament} leaguePlayers={leaguePlayers} />
-      )}
-    </div>
-  )
-}
-
-function TeamsPositionsTable({ tournament, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
-  const { teams } = tournament
-  const allMatches = getAllMatches(tournament)
-  const [editingTeamId, setEditingTeamId] = useState(null)
-  const [editName, setEditName]           = useState('')
-  const [saving, setSaving]               = useState(false)
-  const [saveError, setSaveError]         = useState(null)
-
-  // Calculate overall standings based on all matches in tournament
-  const rows = calcOverallStandings(teams, allMatches, leaguePlayers)
-
-  async function handleSave(teamId) {
-    const trimmed = editName.trim()
-    if (!trimmed) return
-    setSaving(true)
-    setSaveError(null)
-    try {
-      await onRenameTeam(teamId, trimmed)
-      setEditingTeamId(null)
-    } catch (err) {
-      setSaveError(err?.message || 'Failed to save. Check your permissions.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
-      {/* Column headers */}
-      <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
-        <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
-        <span className="flex-1  text-[10px] font-bold text-dim">TEAM</span>
-        <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
-        <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
-        <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
-        <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="text-center text-[13px] text-dim py-4">No teams yet</div>
-      ) : rows.map((row, i) => {
-        const team = teams.find(t => t.id === row.id)
-        if (!team) return null
-
-        const isMember = currentUserId && (team.players || []).some(pid => {
-          const p = leaguePlayers.find(pl => pl.id === pid)
-          return p?.userId === currentUserId
-        })
-        const canEdit   = isAdmin || isMember
-        const isEditing = editingTeamId === team.id
-
-        return (
-          <div
-            key={row.id}
-            className={`
-              flex items-center px-3.5 py-2.5
-              ${i < rows.length - 1 ? 'border-b border-line' : ''}
-              ${i === 0 ? 'bg-accent/15' : ''}
-            `}
-          >
-            <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>
-              {i + 1}
-            </span>
-            
-            <div className="flex-1 overflow-hidden pr-2">
-              {isEditing ? (
-                <div className="flex flex-col gap-1.5 mb-1">
-                  <div className="flex items-center gap-1">
-                    <input
-                      autoFocus
-                      value={editName}
-                      onChange={e => { setEditName(e.target.value); setSaveError(null) }}
-                      onKeyDown={e => { if (e.key === 'Enter') handleSave(team.id); if (e.key === 'Escape') { setEditingTeamId(null); setSaveError(null) } }}
-                      className="w-full min-w-0 bg-bg border border-accent rounded px-1.5 py-1 text-[13px] font-bold text-text outline-none"
-                    />
-                    <button
-                      onClick={() => handleSave(team.id)}
-                      disabled={saving || !editName.trim()}
-                      className="text-[10px] font-bold text-white bg-accent px-2 py-1 rounded border-0 cursor-pointer disabled:opacity-50"
-                    >
-                      {saving ? '…' : '✔'}
-                    </button>
-                    <button
-                      onClick={() => { setEditingTeamId(null); setSaveError(null) }}
-                      className="text-[10px] font-semibold text-dim bg-transparent border-0 cursor-pointer px-1"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {saveError && (
-                    <div className="text-[10px] text-error font-medium px-0.5">{saveError}</div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
-                  {canEdit && (
-                    <button
-                      onClick={() => { setEditingTeamId(team.id); setEditName(team.name); setSaveError(null) }}
-                      className="text-dim hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0 flex-shrink-0"
-                      title="Rename team"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              )}
-              {row.playerNames && (
-                <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>
-              )}
-            </div>
-
-            <span className="w-6 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
-            <span className="w-6 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
-            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pf}</span>
-            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pa}</span>
-            <span className={`w-7 text-center text-[13px] font-semibold flex-shrink-0 ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
-              {row.pd > 0 ? '+' + row.pd : row.pd}
-            </span>
-            <span className="w-8 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function PlayersPositionsTable({ tournament, leaguePlayers }) {
-  const { teams } = tournament
-  const allMatches = getAllMatches(tournament)
-
-  // Calculate player stats based on team matches
-  // Player gets 1 win = 1 pt, 1 loss = 0 pt
-  const playerStats = {}
-
-  teams.forEach(team => {
-    // Determine wins/losses for this team
-    let wins = 0, losses = 0
-    allMatches
-      .filter(m => m.played && (m.team1 === team.id || m.team2 === team.id))
-      .forEach(m => {
-        const scored   = m.team1 === team.id ? m.score1 : m.score2
-        const conceded = m.team1 === team.id ? m.score2 : m.score1
-        if (scored > conceded) wins++; else losses++
-      })
-
-    // Assign to players
-    ;(team.players || []).forEach(pid => {
-      if (!playerStats[pid]) {
-        const p = leaguePlayers.find(pl => pl.id === pid)
-        playerStats[pid] = { 
-          id: pid, 
-          name: p ? (p.displayName || p.nickname || p.name) : 'Unknown',
-          wins: 0, 
-          losses: 0,
-          pts: 0
-        }
-      }
-      playerStats[pid].wins += wins
-      playerStats[pid].losses += losses
-      playerStats[pid].pts += wins // 1 win = 1 point as requested
-    })
-  })
-
-  const rows = Object.values(playerStats).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.losses - b.losses || a.name.localeCompare(b.name))
-
-  return (
-    <>
-    <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
-      {/* Column headers */}
-      <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
-        <span className="w-[30px] text-[10px] font-bold text-dim text-center">#</span>
-        <span className="flex-1  text-[10px] font-bold text-dim">PLAYER</span>
-        <span className="w-10 text-center text-[10px] font-bold text-dim">W</span>
-        <span className="w-10 text-center text-[10px] font-bold text-dim">L</span>
-        <span className="w-12 text-center text-[10px] font-bold text-dim">PTS</span>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="text-center text-[13px] text-dim py-4">No players yet</div>
-      ) : rows.map((row, i) => (
-        <div
-          key={row.id}
-          className={`
-            flex items-center px-3.5 py-2.5
-            ${i < rows.length - 1 ? 'border-b border-line' : ''}
-            ${i === 0 ? 'bg-accent/15' : ''}
-          `}
-        >
-          <span className={`w-[30px] text-[13px] font-bold text-center ${i === 0 ? 'text-accent' : 'text-dim'}`}>
-            {i + 1}
-          </span>
-          <div className="flex-1 overflow-hidden pr-2">
-            <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
-          </div>
-          <span className="w-10 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
-          <span className="w-10 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
-          <span className="w-12 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
-        </div>
-      ))}
-    </div>
-    <div className="mt-3.5 text-[12px] text-dim text-center leading-relaxed">
-      Player rankings will update the league standings when the tournament ends.
-    </div>
-    </>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAGE
-// ═══════════════════════════════════════════════════════════════════════════════
 export default function TournamentDetail() {
-  const navigate     = useNavigate()
-  const { id, tid }  = useParams()
-  const location     = useLocation()
+  const navigate    = useNavigate()
+  const { id, tid } = useParams()
+  const location    = useLocation()
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'standings')
+  const { showError } = useToast()
 
   const { league, loading, refetch } = useLeague(id)
   const { canScore, canManage, isAdmin } = useLeagueRole(id)
-  const { session, profile }         = useAuth()
+  const { session, profile } = useAuth()
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
 
   const isGuest = !session
 
-  // ── Tournament Stats Overlay State ──
+  // ── Overlay state ──────────────────────────────────────────────────────────
   const [showTournamentStats, setShowTournamentStats] = useState(false)
-  const [showMatchMenu, setShowMatchMenu] = useState(false)
-  const [showTournamentMenu, setShowTournamentMenu] = useState(false)
+  const [selectedStatsMatch,  setSelectedStatsMatch]  = useState(null)
+
+  // ── Header / delete state ──────────────────────────────────────────────────
   const [deleting, setDeleting] = useState(false)
 
-  // ── Match Start Modal State ──
-  const [selectedMatch, setSelectedMatch] = useState(null)
-  const [showScoreForm, setShowScoreForm] = useState(false)
-  const [manualScore1, setManualScore1]   = useState('0')
-  const [manualScore2, setManualScore2]   = useState('0')
-  const [conflictScorer, setConflictScorer] = useState(null) // { name: string } | null
-  const [checkingScorer, setCheckingScorer] = useState(false)
-  const [savingScore, setSavingScore] = useState(false)
-
-  // ── Match Stats Overlay State ──
-  const [selectedStatsMatch, setSelectedStatsMatch] = useState(null)
-
-  // ── Edit Match State ──
-  const [editingMatch, setEditingMatch] = useState(null)
+  // ── Start-match modal state ────────────────────────────────────────────────
+  const [selectedMatch,   setSelectedMatch]   = useState(null)
+  const [showScoreForm,   setShowScoreForm]   = useState(false)
+  const [manualScore1,    setManualScore1]    = useState('0')
+  const [manualScore2,    setManualScore2]    = useState('0')
+  const [conflictScorer,  setConflictScorer]  = useState(null)
+  const [checkingScorer,  setCheckingScorer]  = useState(false)
+  const [savingScore,     setSavingScore]     = useState(false)
 
   if (loading) {
     return (
@@ -873,9 +80,9 @@ export default function TournamentDetail() {
     )
   }
 
-  // ── Handlers ──
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleRenameTeam = async (teamId, newName) => {
-    await renameTeam(teamId, newName)  // throws on error — propagates to TeamsTab
+    await renameTeam(teamId, newName)
     refetch()
   }
 
@@ -907,7 +114,6 @@ export default function TournamentDetail() {
     if (savingScore) return
     const s1 = parseInt(manualScore1, 10)
     const s2 = parseInt(manualScore2, 10)
-
     if (isNaN(s1) || isNaN(s2) || s1 === s2) return
 
     const winnerId = s1 > s2 ? selectedMatch.team1 : selectedMatch.team2
@@ -916,7 +122,6 @@ export default function TournamentDetail() {
     try {
       await supabaseSaveMatchResult(selectedMatch.id, s1, s2, winnerId)
 
-      // Notify players in this match of the result
       const team1 = tournament.teams?.find(t => t.id === selectedMatch.team1)
       const team2 = tournament.teams?.find(t => t.id === selectedMatch.team2)
       const t1Name = team1?.name || 'Team 1'
@@ -946,8 +151,6 @@ export default function TournamentDetail() {
 
       if (tournament.knockout) {
         await advanceKnockoutAfterMatch(selectedMatch.id, winnerId, tournament.knockout)
-
-        // Check if this was the final match
         const isFinal = tournament.knockout.rounds.some(
           r => r.id === 'final' && r.matches.some(m => m.id === selectedMatch.id)
         )
@@ -967,6 +170,7 @@ export default function TournamentDetail() {
       refetch()
     } catch (err) {
       console.error('Failed to save match result:', err)
+      showError(err, 'Failed to save match result')
     } finally {
       setSavingScore(false)
     }
@@ -974,18 +178,14 @@ export default function TournamentDetail() {
 
   const handleGenerateKnockout = async () => {
     const knockout = buildKnockout(tournament.groups)
-
     try {
       await saveKnockoutRounds(tid, knockout.rounds)
       await updateTournamentPhase(tid, 'knockout')
       refetch()
     } catch (err) {
       console.error('Failed to generate knockout:', err)
+      showError(err, 'Failed to generate knockout')
     }
-  }
-
-  const handleMatchClick = (match) => {
-    setSelectedStatsMatch(match)
   }
 
   const handleDeleteTournament = async () => {
@@ -995,28 +195,9 @@ export default function TournamentDetail() {
       await deleteTournament(tid)
       navigate(`/league/${id}`)
     } catch (err) {
-      alert(err.message || 'Failed to delete tournament')
+      showError(err, 'Failed to delete tournament')
       setDeleting(false)
     }
-  }
-
-  // Mock translation function for GameStats
-  const t = (key) => {
-    const dict = {
-      winner: 'Winner',
-      totalPoints: 'Total Points',
-      totalLabel: 'pts',
-      streaks: 'Streaks',
-      maxStreak: 'Max streak',
-      howWonTitle: 'How points were won',
-      comparison: 'vs',
-      serveEff: 'Serve Efficiency',
-      whileServing: 'serving',
-      whileReceiving: 'receiving',
-      history: 'Match History',
-      newMatch: 'New Match'
-    }
-    return dict[key] || key
   }
 
   return (
@@ -1033,165 +214,28 @@ export default function TournamentDetail() {
 
       {/* ── Match Stats Full-screen Overlay ── */}
       {selectedStatsMatch && (
-        <div className="absolute inset-0 z-[100] bg-bg flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2.5 px-4 pt-3 pb-2.5 flex-shrink-0 bg-surface border-b border-line">
-            <button
-              onClick={() => { setSelectedStatsMatch(null); setShowMatchMenu(false) }}
-              className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text flex-shrink-0"
-            >
-              <BackIcon />
-            </button>
-            <div className="flex-1 min-w-0">
-              <div className="text-[16px] font-bold text-text leading-tight truncate">
-                Match Details
-              </div>
-              <div className="text-[11px] text-dim">{selectedStatsMatch.label || 'Result'}</div>
-            </div>
-            {isAdmin && !isGuest && (
-              <div className="relative flex-shrink-0">
-                <button
-                  onClick={() => setShowMatchMenu(v => !v)}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-dim text-[20px] font-black leading-none cursor-pointer bg-transparent border-0"
-                >
-                  ···
-                </button>
-                {showMatchMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowMatchMenu(false)} />
-                    <div className="absolute right-0 top-10 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[150px]">
-                      <button
-                        onClick={() => { setShowMatchMenu(false); setEditingMatch(selectedStatsMatch) }}
-                        className="w-full px-4 py-3 text-left text-[13px] font-semibold text-text hover:bg-alt cursor-pointer border-0 bg-transparent flex items-center gap-2"
-                      >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 relative">
-            {selectedStatsMatch.log && selectedStatsMatch.log.length > 0 ? (
-              <GameStats
-                winner={selectedStatsMatch.winner}
-                team1Id={selectedStatsMatch.team1}
-                team2Id={selectedStatsMatch.team2}
-                sets={selectedStatsMatch.sets || [{ s1: selectedStatsMatch.score1, s2: selectedStatsMatch.score2, winner: selectedStatsMatch.winner }]}
-                t1Sets={selectedStatsMatch.sets ? selectedStatsMatch.sets.filter(s => s.winner === 1).length : (selectedStatsMatch.winner === selectedStatsMatch.team1 ? 1 : 0)}
-                t2Sets={selectedStatsMatch.sets ? selectedStatsMatch.sets.filter(s => s.winner === 2).length : (selectedStatsMatch.winner === selectedStatsMatch.team2 ? 1 : 0)}
-                log={selectedStatsMatch.log}
-                teams={tournament.teams}
-                players={leaguePlayers}
-                t={t}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center h-full gap-6">
-                <div className="text-[48px]">📋</div>
-                <div>
-                  <div className="text-[18px] font-bold text-text mb-1">Manual Score Result</div>
-                  <div className="text-[13px] text-dim">No detailed stats were recorded for this match.</div>
-                </div>
-
-                <div className="bg-surface border border-line rounded-2xl p-6 w-full max-w-[280px]">
-                  {[
-                    { teamId: selectedStatsMatch.team1, score: selectedStatsMatch.score1 },
-                    { teamId: selectedStatsMatch.team2, score: selectedStatsMatch.score2 },
-                  ].map(({ teamId, score }, idx) => {
-                    const isWinner = selectedStatsMatch.winner === teamId
-                    const t = tournament.teams.find(x => x.id === teamId)
-                    const names = (t?.players || []).map(pid => {
-                      const p = leaguePlayers.find(x => x.id === pid)
-                      return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-                    }).join(' · ')
-                    return (
-                      <div key={teamId} className={`flex justify-between items-start ${idx === 0 ? 'mb-4' : ''}`}>
-                        <div className="flex-1 min-w-0 pr-3">
-                          <div className={`text-[15px] ${isWinner ? 'font-bold text-accent' : 'font-medium text-dim'}`}>
-                            {teamName(tournament.teams, teamId)}
-                          </div>
-                          {names && <div className="text-[10px] text-dim mt-0.5">{names}</div>}
-                        </div>
-                        <span className={`text-[24px] font-black flex-shrink-0 ${isWinner ? 'text-accent' : 'text-text'}`}>
-                          {score}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <button
-                  onClick={() => setSelectedStatsMatch(null)}
-                  className="mt-4 px-6 py-2.5 rounded-xl bg-alt text-[13px] font-bold text-text border-0 cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            )}
-          </div>
-
-
-          {/* Edit Match Modal */}
-          {editingMatch && editingMatch.id === selectedStatsMatch.id && (
-            <EditMatchModal
-              match={editingMatch}
-              tournament={tournament}
-              teams={tournament.teams}
-              leagueId={id}
-              tournamentId={tid}
-              navigate={navigate}
-              onSave={() => {
-                setEditingMatch(null)
-                setSelectedStatsMatch(null)
-                refetch()
-              }}
-              onClose={() => setEditingMatch(null)}
-            />
-          )}
-        </div>
+        <MatchStatsOverlay
+          match={selectedStatsMatch}
+          tournament={tournament}
+          leaguePlayers={leaguePlayers}
+          isAdmin={isAdmin && !isGuest}
+          leagueId={id}
+          tournamentId={tid}
+          navigate={navigate}
+          onClose={() => setSelectedStatsMatch(null)}
+          onSaved={refetch}
+        />
       )}
 
       {/* ── Header ── */}
-      <div className="screen__top flex items-center gap-2.5 px-4 pt-3 pb-2.5">
-        <button
-          onClick={() => navigate(`/league/${id}`)}
-          className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text flex-shrink-0"
-        >
-          <BackIcon />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="text-[18px] font-bold text-text leading-tight truncate">
-            {tournament.name}
-          </div>
-          <div className="text-[11px] text-dim">{league?.name}</div>
-        </div>
-        <StatusBadge tournament={tournament} />
-        {isAdmin && !isGuest && (
-          <div className="relative flex-shrink-0">
-            <button
-              onClick={() => setShowTournamentMenu(v => !v)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-dim text-[20px] font-black leading-none cursor-pointer bg-transparent border-0"
-            >
-              ···
-            </button>
-            {showTournamentMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowTournamentMenu(false)} />
-                <div className="absolute right-0 top-10 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[180px]">
-                  <button
-                    onClick={() => { setShowTournamentMenu(false); handleDeleteTournament() }}
-                    disabled={deleting}
-                    className="w-full px-4 py-3 text-left text-[13px] font-semibold text-error hover:bg-alt cursor-pointer border-0 bg-transparent flex items-center gap-2"
-                  >
-                    🗑️ {deleting ? 'Deleting…' : 'Delete tournament'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      <TournamentHeader
+        tournament={tournament}
+        league={league}
+        onBack={() => navigate(`/league/${id}`)}
+        isAdmin={isAdmin && !isGuest}
+        onDelete={handleDeleteTournament}
+        deleting={deleting}
+      />
 
       {/* ── Tournament Complete Banner ── */}
       {tournament.status === 'completed' && (
@@ -1203,7 +247,7 @@ export default function TournamentDetail() {
             <span className="text-[20px]">🏆</span>
             <div className="text-left">
               <div className="text-[13px] font-bold text-accent leading-tight">Tournament Complete</div>
-              <div className="text-[11px] text-dim">See full stats & awards</div>
+              <div className="text-[11px] text-dim">See full stats &amp; awards</div>
             </div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent flex-shrink-0">
@@ -1229,6 +273,7 @@ export default function TournamentDetail() {
           <StandingsTab
             tournament={tournament}
             onGenerateKnockout={handleGenerateKnockout}
+            onMatchClick={m => setSelectedStatsMatch(m)}
             canManage={canManage}
             players={leaguePlayers}
           />
@@ -1237,183 +282,53 @@ export default function TournamentDetail() {
           <MatchesTab
             tournament={tournament}
             onStartMatch={handleStartMatchClick}
-            onMatchClick={handleMatchClick}
+            onMatchClick={m => setSelectedStatsMatch(m)}
             canScore={canScore}
             players={leaguePlayers}
           />
         )}
         {activeTab === 'positions' && (
-          <PositionsTab tournament={tournament} leaguePlayers={leaguePlayers} currentUserId={profile?.id} isAdmin={isGuest ? false : isAdmin} onRenameTeam={handleRenameTeam} />
+          <PositionsTab
+            tournament={tournament}
+            leaguePlayers={leaguePlayers}
+            currentUserId={profile?.id}
+            isAdmin={isGuest ? false : isAdmin}
+            onRenameTeam={handleRenameTeam}
+          />
         )}
       </main>
 
-      {/* ── Start Match Modal Overlay ── */}
+      {/* ── Start Match Modal ── */}
       {selectedMatch && (
-        <div className="absolute inset-0 z-50 bg-bg/90 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface rounded-[20px] w-full max-w-[320px] border border-line shadow-2xl overflow-hidden relative">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-4 border-b border-line bg-alt">
-              <span className="text-[13px] font-bold text-dim uppercase tracking-wide">
-                {showScoreForm ? 'Enter Final Score' : 'Start Match'}
-              </span>
-              <button 
-                onClick={handleCloseModal}
-                className="w-8 h-8 rounded-lg bg-bg flex items-center justify-center border-0 cursor-pointer text-text hover:text-error transition-colors"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5">
-              {!showScoreForm ? (
-                // Option Selection
-                <div className="flex flex-col gap-3">
-                  {(() => {
-                    const getNames = id => {
-                      const t = tournament.teams.find(x => x.id === id)
-                      return (t?.players || []).map(pid => {
-                        const p = leaguePlayers.find(x => x.id === pid)
-                        return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-                      }).join(' · ')
-                    }
-                    const n1 = getNames(selectedMatch.team1)
-                    const n2 = getNames(selectedMatch.team2)
-                    return (
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 text-center pr-1">
-                          <div className="text-[14px] font-bold text-text">{teamName(tournament.teams, selectedMatch.team1)}</div>
-                          {n1 && <div className="text-[10px] text-dim mt-0.5">{n1}</div>}
-                        </div>
-                        <span className="text-[11px] font-bold text-dim px-3 pt-0.5 flex-shrink-0">VS</span>
-                        <div className="flex-1 text-center pl-1">
-                          <div className="text-[14px] font-bold text-text">{teamName(tournament.teams, selectedMatch.team2)}</div>
-                          {n2 && <div className="text-[10px] text-dim mt-0.5">{n2}</div>}
-                        </div>
-                      </div>
-                    )
-                  })()}
-                  <button
-                    onClick={handlePlayLive}
-                    disabled={checkingScorer}
-                    className="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-[14px] flex items-center justify-center gap-2 border-0 cursor-pointer shadow-[0_4px_12px_rgba(var(--c-accent),0.25)] hover:opacity-90 transition-all disabled:opacity-60"
-                  >
-                    <span className="text-[18px]">🏐</span> {checkingScorer ? 'Checking...' : 'Play Live'}
-                  </button>
-
-                  <button
-                    onClick={() => setShowScoreForm(true)}
-                    className="w-full py-3.5 rounded-xl bg-alt text-text font-semibold text-[14px] flex items-center justify-center gap-2 border border-line cursor-pointer hover:bg-bg transition-colors"
-                  >
-                    <span className="text-[18px]">✏️</span> Enter Score
-                  </button>
-                </div>
-              ) : (
-                // Score Entry Form
-                <div className="flex flex-col gap-4">
-                  {(() => {
-                    const getNames = id => {
-                      const t = tournament.teams.find(x => x.id === id)
-                      return (t?.players || []).map(pid => {
-                        const p = leaguePlayers.find(x => x.id === pid)
-                        return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-                      }).join(' · ')
-                    }
-                    const n1 = getNames(selectedMatch.team1)
-                    const n2 = getNames(selectedMatch.team2)
-                    return (
-                      <div className="flex gap-3 items-start">
-                        <div className="flex-1">
-                          <div className="text-[12px] font-semibold text-dim text-center truncate">{teamName(tournament.teams, selectedMatch.team1)}</div>
-                          {n1 && <div className="text-[10px] text-dim text-center mb-1">{n1}</div>}
-                          <input
-                            type="tel"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={manualScore1}
-                            onChange={e => setManualScore1(e.target.value)}
-                            placeholder="0"
-                            className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
-                          />
-                        </div>
-                        <div className="font-display text-[28px] text-dim pt-[30px] flex-shrink-0">—</div>
-                        <div className="flex-1">
-                          <div className="text-[12px] font-semibold text-dim text-center truncate">{teamName(tournament.teams, selectedMatch.team2)}</div>
-                          {n2 && <div className="text-[10px] text-dim text-center mb-1">{n2}</div>}
-                          <input
-                            type="tel"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={manualScore2}
-                            onChange={e => setManualScore2(e.target.value)}
-                            placeholder="0"
-                            className="w-full text-center text-[24px] font-bold bg-bg border border-line rounded-xl py-3 focus:border-accent focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    )
-                  })()}
-                  <div className="text-[11px] text-center text-dim mt-1">
-                    {(manualScore1 !== '' && manualScore1 === manualScore2) 
-                      ? <span className="text-error font-bold">Matches cannot end in a tie.</span>
-                      : 'Enter the final score.'}
-                  </div>
-
-                  <div className="flex gap-2 mt-2">
-                    <button 
-                      onClick={() => setShowScoreForm(false)}
-                      className="flex-1 py-3 rounded-xl bg-alt text-text font-semibold text-[13px] border border-line cursor-pointer"
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={handleSaveManualScore}
-                      disabled={savingScore || !manualScore1 || !manualScore2 || parseInt(manualScore1) === parseInt(manualScore2)}
-                      className="flex-1 py-3 rounded-xl bg-accent text-white font-bold text-[13px] border-0 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {savingScore ? (
-                        <>
-                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                          Saving…
-                        </>
-                      ) : 'Save Result'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <StartMatchModal
+          match={selectedMatch}
+          tournament={tournament}
+          leaguePlayers={leaguePlayers}
+          showScoreForm={showScoreForm}
+          manualScore1={manualScore1}
+          manualScore2={manualScore2}
+          checkingScorer={checkingScorer}
+          savingScore={savingScore}
+          onPlayLive={handlePlayLive}
+          onShowScoreForm={() => setShowScoreForm(true)}
+          onScore1Change={setManualScore1}
+          onScore2Change={setManualScore2}
+          onSaveScore={handleSaveManualScore}
+          onClose={handleCloseModal}
+        />
       )}
 
       {/* ── Scorer Conflict Modal ── */}
       {conflictScorer && (
-        <div className="absolute inset-0 z-[60] bg-black/60 flex items-center justify-center p-6">
-          <div className="bg-surface border border-line p-6 rounded-2xl max-w-[320px] w-full text-center">
-            <div className="text-[32px] mb-3">⚠️</div>
-            <div className="text-[16px] font-bold mb-2 text-text">Already being scored</div>
-            <div className="text-[13px] text-dim mb-6">
-              <strong className="text-text">{conflictScorer.name}</strong> is already scoring this match.
-              If you continue, only the first saved result will count.
-            </div>
-            <button
-              onClick={() => setConflictScorer(null)}
-              className="w-full py-3 bg-bg border border-line text-text font-bold rounded-xl mb-3 cursor-pointer"
-            >
-              Go Back
-            </button>
-            <button
-              onClick={() => {
-                claimMatchScorer(selectedMatch.id, profile?.id)
-                setConflictScorer(null)
-                navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
-              }}
-              className="w-full py-3 bg-accent text-white font-bold rounded-xl border-0 cursor-pointer"
-            >
-              Continue Anyway
-            </button>
-          </div>
-        </div>
+        <ScorerConflictModal
+          scorerName={conflictScorer.name}
+          onGoBack={() => setConflictScorer(null)}
+          onContinue={() => {
+            claimMatchScorer(selectedMatch.id, profile?.id)
+            setConflictScorer(null)
+            navigate(`/league/${id}/tournament/${tid}/match/${selectedMatch.id}`)
+          }}
+        />
       )}
 
     </div>

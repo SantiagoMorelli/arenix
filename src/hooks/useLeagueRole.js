@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { getLeagueMemberRoleData } from '../services/profileService'
 import { useAuth } from '../contexts/AuthContext'
 
 // Empty permissions object returned for guests (no session)
@@ -24,42 +24,16 @@ export function useLeagueRole(leagueId) {
     // No session or no leagueId → nothing to fetch
     if (!session || !leagueId) return
 
+    const userId = session.user.id
     let cancelled = false
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        if (!cancelled) {
-          setRoles([])
-          setPermissions(new Set())
-          setIsSuperAdmin(false)
-          setLoading(false)
-        }
-        return
-      }
-
-      const [rolesRes, permsRes, profileRes] = await Promise.all([
-        supabase
-          .from('league_member_roles')
-          .select('role')
-          .eq('league_id', leagueId)
-          .eq('user_id', user.id),
-        supabase
-          .from('league_member_permissions')
-          .select('permission')
-          .eq('league_id', leagueId)
-          .eq('user_id', user.id),
-        supabase
-          .from('profiles')
-          .select('is_super_admin')
-          .eq('id', user.id)
-          .single(),
-      ])
+      const { roles: roleList, permissions: permList, isSuperAdmin: superAdmin } =
+        await getLeagueMemberRoleData(leagueId, userId)
 
       if (!cancelled) {
-        const superAdmin = profileRes.data?.is_super_admin ?? false
-        setRoles((rolesRes.data || []).map(r => r.role))
-        setPermissions(new Set((permsRes.data || []).map(r => r.permission)))
+        setRoles(roleList)
+        setPermissions(new Set(permList))
         setIsSuperAdmin(superAdmin)
         setLoading(false)
       }

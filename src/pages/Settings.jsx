@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { SectionLabel } from '../components/ui-new'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../components/ToastContext'
+import { updatePassword } from '../services/authService'
+import {
+  listAllProfiles,
+  updateProfilePermission,
+  deleteOwnAccount,
+} from '../services/profileService'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -75,6 +82,7 @@ const DEFAULT_NOTIF_PREFS = { match_reminders: true, tournament_updates: true, l
 export default function Settings() {
   const navigate = useNavigate()
   const { signOut, profile, isSuperAdmin, session, updateProfile } = useAuth()
+  const { showError } = useToast()
   const [isDark, setIsDark] = useLocalStorage("arenix-dark", false);
   const [allUsers, setAllUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
@@ -101,11 +109,9 @@ export default function Settings() {
   useEffect(() => {
     if (isSuperAdmin) {
       setLoadingUsers(true)
-      import('../lib/supabase').then(({ supabase }) => {
-        supabase.from('profiles').select('*').order('full_name').then(({ data }) => {
-          if (data) setAllUsers(data)
-          setLoadingUsers(false)
-        })
+      listAllProfiles().then(({ data }) => {
+        if (data) setAllUsers(data)
+        setLoadingUsers(false)
       })
     }
   }, [isSuperAdmin])
@@ -115,10 +121,10 @@ export default function Settings() {
     // Optimistic update
     setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, can_create_league: nextVal } : u))
     
-    const { supabase } = await import('../lib/supabase')
-    const { error } = await supabase.from('profiles').update({ can_create_league: nextVal }).eq('id', userId)
+    const { error } = await updateProfilePermission(userId, { can_create_league: nextVal })
     if (error) {
       console.error('Failed to update permission:', error)
+      showError(error, 'Failed to update permission')
       // Revert on error
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, can_create_league: currentVal } : u))
     }
@@ -140,12 +146,12 @@ export default function Settings() {
     if (deleteText !== 'DELETE') return
     setDeleting(true)
     try {
-      const { supabase } = await import('../lib/supabase')
-      await supabase.rpc('delete_own_account')
+      await deleteOwnAccount()
       await signOut()
       navigate('/login', { replace: true })
     } catch (err) {
       console.error('Delete account failed:', err)
+      showError(err, 'Failed to delete account')
       setDeleting(false)
     }
   }
@@ -159,8 +165,7 @@ export default function Settings() {
     if (newPwd.length < 6) return setPwdForm(f => ({ ...f, error: 'Password must be at least 6 characters.' }))
     if (newPwd !== confirmPwd) return setPwdForm(f => ({ ...f, error: 'Passwords do not match.' }))
     setPwdForm(f => ({ ...f, loading: true, error: '' }))
-    const { supabase } = await import('../lib/supabase')
-    const { error } = await supabase.auth.updateUser({ password: newPwd })
+    const { error } = await updatePassword(newPwd)
     if (error) {
       setPwdForm(f => ({ ...f, loading: false, error: error.message }))
     } else {

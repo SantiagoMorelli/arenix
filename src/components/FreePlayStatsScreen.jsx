@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings, calcPlayerStandings } from '../lib/standings'
 import { PillTabs } from './ui-new'
+import TieBreakerControls from './standings/TieBreakerControls'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -275,7 +276,7 @@ function Awards({ playerStats, session }) {
 }
 
 // ─── Final standings table ─────────────────────────────────────────────────────
-function StandingsSection({ rows }) {
+function StandingsSection({ rows, tbOptions }) {
   if (!rows.length) {
     return (
       <div className="px-4 text-[13px] text-dim text-center py-4">
@@ -287,15 +288,22 @@ function StandingsSection({ rows }) {
   return (
     <div className="px-4">
       <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
-        <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
-          <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
-          <span className="flex-1  text-[10px] font-bold text-dim">TEAM</span>
-          <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
-          <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
-          <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
-          <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
-          <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
-          <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
+        <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-[20px] text-[10px] font-bold text-dim">#</span>
+            <span className="text-[10px] font-bold text-dim">TEAM</span>
+          </div>
+          <div className="flex items-center">
+            {tbOptions?.tieBreakerMode !== 'id' && (
+              <span className="mr-3 text-[10px] font-bold text-dim uppercase">TB: {tbOptions?.tieBreakerMode}</span>
+            )}
+            <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
+            <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
+            <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
+            <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
+            <span className="w-7 text-center text-[10px] font-bold text-dim">PD</span>
+            <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
+          </div>
         </div>
         {rows.map((row, i) => (
           <div
@@ -533,6 +541,7 @@ function PlayerRankingsSection({ ranking }) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function FreePlayStatsScreen({ session, onClose }) {
   const [tab, setTab] = useState('teams')
+  const [tbOptions, setTbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
 
   const allMatches = useMemo(() => getAllSessionMatches(session), [session])
 
@@ -543,8 +552,8 @@ export default function FreePlayStatsScreen({ session, onClose }) {
   )
 
   const standings   = useMemo(
-    () => calcOverallStandings(teamsForStandings, allMatches, session.players || []),
-    [teamsForStandings, allMatches, session.players]
+    () => calcOverallStandings(teamsForStandings, allMatches, session.players || [], tbOptions),
+    [teamsForStandings, allMatches, session.players, tbOptions]
   )
   const playerStats = useMemo(() => computePlayerStats(allMatches), [allMatches])
   const records     = useMemo(() => computeMatchRecords(allMatches), [allMatches])
@@ -613,10 +622,13 @@ export default function FreePlayStatsScreen({ session, onClose }) {
 
             {/* Final Standings */}
             <div className="mb-5">
-              <div className="px-4 mb-3">
+              <div className="px-4 mb-3 flex items-center justify-between">
                 <SectionLabel>Final Standings</SectionLabel>
               </div>
-              <StandingsSection rows={standings} />
+              <div className="px-4 mb-3">
+                <TieBreakerControls teams={teamsForStandings} value={tbOptions} onChange={setTbOptions} accent="free" />
+              </div>
+              <StandingsSection rows={standings} tbOptions={tbOptions} />
             </div>
 
             <div className="h-px bg-line mx-4 mb-5" />

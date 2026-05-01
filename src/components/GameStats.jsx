@@ -10,7 +10,6 @@ const GameStats = ({
   onSaveResult, activeTourMatchId,
   isSaving,
   reset,
-  t,
   hasHistory,
   onRequestUndo,
   pendingUndo,
@@ -143,7 +142,7 @@ const GameStats = ({
           <div className="bg-[#0D1B2A] rounded-[16px] px-4 py-4 mb-3 text-center">
             <div className="text-[32px] mb-1.5">🏆</div>
             <div className="text-[10px] font-bold text-[#7A8EA0] uppercase tracking-wide mb-0.5">
-              {t("winner")}
+              WINNER!
             </div>
             <div className={`text-[20px] font-extrabold mb-1 ${winnerIsTeam1 ? "text-accent" : "text-free"}`}>
               {tName(winnerIsTeam1 ? team1Id : team2Id)}
@@ -190,7 +189,7 @@ const GameStats = ({
           {/* Total points */}
           <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
             <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-1.5">
-              {t("totalPoints")}
+              TOTAL POINTS
             </div>
             <div className="flex justify-between items-center mb-2.5">
               <div className="text-center flex-1">
@@ -199,7 +198,7 @@ const GameStats = ({
               </div>
               <div className="text-center text-dim text-[11px]">
                 <div className="font-display text-[22px]">–</div>
-                {s1.total + s2.total} {t("totalLabel")}
+                {s1.total + s2.total} total
               </div>
               <div className="text-center flex-1">
                 <div className="text-[10px] text-dim">{tName(team2Id)}</div>
@@ -224,7 +223,7 @@ const GameStats = ({
           {/* Streaks & players table */}
           <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
             <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">
-              {t("streaks")}
+              STREAKS &amp; PLAYERS
             </div>
             {/* Streak cards side by side */}
             <div className="flex gap-2 mb-3">
@@ -238,7 +237,7 @@ const GameStats = ({
                 >
                   <div>
                     <div className={`text-[10px] font-bold ${isTeam1 ? "text-accent" : "text-free"}`}>{tName(tid)}</div>
-                    <div className="text-[9px] text-dim">{t("maxStreak")}</div>
+                    <div className="text-[9px] text-dim">Best streak</div>
                   </div>
                   <div className={`text-[20px] font-extrabold ${isTeam1 ? "text-accent" : "text-free"}`}>
                     🔥 {st.bestStreak}
@@ -289,7 +288,7 @@ const GameStats = ({
           <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
-              <span className="text-[10px] font-bold text-dim uppercase tracking-wide">{t("howWonTitle")}</span>
+              <span className="text-[10px] font-bold text-dim uppercase tracking-wide">HOW POINTS WERE WON</span>
               <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
             </div>
             {renderStatBar("🎯 Ace",         s1.byType.ace,   s2.byType.ace)}
@@ -299,7 +298,7 @@ const GameStats = ({
             {renderStatBar("❌ Error rival", s1.byType.error, s2.byType.error)}
             <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
               <span className="font-bold text-accent">{tName(team1Id)}</span>
-              <span className="text-dim">{t("comparison")}</span>
+              <span className="text-dim">comparison</span>
               <span className="font-bold text-free">{tName(team2Id)}</span>
             </div>
           </div>
@@ -307,7 +306,7 @@ const GameStats = ({
           {/* Serve efficiency */}
           <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
             <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">
-              {t("serveEff")}
+              SERVE EFFICIENCY
             </div>
             <div className="flex gap-2">
               {[
@@ -326,11 +325,11 @@ const GameStats = ({
                     <div className="flex justify-around">
                       <div>
                         <div className="text-[14px] font-bold text-text">{st.whileServing}</div>
-                        <div className="text-[8px] text-dim uppercase">{t("whileServing")}</div>
+                        <div className="text-[8px] text-dim uppercase">serving</div>
                       </div>
                       <div>
                         <div className="text-[14px] font-bold text-text">{st.whileReceiving}</div>
-                        <div className="text-[8px] text-dim uppercase">{t("whileReceiving")}</div>
+                        <div className="text-[8px] text-dim uppercase">receiving</div>
                       </div>
                     </div>
                   </div>
@@ -372,7 +371,7 @@ const GameStats = ({
       {tab === "history" && (
         <div className="bg-surface rounded-xl border border-line overflow-hidden mb-3">
           <div className="px-3.5 py-2.5 bg-alt text-[12px] font-bold text-accent tracking-wide uppercase">
-            {t("history")}
+            HISTORY
           </div>
           {[...log].reverse().map((entry) => {
             if (!entry.team) return (
@@ -429,7 +428,7 @@ const GameStats = ({
           onClick={reset}
           className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer"
         >
-          {t("newMatch")}
+          New match
         </button>
       )}
 

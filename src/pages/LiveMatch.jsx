@@ -1,9 +1,9 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
-import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament } from '../services/tournamentService'
+import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament, releaseMatchScorer } from '../services/tournamentService'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import LiveScoreboard from '../components/LiveScoreboard'
 const QRImportModal = lazy(() => import('../components/QRImportModal'))
@@ -198,7 +198,7 @@ export default function LiveMatch() {
   const navigate = useNavigate()
   const { id, tid, mid } = useParams()
   const location = useLocation()
-  const { showError } = useToast()
+  const { showError, showSuccess } = useToast()
 
   const { league, loading: leagueLoading, refetch } = useLeague(id)
   const { canScore, isAdmin, loading: roleLoading }  = useLeagueRole(id)
@@ -237,6 +237,34 @@ export default function LiveMatch() {
 
   const [showQRImport, setShowQRImport] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // ── Abort detection: End Match pressed with no points scored ──────────────
+  // When pendingEnd transitions true → false while the game is still running
+  // (gameStarted=true, no winner, no score), confirmEnd took the zero-score
+  // early-return path. We need to navigate away ourselves.
+  const prevPendingEnd = useRef(false)
+  useEffect(() => {
+    const wasEnding = prevPendingEnd.current
+    prevPendingEnd.current = live.pendingEnd
+    if (
+      wasEnding &&
+      !live.pendingEnd &&
+      live.gameStarted &&
+      live.winner == null &&
+      live.score1 === 0 &&
+      live.score2 === 0 &&
+      live.sets.length === 0
+    ) {
+      // Full reset: clears gameStarted, scores, and the localStorage snapshot.
+      live.reset()
+      // Release the scorer claim so another user can pick up the match.
+      releaseMatchScorer(mid).catch(() => {/* fire-and-forget */})
+      showSuccess('Match cancelled')
+      navigate(`/league/${id}/tournament/${tid}`, {
+        state: { tab: 'matches', subTab: getReturnSubTab() },
+      })
+    }
+  })
 
   const getQRPayload = () => {
     const s = loadSaved()

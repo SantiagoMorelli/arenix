@@ -398,6 +398,19 @@ export async function claimMatchScorer(matchId, userId) {
     .eq('id', matchId)
 }
 
+/**
+ * Release the scorer claim on a match (e.g. when a match is aborted at 0-0
+ * before any points are recorded). Makes the match immediately available for
+ * another scorer to pick up.
+ */
+export async function releaseMatchScorer(matchId) {
+  if (!matchId) return
+  await supabase
+    .from('matches')
+    .update({ scorer_user_id: null, scorer_started_at: null })
+    .eq('id', matchId)
+}
+
 // ─── Admin edit helpers ───────────────────────────────────────────────────────
 
 async function reverseMatchStats(matchId) {

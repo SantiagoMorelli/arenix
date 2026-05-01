@@ -205,7 +205,7 @@ export default function FreePlayLiveMatch() {
   const navigate      = useNavigate()
   const { id }        = useParams()
   const location      = useLocation()
-  const { showError } = useToast()
+  const { showError, showSuccess } = useToast()
   const gameId        = location.state?.gameId
 
   const setsPerMatch  = location.state?.setsPerMatch  ?? 1
@@ -250,6 +250,26 @@ export default function FreePlayLiveMatch() {
     if (t1?.playerIds?.length) live.setT1ServeOrder(t1.playerIds)
     if (t2?.playerIds?.length) live.setT2ServeOrder(t2.playerIds)
   }, [session])
+
+  // ── Abort detection: End Match pressed with no points scored ──────────────
+  const prevPendingEnd = useRef(false)
+  useEffect(() => {
+    const wasEnding = prevPendingEnd.current
+    prevPendingEnd.current = live.pendingEnd
+    if (
+      wasEnding &&
+      !live.pendingEnd &&
+      live.gameStarted &&
+      live.winner == null &&
+      live.score1 === 0 &&
+      live.score2 === 0 &&
+      live.sets.length === 0
+    ) {
+      live.reset()
+      showSuccess('Match cancelled')
+      navigate(`/free-play/${id}`)
+    }
+  })
 
   // ── Save handler (called by GameStats inside LiveScoreboard) ─────────────
   // GameStats invokes onSaveResult(matchId, s1_sets, s2_sets, winnerTeamId, log, sets).

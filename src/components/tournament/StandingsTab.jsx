@@ -3,7 +3,18 @@ import StandingsTable from './StandingsTable'
 import KnockoutResults from './KnockoutResults'
 import TieBreakerControls from '../standings/TieBreakerControls'
 
-export default function StandingsTab({ tournament, onGenerateKnockout, onMatchClick, canManage, players, tbOptions, onTbOptionsChange }) {
+export default function StandingsTab({
+  tournament,
+  onGenerateKnockout,
+  onMatchClick,
+  canManage,
+  players,
+  tbOptions,
+  onTbOptionsChange,
+  currentUserId,
+  isAdmin,
+  onRenameTeam,
+}) {
   const { phase, groups, teams, matches } = tournament
   const hasGroups = (groups || []).length > 0
 
@@ -27,7 +38,14 @@ export default function StandingsTab({ tournament, onGenerateKnockout, onMatchCl
         {canManage && (
           <TieBreakerControls teams={teams} value={tbOptions} onChange={onTbOptionsChange} accent="accent" />
         )}
-        <StandingsTable rows={rows} />
+        <StandingsTable
+          rows={rows}
+          teams={teams}
+          leaguePlayers={players}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onRenameTeam={onRenameTeam}
+        />
       </div>
     )
   }
@@ -52,7 +70,14 @@ export default function StandingsTab({ tournament, onGenerateKnockout, onMatchCl
                 </div>
               )}
             </div>
-            <StandingsTable rows={calcGroupStandings(group, teams, players, tbOptions)} />
+            <StandingsTable
+              rows={calcGroupStandings(group, teams, players, tbOptions)}
+              teams={teams}
+              leaguePlayers={players}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              onRenameTeam={onRenameTeam}
+            />
           </div>
         )
       })}

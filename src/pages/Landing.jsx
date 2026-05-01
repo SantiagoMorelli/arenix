@@ -706,8 +706,8 @@ export default function Landing() {
       />
     )}
 
-    <div className="min-h-screen bg-bg text-text flex flex-col">
-      <div className="flex-1 overflow-y-auto">
+    <div className="screen bg-bg text-text">
+      <div className="screen__top bg-bg">
 
         {/* ── Brand bar ── */}
         <div className="flex items-center justify-between px-4 pt-[14px] pb-[6px]">
@@ -781,6 +781,9 @@ export default function Landing() {
               : 'Browse public leagues and open tournaments — no account needed.'}
           </div>
         </div>
+      </div>
+
+      <main className="screen__body">
 
         {/* ── Search + filter chips ── */}
         <div className="px-4 pb-2">
@@ -888,7 +891,7 @@ export default function Landing() {
 
         {/* Breathing room when logged in */}
         {isLoggedIn && <div className="h-6" />}
-      </div>
+      </main>
     </div>
     </>
   )

@@ -138,6 +138,69 @@ export async function createLeague({ name, location = '', visibility = 'public',
 }
 
 /**
+ * Fetch public leagues with their tournaments and player/team counts.
+ * Used by the Landing page — no auth required.
+ */
+export async function getPublicLeagues() {
+  const { data: leagues, error } = await supabase
+    .from('leagues')
+    .select('id, name, location, season, invite_code')
+    .eq('visibility', 'public')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  if (!leagues?.length) return []
+
+  const leagueIds = leagues.map(l => l.id)
+
+  const [playersRes, tournamentsRes] = await Promise.all([
+    supabase.from('players').select('id, league_id').in('league_id', leagueIds),
+    supabase.from('tournaments')
+      .select('id, name, date, status, phase, league_id')
+      .in('league_id', leagueIds)
+      .order('created_at', { ascending: true }),
+  ])
+
+  const tourIds = (tournamentsRes.data || []).map(t => t.id)
+  const teamsRes = tourIds.length
+    ? await supabase.from('teams').select('id, tournament_id').in('tournament_id', tourIds)
+    : { data: [] }
+
+  const playersByLeague = {}
+  for (const p of playersRes.data || []) {
+    playersByLeague[p.league_id] = (playersByLeague[p.league_id] || 0) + 1
+  }
+
+  const teamsByTournament = {}
+  for (const t of teamsRes.data || []) {
+    teamsByTournament[t.tournament_id] = (teamsByTournament[t.tournament_id] || 0) + 1
+  }
+
+  const toursByLeague = {}
+  for (const t of tournamentsRes.data || []) {
+    if (!toursByLeague[t.league_id]) toursByLeague[t.league_id] = []
+    toursByLeague[t.league_id].push({
+      id:     t.id,
+      name:   t.name,
+      date:   t.date,
+      status: t.status,
+      phase:  t.phase,
+      teams:  teamsByTournament[t.id] || 0,
+    })
+  }
+
+  return leagues.map(l => ({
+    id:          l.id,
+    name:        l.name,
+    city:        l.location || '',
+    season:      l.season,
+    inviteCode:  l.invite_code,
+    playerCount: playersByLeague[l.id] || 0,
+    tournaments: toursByLeague[l.id]   || [],
+  }))
+}
+
+/**
  * Update editable league fields (name, location, visibility).
  */
 export async function updateLeague(leagueId, { name, location, visibility }) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import GuestHome from './GuestHome'
+import Landing from './Landing'
 import { getMyLeagues, getLeagueById, createLeague } from '../services/leagueService'
 import { getFreePlays } from '../services/freePlayService'
 import { BottomNav, IconButton, AppBadge, Label } from '../components/ui-new'
@@ -293,8 +293,8 @@ export default function Home() {
     )
   }
 
-  // Guest: show landing page (all hooks already called above)
-  if (!session) return <GuestHome />
+  // Guest: show public landing page (all hooks already called above)
+  if (!session) return <Landing />
 
   if (loading) {
     return (

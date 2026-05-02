@@ -541,7 +541,7 @@ function PlayerRankingsSection({ ranking }) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function FreePlayStatsScreen({ session, onClose }) {
   const [tab, setTab] = useState('teams')
-  const [tbOptions, setTbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
+  const [tbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
 
   const allMatches = useMemo(() => getAllSessionMatches(session), [session])
 
@@ -624,9 +624,6 @@ export default function FreePlayStatsScreen({ session, onClose }) {
             <div className="mb-5">
               <div className="px-4 mb-3 flex items-center justify-between">
                 <SectionLabel>Final Standings</SectionLabel>
-              </div>
-              <div className="px-4 mb-3">
-                <TieBreakerControls teams={teamsForStandings} value={tbOptions} onChange={setTbOptions} accent="free" />
               </div>
               <StandingsSection rows={standings} tbOptions={tbOptions} />
             </div>

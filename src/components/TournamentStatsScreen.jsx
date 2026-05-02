@@ -380,7 +380,7 @@ function MatchRecords({ records, tournament }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TournamentStatsScreen({ tournament, leaguePlayers, onClose, tbOptions, onTbOptionsChange }) {
+export default function TournamentStatsScreen({ tournament, leaguePlayers, onClose, tbOptions, onTbOptionsChange, isAdmin = false }) {
   const allMatches = useMemo(() => getAllMatches(tournament), [tournament])
   const playerStats = useMemo(() => computePlayerStats(allMatches), [allMatches])
   const records = useMemo(() => computeMatchRecords(allMatches), [allMatches])
@@ -438,7 +438,7 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
             <SectionLabel>Final Standings</SectionLabel>
           </div>
           <div className="px-4 mb-3">
-            <TieBreakerControls teams={tournament.teams} value={effectiveTbOptions} onChange={effectiveOnTbOptionsChange} accent="accent" />
+            {isAdmin && <TieBreakerControls teams={tournament.teams} value={effectiveTbOptions} onChange={effectiveOnTbOptionsChange} accent="accent" />}
           </div>
           <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={effectiveTbOptions} />
         </div>

@@ -245,6 +245,7 @@ export default function TournamentDetail() {
           onClose={() => setShowTournamentStats(false)}
           tbOptions={tbOptions}
           onTbOptionsChange={setTbOptions}
+          isAdmin={isAdmin && !isGuest}
         />
       )}
 

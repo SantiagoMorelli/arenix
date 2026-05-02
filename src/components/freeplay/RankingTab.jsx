@@ -98,9 +98,9 @@ function PlayersRankingTable({ rows }) {
 }
 
 // ─── Ranking tab (outer) ──────────────────────────────────────────────────────
-export default function RankingTab({ session, canManage }) {
+export default function RankingTab({ session }) {
   const [subTab, setSubTab] = useState('teams')
-  const [tbOptions, setTbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
+  const [tbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
 
   const matches = useMemo(() => (session.games || [])
     .filter(g => g.played)
@@ -149,9 +149,6 @@ export default function RankingTab({ session, canManage }) {
 
       {subTab === 'teams' ? (
         <div className="flex flex-col gap-3">
-          {canManage && (
-            <TieBreakerControls teams={session.teams} value={tbOptions} onChange={setTbOptions} accent="free" />
-          )}
           <TeamsRankingTable rows={teamRows} tbOptions={tbOptions} />
         </div>
       ) : (

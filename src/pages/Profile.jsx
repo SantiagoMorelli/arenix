@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SectionLabel, PageHeader, IconButton } from '../components/ui-new'
+import { SectionLabel } from '../components/ui-new'
 import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues, getLeagueById } from '../services/leagueService'
 
@@ -510,15 +510,26 @@ export default function Profile() {
   return (
     <div className="screen bg-bg text-text">
 
-      {/* ── Page header ── */}
-      <PageHeader
-        title="Profile"
-        rightSlot={
-          <IconButton onClick={() => navigate('/settings')} ariaLabel="Settings">
-            <GearIcon />
-          </IconButton>
-        }
-      />
+      {/* ── Header ── */}
+      <div className="screen__top flex items-center gap-2.5 px-4 py-3 text-text">
+        <button
+          onClick={() => navigate('/')}
+          className="cursor-pointer bg-transparent border-0 p-1 -ml-1"
+          aria-label="Back"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <span className="text-[18px] font-bold flex-1">Profile</span>
+        <button
+          onClick={() => navigate('/settings')}
+          className="cursor-pointer bg-transparent border-0 p-1 text-dim"
+          aria-label="Settings"
+        >
+          <GearIcon />
+        </button>
+      </div>
 
       {/* ── Scrollable content ── */}
       <main className="screen__body">

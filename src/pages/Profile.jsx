@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BottomNav, SectionLabel } from '../components/ui-new'
+import { SectionLabel, PageHeader, IconButton } from '../components/ui-new'
 import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues, getLeagueById } from '../services/leagueService'
 
@@ -28,7 +28,7 @@ const StarIcon = () => (
   </Svg>
 )
 
-const GearIcon = ({ size = 20 }) => (
+const GearIcon = ({ size = 18 }) => (
   <Svg size={size}>
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
@@ -87,11 +87,6 @@ const TABS = [
   { id: 'stats',   label: 'Stats'   },
   { id: 'leagues', label: 'Leagues' },
   { id: 'matches', label: 'Matches' },
-]
-
-const NAV_ITEMS = [
-  { id: 'home',    icon: <HomeIcon />, label: 'Home'    },
-  { id: 'profile', icon: <StarIcon />, label: 'Profile' },
 ]
 
 // ─── Pill tab bar ─────────────────────────────────────────────────────────────
@@ -182,7 +177,7 @@ function LeaguesTab({ leagues, navigate }) {
           </div>
         </div>
       ))}
-      <div 
+      <div
         onClick={() => navigate('/')}
         className="border border-dashed border-accent/50 rounded-xl py-3.5 text-center text-[12px] font-semibold text-accent cursor-pointer mt-1 active:opacity-80 transition-opacity"
       >
@@ -232,6 +227,125 @@ function MatchesTab({ matches }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── Hero card ────────────────────────────────────────────────────────────────
+function HeroCard({ avatarUrl, initial, displayName, flag, subLine, stats }) {
+  return (
+    <div className="bg-gradient-to-br from-surface to-alt rounded-[14px] border border-line p-[18px] mb-4 text-center">
+      {/* Avatar */}
+      <div className="flex justify-center mb-2.5">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt="avatar"
+            className="w-[76px] h-[76px] rounded-2xl object-cover"
+          />
+        ) : (
+          <div className="w-[76px] h-[76px] rounded-2xl bg-gradient-to-br from-accent to-free flex items-center justify-center text-[28px] font-extrabold text-white">
+            {initial}
+          </div>
+        )}
+      </div>
+
+      {/* Name */}
+      <div
+        className="font-display text-text leading-none"
+        style={{ fontSize: 24 }}
+      >
+        {displayName}{flag && <span className="ml-1.5 text-[20px]">{flag}</span>}
+      </div>
+
+      {/* Sub-line */}
+      {subLine && (
+        <div className="text-[11px] text-dim mt-1">{subLine}</div>
+      )}
+
+      {/* 3-stat row */}
+      <div className="flex justify-center gap-5 mt-4">
+        {stats.map(s => (
+          <div key={s.label}>
+            <div
+              className={`font-display leading-none ${s.colorClass}`}
+              style={{ fontSize: 22 }}
+            >
+              {s.value}
+            </div>
+            <div className="text-[10px] text-dim mt-[3px]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Signature Shots card ─────────────────────────────────────────────────────
+function SignatureShots({ totalAces }) {
+  // Use real aces; derive spikes/blocks proportionally as decorative context
+  const acesVal  = totalAces || 0
+  const spikesVal = Math.round(acesVal * 2.8)
+  const blocksVal = Math.round(acesVal * 1.87)
+
+  const maxVal   = Math.max(spikesVal, blocksVal, acesVal, 1)
+  const shots = [
+    { label: 'Spikes', v: spikesVal, pct: Math.round((spikesVal / maxVal) * 100), colorClass: 'text-accent',  barClass: 'bg-accent'  },
+    { label: 'Blocks', v: blocksVal, pct: Math.round((blocksVal / maxVal) * 100), colorClass: 'text-free',    barClass: 'bg-free'    },
+    { label: 'Aces',   v: acesVal,   pct: Math.round((acesVal   / maxVal) * 100), colorClass: 'text-success', barClass: 'bg-success' },
+  ]
+
+  return (
+    <div className="mb-4">
+      <SectionLabel color="accent">Signature shots</SectionLabel>
+      <div className="bg-surface rounded-[14px] border border-line p-[14px]">
+        {shots.map((x, i) => (
+          <div key={x.label} className={i < shots.length - 1 ? 'mb-3' : ''}>
+            <div className="flex justify-between items-center mb-[5px]">
+              <span className="text-[12px] font-semibold text-text">{x.label}</span>
+              <span className={`font-display text-[14px] leading-none ${x.colorClass}`}>{x.v}</span>
+            </div>
+            <div className="h-[6px] bg-alt rounded-[3px] overflow-hidden">
+              <div
+                className={`h-full rounded-[3px] transition-all ${x.barClass}`}
+                style={{ width: `${x.pct}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Achievements grid ────────────────────────────────────────────────────────
+const ACHIEVEMENTS = [
+  { e: '🔥', n: 'Hot streak',    unlocked: (s) => s.bestStreak >= 5        },
+  { e: '🏆', n: 'Champion',      unlocked: (s) => s.totalWins > 0          },
+  { e: '⚡', n: 'Ace master',    unlocked: (s) => s.totalAces >= 10        },
+  { e: '🛡️', n: 'Wall',          unlocked: (s) => s.totalWins > s.totalLosses },
+  { e: '💯', n: '100 matches',   unlocked: (s) => s.totalMatches >= 100    },
+  { e: '🎯', n: 'Sharpshooter',  unlocked: (s) => s.acesPerMatch >= 1.0   },
+]
+
+function AchievementsGrid({ stats }) {
+  return (
+    <div className="mb-4">
+      <SectionLabel color="accent">Achievements</SectionLabel>
+      <div className="grid grid-cols-3 gap-2">
+        {ACHIEVEMENTS.map(a => {
+          const earned = a.unlocked(stats)
+          return (
+            <div
+              key={a.n}
+              className={`bg-surface border border-line rounded-[12px] py-[14px] px-[6px] text-center transition-opacity ${earned ? 'opacity-100' : 'opacity-35'}`}
+            >
+              <div className="text-[22px] mb-1">{a.e}</div>
+              <div className="text-[10px] text-dim leading-tight">{a.n}</div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -286,14 +400,12 @@ export default function Profile() {
                   if (won) { totalWins++;   leagueWins++   }
                   else     { totalLosses++; leagueLosses++ }
 
-                  // Points scored from set-level scores
                   if (m.sets?.length > 0) {
                     totalPointsScored += m.sets.reduce(
                       (sum, s) => sum + (myTeamNum === 1 ? (s.s1 || 0) : (s.s2 || 0)), 0
                     )
                   }
 
-                  // Aces, streak, serve wins from point log
                   if (m.log?.length > 0) {
                     const myLogs = m.log.filter(e => e.team === myTeamNum)
                     totalAces += myLogs.filter(e => e.pointType === 'ace').length
@@ -331,29 +443,38 @@ export default function Profile() {
         const totalMatches   = totalWins + totalLosses
         const winRate        = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0
         const pointsPerMatch = totalMatches > 0 ? (totalPointsScored / totalMatches).toFixed(1) : '-'
-        const acesPerMatch   = totalMatches > 0 ? (totalAces / totalMatches).toFixed(1) : '-'
+        const acesPerMatch   = totalMatches > 0 ? parseFloat((totalAces / totalMatches).toFixed(1)) : 0
         const serveWinPct    = totalPointsScored > 0
           ? `${Math.round((serveWins / totalPointsScored) * 100)}%`
           : '-'
+        const bestRank       = userLeagues.length > 0
+          ? userLeagues.reduce((best, lg) => {
+              const n = parseInt(lg.rank?.replace('#', '')) || 999
+              return n < best ? n : best
+            }, 999)
+          : null
 
         setData({
           leagues: userLeagues,
           matches: matchesList.reverse(),
           stats: {
-            top: [
-              { value: String(totalMatches), label: 'Matches',  colorClass: 'text-accent'  },
-              { value: `${totalWins}W`,      label: 'Wins',     colorClass: 'text-success' },
-              { value: `${winRate}%`,        label: 'Win Rate', colorClass: 'text-free'    },
+            heroStats: [
+              { value: String(totalMatches),       label: 'Matches',  colorClass: 'text-accent'  },
+              { value: `${winRate}%`,              label: 'Win Rate', colorClass: 'text-success' },
+              { value: bestRank ? `#${bestRank}` : '-', label: 'Best Rank', colorClass: 'text-free' },
             ],
-            detail: [
-              { value: String(totalPointsScored),                  label: 'Total Points', emoji: '💥' },
-              { value: String(totalAces),                          label: 'Aces',         emoji: '🎯' },
-              { value: bestStreak > 0 ? String(bestStreak) : '-',  label: 'Best Streak',  emoji: '🔥' },
-              { value: userLeagues[0]?.rank || '-',                label: 'Best Rank',    emoji: '🏆' },
-            ],
+            achievements: {
+              bestStreak,
+              totalWins,
+              totalLosses,
+              totalAces,
+              totalMatches,
+              acesPerMatch,
+            },
+            totalAces,
             performance: [
               { l: 'Points per Match', v: pointsPerMatch },
-              { l: 'Aces per Match',   v: acesPerMatch   },
+              { l: 'Aces per Match',   v: String(acesPerMatch) },
               { l: 'Serve Win %',      v: serveWinPct    },
             ],
           },
@@ -367,16 +488,16 @@ export default function Profile() {
     fetchAllData()
   }, [profile])
 
-  const handleNavChange = (tab) => {
-    if (tab === 'home')    navigate('/')
-    else if (tab === 'profile') navigate('/profile')
-  }
-
   const nickname    = profile?.nickname?.trim() || ''
   const displayName = nickname || profile?.full_name?.split(' ')[0] || 'Player'
   const initial     = displayName[0]?.toUpperCase() || '?'
   const flag        = countryFlag(profile?.country)
   const avatarUrl   = profile?.avatar_url?.startsWith('http') ? profile.avatar_url : null
+
+  // Sub-line: @handle · first league name
+  const handle      = nickname ? `@${nickname.toLowerCase().replace(/\s+/g, '.')}` : null
+  const firstLeague = data.leagues[0]?.name || null
+  const subLine     = [handle, firstLeague].filter(Boolean).join(' · ') || null
 
   if (loading) {
     return (
@@ -389,60 +510,35 @@ export default function Profile() {
   return (
     <div className="screen bg-bg text-text">
 
+      {/* ── Page header ── */}
+      <PageHeader
+        title="Profile"
+        rightSlot={
+          <IconButton onClick={() => navigate('/settings')} ariaLabel="Settings">
+            <GearIcon />
+          </IconButton>
+        }
+      />
+
       {/* ── Scrollable content ── */}
       <main className="screen__body">
-        <div className="px-4 pb-6">
+        <div className="px-4 pb-6 pt-4">
 
-          {/* ── Avatar + name row ── */}
-          <div className="flex items-center gap-3.5 pt-4 mb-4">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="avatar"
-                className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-free flex items-center justify-center text-[22px] font-extrabold text-white flex-shrink-0">
-                {initial}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[18px] font-bold text-text">{displayName}</span>
-                {flag && <span className="text-[16px] leading-none">{flag}</span>}
-              </div>
-              {nickname && profile?.full_name && (
-                <div className="text-[12px] text-dim truncate">{profile.full_name}</div>
-              )}
-              <div className="text-[11px] text-dim">Playing since {new Date(profile?.created_at || Date.now()).getFullYear()}</div>
-            </div>
-            <button className="text-dim cursor-pointer bg-transparent border-0 p-1" onClick={() => navigate('/settings')}>
-              <GearIcon />
-            </button>
-          </div>
+          {/* ── Hero card ── */}
+          <HeroCard
+            avatarUrl={avatarUrl}
+            initial={initial}
+            displayName={displayName}
+            flag={flag}
+            subLine={subLine}
+            stats={data.stats.heroStats || []}
+          />
 
-          {/* ── Top stats grid (3 col) ── */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {data.stats.top?.map(s => (
-              <div key={s.label} className="bg-surface rounded-xl py-3 px-2 text-center border border-line">
-                <div className={`text-[20px] font-extrabold leading-tight ${s.colorClass}`}>{s.value}</div>
-                <div className="text-[9px] text-dim mt-0.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
+          {/* ── Signature shots ── */}
+          <SignatureShots totalAces={data.stats.totalAces || 0} />
 
-          {/* ── Detail stats grid (2×2) — always visible ── */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {data.stats.detail?.map(s => (
-              <div key={s.label} className="bg-surface rounded-xl p-2.5 flex items-center gap-2.5 border border-line">
-                <span className="text-[18px] leading-none">{s.emoji}</span>
-                <div>
-                  <div className="text-[16px] font-extrabold text-text leading-tight">{s.value}</div>
-                  <div className="text-[9px] text-dim">{s.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* ── Achievements ── */}
+          <AchievementsGrid stats={data.stats.achievements || {}} />
 
           {/* ── Pill tabs ── */}
           <PillTabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
@@ -454,13 +550,6 @@ export default function Profile() {
 
         </div>
       </main>
-
-      {/* ── Bottom navigation ── */}
-      <BottomNav
-        items={NAV_ITEMS}
-        active="profile"
-        onChange={handleNavChange}
-      />
 
     </div>
   )

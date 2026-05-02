@@ -268,6 +268,40 @@ export function AppToast({ toast, onDismiss }) {
   )
 }
 
+/* ─── PageHeader ──────────────────────────────────────────────────────────── */
+/**
+ * Sticky top bar used on detail / profile screens.
+ * Props:
+ *   title      string
+ *   onBack     fn | null  — renders a back chevron when provided
+ *   rightSlot  ReactNode  — optional icon button(s) on the right
+ */
+export function PageHeader({ title, onBack, rightSlot }) {
+  return (
+    <div className="screen__top flex items-center gap-2 px-4 bg-surface border-b border-line flex-shrink-0 min-h-[52px]">
+      {onBack ? (
+        <button
+          onClick={onBack}
+          className="w-[38px] h-[38px] rounded-xl bg-alt flex items-center justify-center cursor-pointer border-0 transition-opacity active:opacity-70 flex-shrink-0"
+          aria-label="Back"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+      ) : (
+        <div className="w-[38px] flex-shrink-0" />
+      )}
+      <span className="flex-1 text-center text-[15px] font-bold text-text tracking-tight">{title}</span>
+      {rightSlot ? (
+        <div className="flex-shrink-0">{rightSlot}</div>
+      ) : (
+        <div className="w-[38px] flex-shrink-0" />
+      )}
+    </div>
+  )
+}
+
 /* ─── IconButton ──────────────────────────────────────────────────────────── */
 /**
  * Props:

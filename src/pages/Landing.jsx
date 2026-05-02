@@ -5,7 +5,8 @@ import {
   ChevronDown, Plus, Bell, Check,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { getPublicLeagues, getMyLeagues, createLeague, joinLeague } from '../services/leagueService'
+import { getPublicLeagues, getMyLeagues, createLeague } from '../services/leagueService'
+import { joinLeague } from '../services/inviteService'
 import { getFreePlays } from '../services/freePlayService'
 import {
   getMyNotifications,
@@ -772,7 +773,7 @@ export default function Landing() {
     setJoining(true)
     try {
       await joinLeague(joinPending.id)
-      setMyLeagues(prev => [...prev, { ...joinPending, myRole: 'member', myRoles: ['member'] }])
+      setMyLeagues(prev => [...prev, { ...joinPending, myRole: 'player', myRoles: ['player'] }])
       setJoinPending(null)
     } catch (err) {
       console.error(err)

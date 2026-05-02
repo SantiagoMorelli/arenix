@@ -201,7 +201,9 @@ export async function addMemberRole(leagueId, userId, role) {
 }
 
 /**
- * Remove a single role from a member. Does not touch permissions.
+ * Remove a single role from a member and revoke the permissions that were
+ * automatically granted for that role (leaves independently-granted perms
+ * for other roles untouched by design, but cleans up the role's own set).
  */
 export async function removeMemberRole(leagueId, userId, role) {
   const { error } = await supabase
@@ -212,6 +214,20 @@ export async function removeMemberRole(leagueId, userId, role) {
     .eq('role', role)
 
   if (error) throw error
+
+  // Revoke every permission that belongs to this role so leftover DB rows
+  // don't keep canManage / canScore true for a demoted member.
+  const rolePerms = (ROLE_PERMISSIONS[role] || []).filter(p => p !== 'edit_profile')
+  if (rolePerms.length > 0) {
+    const { error: permError } = await supabase
+      .from('league_member_permissions')
+      .delete()
+      .eq('league_id', leagueId)
+      .eq('user_id', userId)
+      .in('permission', rolePerms)
+
+    if (permError) throw permError
+  }
 }
 
 /**

@@ -35,7 +35,7 @@ export default function StandingsTab({
     const rows = calcOverallStandings(teams, matches, players, tbOptions)
     return (
       <div className="px-4">
-        {canManage && (
+        {isAdmin && (
           <TieBreakerControls teams={teams} value={tbOptions} onChange={onTbOptionsChange} accent="accent" />
         )}
         <StandingsTable
@@ -53,7 +53,7 @@ export default function StandingsTab({
   // Group stage → show each group, then knockout below
   return (
     <div className="px-4">
-      {canManage && (
+      {isAdmin && (
         <TieBreakerControls teams={teams} value={tbOptions} onChange={onTbOptionsChange} accent="accent" />
       )}
 
@@ -64,7 +64,7 @@ export default function StandingsTab({
               <div className="text-[12px] font-bold text-accent tracking-wide uppercase">
                 {group.name}
               </div>
-              {canManage && tbOptions.tieBreakerMode !== 'id' && (
+              {isAdmin && tbOptions.tieBreakerMode !== 'id' && (
                 <div className="text-[10px] text-dim font-semibold uppercase">
                   TB: {tbOptions.tieBreakerMode}
                 </div>

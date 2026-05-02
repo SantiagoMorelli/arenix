@@ -51,6 +51,27 @@ export async function deletePlayer(playerId) {
   if (error) throw error
 }
 
+export async function resetPlayerScores(playerId) {
+  const { data, error } = await supabase
+    .from('players')
+    .update({ wins: 0, losses: 0, points: 0 })
+    .eq('id', playerId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return normalizePlayer(data)
+}
+
+export async function resetLeaguePlayerScores(leagueId) {
+  const { error } = await supabase
+    .from('players')
+    .update({ wins: 0, losses: 0, points: 0 })
+    .eq('league_id', leagueId)
+
+  if (error) throw error
+}
+
 function normalizePlayer(row) {
   return {
     id:       row.id,

@@ -4,6 +4,14 @@ import { SectionLabel } from '../components/ui-new'
 import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues, getLeagueById } from '../services/leagueService'
 
+// ─── Avatar color helper (matches Home/Landing) ───────────────────────────────
+function hueFromString(str) {
+  if (!str) return 200
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff
+  return h % 360
+}
+
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
   <svg
@@ -232,7 +240,12 @@ function MatchesTab({ matches }) {
 }
 
 // ─── Hero card ────────────────────────────────────────────────────────────────
-function HeroCard({ avatarUrl, initial, displayName, flag, subLine, stats }) {
+function HeroCard({ avatarUrl, fullName, userId, displayName, flag, subLine, stats }) {
+  const initials = (fullName || displayName || '?')
+    .split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('')
+  const hue = hueFromString(userId || fullName || '')
+  const size = 76
+
   return (
     <div className="bg-gradient-to-br from-surface to-alt rounded-[14px] border border-line p-[18px] mb-4 text-center">
       {/* Avatar */}
@@ -241,11 +254,21 @@ function HeroCard({ avatarUrl, initial, displayName, flag, subLine, stats }) {
           <img
             src={avatarUrl}
             alt="avatar"
-            className="w-[76px] h-[76px] rounded-2xl object-cover"
+            style={{ width: size, height: size, borderRadius: Math.round(size * 0.32) }}
+            className="object-cover"
           />
         ) : (
-          <div className="w-[76px] h-[76px] rounded-2xl bg-gradient-to-br from-accent to-free flex items-center justify-center text-[28px] font-extrabold text-white">
-            {initial}
+          <div
+            className="flex items-center justify-center font-bold text-white shrink-0"
+            style={{
+              width: size, height: size,
+              borderRadius: Math.round(size * 0.32),
+              background: `oklch(0.55 0.15 ${hue})`,
+              fontSize: Math.round(size * 0.38),
+              letterSpacing: '-0.5px',
+            }}
+          >
+            {initials}
           </div>
         )}
       </div>
@@ -490,7 +513,6 @@ export default function Profile() {
 
   const nickname    = profile?.nickname?.trim() || ''
   const displayName = nickname || profile?.full_name?.split(' ')[0] || 'Player'
-  const initial     = displayName[0]?.toUpperCase() || '?'
   const flag        = countryFlag(profile?.country)
   const avatarUrl   = profile?.avatar_url?.startsWith('http') ? profile.avatar_url : null
 
@@ -538,7 +560,8 @@ export default function Profile() {
           {/* ── Hero card ── */}
           <HeroCard
             avatarUrl={avatarUrl}
-            initial={initial}
+            fullName={profile?.full_name}
+            userId={profile?.id}
             displayName={displayName}
             flag={flag}
             subLine={subLine}

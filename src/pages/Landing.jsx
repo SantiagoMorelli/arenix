@@ -719,8 +719,10 @@ export default function Landing() {
 
   const joinedLeagueIds = useMemo(() => new Set(myLeagues.map(l => l.id)), [myLeagues])
 
-  // Show My Leagues section for any logged-in user who belongs to at least one league
-  const showMyLeagues = isLoggedIn && myLeagues.length > 0
+  // Only show My Leagues section for admins / league creators
+  const showMyLeagues = isLoggedIn && (
+    isSuperAdmin || canCreateLeague || myLeagues.some(l => l.myRole === 'admin')
+  )
 
   // Flatten tournaments for chip counts (unfiltered)
   const allTourneys = useMemo(

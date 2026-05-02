@@ -14,6 +14,7 @@ const ROLE_PERMISSIONS = {
   admin:  ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile'],
   player: ['edit_profile'],
   viewer: ['edit_profile'],
+  member: ['edit_profile'],
 }
 
 /**
@@ -81,11 +82,10 @@ export async function joinLeague(leagueId) {
     supabase.from('league_member_roles').insert({
       league_id: leagueId,
       user_id:   user.id,
-      role:      'player',
+      role:      'member',
     }),
-    // player default: edit_profile only — score_match must be granted explicitly
     supabase.from('league_member_permissions').insert(
-      ROLE_PERMISSIONS.player.map(permission => ({
+      ROLE_PERMISSIONS.member.map(permission => ({
         league_id: leagueId,
         user_id:   user.id,
         permission,

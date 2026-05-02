@@ -139,13 +139,26 @@ export async function createLeague({ name, location = '', visibility = 'public',
 
 /**
  * Join a public league as a regular member.
+ * Prefer inviteService.joinLeague for the full flow (admin notification, etc.).
  */
 export async function joinLeague(leagueId) {
   const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: existing } = await supabase
+    .from('league_member_roles')
+    .select('role')
+    .eq('league_id', leagueId)
+    .eq('user_id', user.id)
+    .limit(1)
+    .single()
+
+  if (existing) return { role: existing.role, alreadyMember: true }
+
   const { error } = await supabase
     .from('league_member_roles')
     .insert({ league_id: leagueId, user_id: user.id, role: 'member' })
   if (error) throw error
+  return { role: 'member', alreadyMember: false }
 }
 
 /**

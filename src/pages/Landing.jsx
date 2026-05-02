@@ -772,11 +772,14 @@ export default function Landing() {
     if (!joinPending) return
     setJoining(true)
     try {
-      await joinLeague(joinPending.id)
-      setMyLeagues(prev => [...prev, { ...joinPending, myRole: 'player', myRoles: ['player'] }])
+      const { alreadyMember } = await joinLeague(joinPending.id)
+      if (!alreadyMember) {
+        setMyLeagues(prev => [...prev, { ...joinPending, myRole: 'member', myRoles: ['member'] }])
+      }
       setJoinPending(null)
     } catch (err) {
-      console.error(err)
+      console.error('Join league failed:', err)
+      alert(err.message || 'Failed to join league. Please try again.')
     } finally {
       setJoining(false)
     }

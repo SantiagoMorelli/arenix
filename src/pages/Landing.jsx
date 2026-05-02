@@ -128,9 +128,10 @@ function VerifiedBadge() {
 
 function TournamentRow({ tournament, leagueId, navigate }) {
   const displayStatus = tournamentDisplayStatus(tournament)
-  const isLive = displayStatus === 'live'
-  const iconBg  = isLive ? 'bg-success/12' : 'bg-accent/10'
-  const iconColor = isLive ? 'text-success' : 'text-accent'
+  const isLive      = displayStatus === 'live'
+  const isCompleted = displayStatus === 'completed'
+  const iconBg    = isLive ? 'bg-success/12' : isCompleted ? 'bg-alt'      : 'bg-accent/10'
+  const iconColor = isLive ? 'text-success'  : isCompleted ? 'text-dim'    : 'text-accent'
 
   function handleClick() {
     if (leagueId) navigate(`/league/${leagueId}/tournament/${tournament.id}`)
@@ -142,7 +143,7 @@ function TournamentRow({ tournament, leagueId, navigate }) {
       className="w-full text-left flex items-center gap-2.5 px-2 py-2.5 rounded-[10px] active:bg-alt/50 transition-colors"
     >
       <div className={`w-[38px] h-[38px] rounded-[10px] flex items-center justify-center shrink-0 ${iconBg} ${iconColor}`}>
-        {isLive ? <Play size={16} /> : <Calendar size={16} />}
+        {isLive ? <Play size={16} /> : isCompleted ? <Check size={16} /> : <Calendar size={16} />}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -167,9 +168,13 @@ function TournamentRow({ tournament, leagueId, navigate }) {
           <span className="dot-pulse w-[5px] h-[5px] rounded-full bg-success" />
           LIVE
         </span>
+      ) : isCompleted ? (
+        <span className="text-[10px] font-bold text-dim bg-alt px-[9px] py-[5px] rounded-md tracking-[0.4px]">
+          DONE
+        </span>
       ) : (
         <span className="text-[10px] font-bold text-accent bg-accent/10 px-[9px] py-[5px] rounded-md tracking-[0.4px]">
-          JOIN
+          OPEN
         </span>
       )}
     </button>
@@ -200,9 +205,22 @@ function PublicLeagueCard({ league, navigate, isJoined, canJoin, onJoin }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[14px] font-bold text-text truncate">{league.name}</span>
             <VerifiedBadge />
+            {isJoined ? (
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-success bg-success/15 px-[6px] py-[3px] rounded-md tracking-[0.4px]">
+                <Check size={8} />
+                JOINED
+              </span>
+            ) : canJoin ? (
+              <button
+                onClick={e => { e.stopPropagation(); onJoin() }}
+                className="inline-flex items-center gap-[3px] text-[9px] font-bold text-accent bg-accent/12 border border-accent/25 px-[6px] py-[3px] rounded-md tracking-[0.4px] active:opacity-70 transition-opacity"
+              >
+                <span className="text-[11px] leading-none">+</span> JOIN
+              </button>
+            ) : null}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-dim">
             <MapPin size={11} className="shrink-0" />
@@ -213,22 +231,10 @@ function PublicLeagueCard({ league, navigate, isJoined, canJoin, onJoin }) {
         </div>
 
         {hasLive ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px]">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px] shrink-0">
             <span className="dot-pulse w-[5px] h-[5px] rounded-full bg-success" />
             LIVE
           </span>
-        ) : isJoined ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px]">
-            <Check size={10} />
-            JOINED
-          </span>
-        ) : canJoin ? (
-          <button
-            onClick={e => { e.stopPropagation(); onJoin() }}
-            className="inline-flex items-center text-[10px] font-bold text-accent bg-accent/12 px-[9px] py-[5px] rounded-md tracking-[0.4px] active:opacity-70 transition-opacity"
-          >
-            JOIN
-          </button>
         ) : (
           <ChevronDown
             size={16}

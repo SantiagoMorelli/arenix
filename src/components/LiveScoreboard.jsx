@@ -226,10 +226,15 @@ export default function LiveScoreboard({
   const rot = live.serveRotation
   const nextSrv = rot[(live.serveIndex + 1) % rot.length]
 
-  const leftTeamNum  = live.side.t1 === 'left' ? 1 : 2
-  const rightTeamNum = live.side.t2 === 'right' ? 2 : 1
-  const leftScoreColor  = live.lastScoringTeam === leftTeamNum  ? 'text-accent' : 'text-dim'
-  const rightScoreColor = live.lastScoringTeam === rightTeamNum ? 'text-free'   : 'text-dim'
+  // Team 1 = always orange (accent), Team 2 = always blue (free), regardless of side.
+  // The scoring team's color stays lit until the other team scores.
+  const leftIsTeam1 = live.side.t1 === 'left'
+  const leftScoreColor  = leftIsTeam1
+    ? (live.lastScoringTeam === 1 ? 'text-accent' : 'text-dim')
+    : (live.lastScoringTeam === 2 ? 'text-free'   : 'text-dim')
+  const rightScoreColor = leftIsTeam1
+    ? (live.lastScoringTeam === 2 ? 'text-free'   : 'text-dim')
+    : (live.lastScoringTeam === 1 ? 'text-accent' : 'text-dim')
 
   const renderServerInfo = (teamNum) => {
     const isServing = currentSrv.team === teamNum

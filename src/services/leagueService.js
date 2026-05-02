@@ -33,9 +33,12 @@ function normalizeLeague(row) {
  * Multiple role rows per league are collapsed into a single entry.
  */
 export async function getMyLeagues() {
+  const { data: { user } } = await supabase.auth.getUser()
+
   const { data, error } = await supabase
     .from('league_member_roles')
     .select('league_id, role, granted_at, leagues(*)')
+    .eq('user_id', user.id)
     .order('granted_at', { ascending: true })
 
   if (error) throw error

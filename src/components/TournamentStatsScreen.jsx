@@ -260,7 +260,7 @@ function Awards({ playerStats, leaguePlayers }) {
   )
 }
 
-function StandingsSection({ tournament, leaguePlayers, tbOptions }) {
+function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = false }) {
   const allMatches = getAllMatches(tournament)
   const rows = calcOverallStandings(tournament.teams, allMatches, leaguePlayers, tbOptions)
 
@@ -273,7 +273,7 @@ function StandingsSection({ tournament, leaguePlayers, tbOptions }) {
             <span className="text-[10px] font-bold text-dim">TEAM</span>
           </div>
           <div className="flex items-center">
-            {tbOptions?.tieBreakerMode !== 'id' && (
+            {isAdmin && tbOptions?.tieBreakerMode !== 'id' && (
               <span className="mr-3 text-[10px] font-bold text-dim uppercase">TB: {tbOptions?.tieBreakerMode}</span>
             )}
             <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
@@ -440,7 +440,7 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
           <div className="px-4 mb-3">
             {isAdmin && <TieBreakerControls teams={tournament.teams} value={effectiveTbOptions} onChange={effectiveOnTbOptionsChange} accent="accent" />}
           </div>
-          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={effectiveTbOptions} />
+          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={effectiveTbOptions} isAdmin={isAdmin} />
         </div>
 
         <div className="h-px bg-line mx-4 mb-5" />

@@ -64,7 +64,7 @@ export default function StandingsTab({
               <div className="text-[12px] font-bold text-accent tracking-wide uppercase">
                 {group.name}
               </div>
-              {tbOptions.tieBreakerMode !== 'id' && (
+              {canManage && tbOptions.tieBreakerMode !== 'id' && (
                 <div className="text-[10px] text-dim font-semibold uppercase">
                   TB: {tbOptions.tieBreakerMode}
                 </div>

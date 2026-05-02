@@ -276,7 +276,7 @@ function Awards({ playerStats, session }) {
 }
 
 // ─── Final standings table ─────────────────────────────────────────────────────
-function StandingsSection({ rows, tbOptions }) {
+function StandingsSection({ rows }) {
   if (!rows.length) {
     return (
       <div className="px-4 text-[13px] text-dim text-center py-4">
@@ -294,10 +294,7 @@ function StandingsSection({ rows, tbOptions }) {
             <span className="text-[10px] font-bold text-dim">TEAM</span>
           </div>
           <div className="flex items-center">
-            {tbOptions?.tieBreakerMode !== 'id' && (
-              <span className="mr-3 text-[10px] font-bold text-dim uppercase">TB: {tbOptions?.tieBreakerMode}</span>
-            )}
-            <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
+              <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
             <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
             <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
             <span className="w-7 text-center text-[10px] font-bold text-dim">PA</span>
@@ -625,7 +622,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
               <div className="px-4 mb-3 flex items-center justify-between">
                 <SectionLabel>Final Standings</SectionLabel>
               </div>
-              <StandingsSection rows={standings} tbOptions={tbOptions} />
+              <StandingsSection rows={standings} />
             </div>
 
             <div className="h-px bg-line mx-4 mb-5" />

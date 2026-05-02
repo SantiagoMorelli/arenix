@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react'
 import { PillTabs } from '../ui-new'
 import { calcOverallStandings, calcPlayerStandings } from '../../lib/standings'
-import TieBreakerControls from '../standings/TieBreakerControls'
 
 // ─── Teams ranking table ───────────────────────────────────────────────────────
-function TeamsRankingTable({ rows, tbOptions }) {
+function TeamsRankingTable({ rows }) {
   return (
     <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
       <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt justify-between">
@@ -13,9 +12,6 @@ function TeamsRankingTable({ rows, tbOptions }) {
           <span className="text-[10px] font-bold text-dim">TEAM</span>
         </div>
         <div className="flex items-center">
-          {tbOptions?.tieBreakerMode !== 'id' && (
-            <span className="mr-3 text-[10px] font-bold text-dim uppercase">TB: {tbOptions?.tieBreakerMode}</span>
-          )}
           <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
           <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
           <span className="w-7 text-center text-[10px] font-bold text-dim">PF</span>
@@ -149,7 +145,7 @@ export default function RankingTab({ session }) {
 
       {subTab === 'teams' ? (
         <div className="flex flex-col gap-3">
-          <TeamsRankingTable rows={teamRows} tbOptions={tbOptions} />
+          <TeamsRankingTable rows={teamRows} />
         </div>
       ) : (
         <PlayersRankingTable rows={playerRows} />

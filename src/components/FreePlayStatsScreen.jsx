@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
+import {
+  ChevronLeft, Trophy, Medal, Target, Zap, Shield, Bomb,
+  Dumbbell, Flame, RotateCcw, Clock, Volleyball,
+} from 'lucide-react'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings, calcPlayerStandings } from '../lib/standings'
-import { PillTabs } from './ui-new'
+import { AppCard, PillTabs, SectionLabel } from './ui-new'
 import TieBreakerControls from './standings/TieBreakerControls'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -117,23 +121,11 @@ function computeMatchRecords(allMatches) {
   return { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback, longestGame, longestRally: longestRallyRecord }
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-function BackIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  )
-}
-
-// ─── Section label ─────────────────────────────────────────────────────────────
-function SectionLabel({ children }) {
-  return (
-    <div className="text-[11px] font-bold text-dim uppercase tracking-widest mb-3">
-      {children}
-    </div>
-  )
+// ─── Medal tint per podium rank ───────────────────────────────────────────────
+const MEDAL_COLOR = {
+  1: 'text-accent',
+  2: 'text-dim',
+  3: 'text-[#CD7F32]',
 }
 
 // ─── Podium (derived from standings, no bracket) ──────────────────────────────
@@ -158,19 +150,21 @@ function Podium({ rows, session }) {
   const champion = rows[0]
 
   const slots = [
-    rows[1] ? { rank: 2, id: rows[1].id, medal: '🥈', height: 'h-16', label: 'Runner-up' } : null,
-    { rank: 1, id: rows[0].id, medal: '🥇', height: 'h-24', label: 'Champion' },
-    rows[2] ? { rank: 3, id: rows[2].id, medal: '🥉', height: 'h-10', label: '3rd Place' } : null,
+    rows[1] ? { rank: 2, id: rows[1].id, height: 'h-16', label: 'Runner-up' } : null,
+    { rank: 1, id: rows[0].id, height: 'h-24', label: 'Champion' },
+    rows[2] ? { rank: 3, id: rows[2].id, height: 'h-10', label: '3rd Place' } : null,
   ].filter(Boolean)
 
   return (
     <div className="px-4">
       {/* Champion highlight */}
-      <div className="bg-gradient-to-b from-free/20 to-transparent rounded-2xl p-5 mb-4 text-center border border-free/30">
-        <div className="text-[40px] mb-1">🏆</div>
-        <div className="text-[22px] font-black text-free tracking-wide">{champion.name || '?'}</div>
+      <div className="bg-gradient-to-br from-free/15 to-surface border border-free/40 rounded-[14px] p-5 mb-4 text-center">
+        <div className="flex justify-center mb-1.5">
+          <Trophy size={36} className="text-free" />
+        </div>
+        <div className="font-display text-[28px] text-free leading-none mb-1">{champion.name || '?'}</div>
         <div className="text-[13px] text-dim mt-1">{getNames(champion.id)}</div>
-        <div className="text-[11px] font-bold text-free/60 uppercase tracking-widest mt-2">Champion</div>
+        <div className="text-[11px] font-bold text-free/60 uppercase tracking-[0.5px] mt-2">Champion</div>
       </div>
 
       {/* Podium visual */}
@@ -178,7 +172,7 @@ function Podium({ rows, session }) {
         <div className="flex items-end justify-center gap-3 mb-2">
           {slots.map(slot => (
             <div key={slot.id} className="flex flex-col items-center flex-1 max-w-[110px]">
-              <div className="text-[22px] mb-1">{slot.medal}</div>
+              <Medal size={22} className={`mb-1 ${MEDAL_COLOR[slot.rank]}`} />
               <div className="text-[12px] font-bold text-text text-center leading-tight mb-1.5 px-1">
                 {getTeam(slot.id)?.name || '?'}
               </div>
@@ -190,7 +184,7 @@ function Podium({ rows, session }) {
                 slot.rank === 2 ? 'bg-surface border-t border-line' :
                 'bg-alt border-t border-line'
               }`}>
-                <span className={`text-[14px] font-black ${slot.rank === 1 ? 'text-free' : 'text-dim'}`}>
+                <span className={`font-display text-[18px] leading-none ${slot.rank === 1 ? 'text-free' : 'text-dim'}`}>
                   #{slot.rank}
                 </span>
               </div>
@@ -203,20 +197,24 @@ function Podium({ rows, session }) {
 }
 
 // ─── Award card ───────────────────────────────────────────────────────────────
-function AwardCard({ icon, title, playerName, value, valueLabel, funny = false }) {
+function AwardCard(props) {
+  const { Icon, title, playerName, value, valueLabel, funny = false } = props
+  const accentText = funny ? 'text-error' : 'text-free'
   return (
-    <div className={`rounded-2xl p-4 border flex flex-col gap-1.5 ${
-      funny ? 'bg-error/10 border-error/30' : 'bg-surface border-line'
-    }`}>
-      <div className="text-[22px]">{icon}</div>
-      <div className={`text-[10px] font-bold uppercase tracking-widest ${funny ? 'text-error' : 'text-free'}`}>
+    <AppCard
+      className={`rounded-2xl p-4 flex flex-col gap-1.5 ${
+        funny ? 'bg-error/10 border-error/30' : ''
+      }`}
+    >
+      <Icon size={22} className={accentText} />
+      <div className={`text-[10px] font-bold uppercase tracking-[0.5px] ${accentText}`}>
         {title}
       </div>
       <div className="text-[14px] font-bold text-text leading-tight">{playerName}</div>
       <div className={`text-[12px] font-semibold ${funny ? 'text-error/70' : 'text-dim'}`}>
         {value} {valueLabel}
       </div>
-    </div>
+    </AppCard>
   )
 }
 
@@ -238,11 +236,11 @@ function Awards({ playerStats, session }) {
   const glassCan  = best('errors')
 
   const awards = [
-    topScorer && { icon: '🏆', title: 'Top Scorer',     pid: topScorer.pid, value: topScorer.value, label: 'pts',    funny: false },
-    aceKing   && { icon: '🎯', title: 'Ace King',       pid: aceKing.pid,   value: aceKing.value,   label: 'aces',   funny: false },
-    spikeMach && { icon: '💥', title: 'Spike Machine',  pid: spikeMach.pid, value: spikeMach.value, label: 'spikes', funny: false },
-    blockMast && { icon: '🛡️', title: 'Block Master',   pid: blockMast.pid, value: blockMast.value, label: 'blocks', funny: false },
-    glassCan  && { icon: '💣', title: 'Glass Cannon',   pid: glassCan.pid,  value: glassCan.value,  label: 'errors', funny: true  },
+    topScorer && { Icon: Trophy, title: 'Top Scorer',     pid: topScorer.pid, value: topScorer.value, label: 'pts',    funny: false },
+    aceKing   && { Icon: Target, title: 'Ace King',       pid: aceKing.pid,   value: aceKing.value,   label: 'aces',   funny: false },
+    spikeMach && { Icon: Zap,    title: 'Spike Machine',  pid: spikeMach.pid, value: spikeMach.value, label: 'spikes', funny: false },
+    blockMast && { Icon: Shield, title: 'Block Master',   pid: blockMast.pid, value: blockMast.value, label: 'blocks', funny: false },
+    glassCan  && { Icon: Bomb,   title: 'Glass Cannon',   pid: glassCan.pid,  value: glassCan.value,  label: 'errors', funny: true  },
   ].filter(Boolean)
 
   if (!awards.length) {
@@ -259,7 +257,7 @@ function Awards({ playerStats, session }) {
         {awards.map(a => (
           <AwardCard
             key={a.title}
-            icon={a.icon}
+            Icon={a.Icon}
             title={a.title}
             playerName={playerName(a.pid)}
             value={a.value}
@@ -328,15 +326,16 @@ function StandingsSection({ rows }) {
 }
 
 // ─── Record card ──────────────────────────────────────────────────────────────
-function RecordCard({ icon, title, line1, line2 }) {
+function RecordCard(props) {
+  const { Icon, title, line1, line2 } = props
   if (!line1) return null
   return (
-    <div className="bg-surface rounded-2xl p-4 border border-line">
-      <div className="text-[20px] mb-1.5">{icon}</div>
-      <div className="text-[10px] font-bold text-free uppercase tracking-widest mb-1">{title}</div>
+    <AppCard className="rounded-2xl p-4">
+      <Icon size={20} className="text-free mb-1.5" />
+      <div className="text-[10px] font-bold text-free uppercase tracking-[0.5px] mb-1">{title}</div>
       <div className="text-[13px] font-bold text-text leading-snug">{line1}</div>
       {line2 && <div className="text-[11px] text-dim mt-0.5">{line2}</div>}
-    </div>
+    </AppCard>
   )
 }
 
@@ -356,20 +355,20 @@ function MatchRecords({ records, session }) {
   return (
     <div className="px-4 grid grid-cols-2 gap-3">
       <RecordCard
-        icon="💪"
+        Icon={Dumbbell}
         title="Most Dominant"
         line1={mostDominant ? `${tName(mostDominant.winner)} wins` : null}
         line2={mostDominant ? `${mostDominant.score1}–${mostDominant.score2} (${dominance} pt gap)` : null}
       />
       <RecordCard
-        icon="🔥"
+        Icon={Flame}
         title="Highest Scoring"
         line1={highestScoring ? `${tName(highestScoring.team1)} vs ${tName(highestScoring.team2)}` : null}
         line2={highestScoring ? `${highestScoring.score1}–${highestScoring.score2} (${highScore} total pts)` : null}
       />
       {longestStreak && (
         <RecordCard
-          icon="⚡"
+          Icon={Zap}
           title="Longest Streak"
           line1={`${longestStreak.streak} in a row`}
           line2={`${tName(longestStreak.team === 1 ? longestStreak.match.team1 : longestStreak.match.team2)} · ${longestStreak.match.label}`}
@@ -377,7 +376,7 @@ function MatchRecords({ records, session }) {
       )}
       {biggestComeback && (
         <RecordCard
-          icon="🔄"
+          Icon={RotateCcw}
           title="Best Comeback"
           line1={`${tName(biggestComeback.team)} came back`}
           line2={`Down ${biggestComeback.deficit} pts · ${biggestComeback.match.label}`}
@@ -385,7 +384,7 @@ function MatchRecords({ records, session }) {
       )}
       {longestGame && (
         <RecordCard
-          icon="⏱️"
+          Icon={Clock}
           title="Longest Game"
           line1={`${tName(longestGame.match.team1)} vs ${tName(longestGame.match.team2)}`}
           line2={`${formatDuration(longestGame.duration)} · ${longestGame.match.label}`}
@@ -393,7 +392,7 @@ function MatchRecords({ records, session }) {
       )}
       {longestRally && (
         <RecordCard
-          icon="🏐"
+          Icon={Volleyball}
           title="Longest Rally"
           line1={formatDuration(longestRally.duration)}
           line2={`${tName(longestRally.match.team1)} vs ${tName(longestRally.match.team2)} · ${longestRally.match.label}`}
@@ -417,22 +416,24 @@ function PlayerPodium({ ranking }) {
   const fmtWL = r => `${r.wins}W – ${r.losses}L · ${Math.round(r.winPct * 100)}%`
 
   const slots = [
-    ranking[1] ? { rank: 2, r: ranking[1], medal: '🥈', height: 'h-16', label: 'Runner-up' } : null,
-    { rank: 1, r: ranking[0], medal: '🥇', height: 'h-24', label: 'Champion' },
-    ranking[2] ? { rank: 3, r: ranking[2], medal: '🥉', height: 'h-10', label: '3rd Place' } : null,
+    ranking[1] ? { rank: 2, r: ranking[1], height: 'h-16', label: 'Runner-up' } : null,
+    { rank: 1, r: ranking[0], height: 'h-24', label: 'Champion' },
+    ranking[2] ? { rank: 3, r: ranking[2], height: 'h-10', label: '3rd Place' } : null,
   ].filter(Boolean)
 
   return (
     <div className="px-4">
       {/* Champion highlight */}
-      <div className="bg-gradient-to-b from-free/20 to-transparent rounded-2xl p-5 mb-4 text-center border border-free/30">
-        <div className="text-[40px] mb-1">🏆</div>
-        <div className="text-[22px] font-black text-free tracking-wide">{champion.name}</div>
+      <div className="bg-gradient-to-br from-free/15 to-surface border border-free/40 rounded-[14px] p-5 mb-4 text-center">
+        <div className="flex justify-center mb-1.5">
+          <Trophy size={36} className="text-free" />
+        </div>
+        <div className="font-display text-[28px] text-free leading-none mb-1">{champion.name}</div>
         <div className="text-[13px] text-dim mt-1">{fmtWL(champion)}</div>
         {champion.points > 0 && (
           <div className="text-[11px] text-dim mt-0.5">{champion.points} pts scored</div>
         )}
-        <div className="text-[11px] font-bold text-free/60 uppercase tracking-widest mt-2">Player of the Session</div>
+        <div className="text-[11px] font-bold text-free/60 uppercase tracking-[0.5px] mt-2">Player of the Session</div>
       </div>
 
       {/* Podium steps */}
@@ -440,7 +441,7 @@ function PlayerPodium({ ranking }) {
         <div className="flex items-end justify-center gap-3 mb-2">
           {slots.map(slot => (
             <div key={slot.r.id} className="flex flex-col items-center flex-1 max-w-[110px]">
-              <div className="text-[22px] mb-1">{slot.medal}</div>
+              <Medal size={22} className={`mb-1 ${MEDAL_COLOR[slot.rank]}`} />
               <div className="text-[12px] font-bold text-text text-center leading-tight mb-1.5 px-1">
                 {slot.r.name}
               </div>
@@ -452,7 +453,7 @@ function PlayerPodium({ ranking }) {
                 slot.rank === 2 ? 'bg-surface border-t border-line' :
                 'bg-alt border-t border-line'
               }`}>
-                <span className={`text-[14px] font-black ${slot.rank === 1 ? 'text-free' : 'text-dim'}`}>
+                <span className={`font-display text-[18px] leading-none ${slot.rank === 1 ? 'text-free' : 'text-dim'}`}>
                   #{slot.rank}
                 </span>
               </div>
@@ -579,8 +580,9 @@ export default function FreePlayStatsScreen({ session, onClose }) {
         <button
           onClick={onClose}
           className="cursor-pointer bg-transparent border-0 p-1 -ml-1 text-text flex-shrink-0"
+          aria-label="Back"
         >
-          <BackIcon />
+          <ChevronLeft size={20} />
         </button>
         <div className="flex-1 min-w-0">
           <div className="text-[16px] font-bold text-text leading-tight truncate">
@@ -588,7 +590,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
           </div>
           <div className="text-[11px] text-dim truncate">{session.name}</div>
         </div>
-        <div className="text-[22px]">🏆</div>
+        <Trophy size={20} className="text-free" />
       </div>
 
       {/* Tab switcher */}

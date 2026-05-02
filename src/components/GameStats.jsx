@@ -1,5 +1,10 @@
 import React, { useState } from "react";
+import {
+  Trophy, Flame, Target, Zap, Shield, Hand, X, Check,
+  Volleyball, Undo2,
+} from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
+import { AppCard, AppButton, PillTabs, SectionLabel } from "./ui-new";
 
 const GameStats = ({
   winner,
@@ -70,15 +75,30 @@ const GameStats = ({
 
   const s1 = statFor(1), s2 = statFor(2);
   const winnerIsTeam1 = winner === 1;
+  const winnerColor = winnerIsTeam1 ? "text-accent" : "text-free";
+  const winnerBorder = winnerIsTeam1 ? "border-accent/40" : "border-free/40";
+  const winnerGradient = winnerIsTeam1
+    ? "bg-gradient-to-br from-accent/15 to-surface"
+    : "bg-gradient-to-br from-free/15 to-surface";
 
-  // Comparison bar helper (not a React component — called as a function)
-  const renderStatBar = (label, v1, v2) => {
+  const POINT_TYPES = [
+    { id: "ace",   label: "Ace",         icon: Target },
+    { id: "spike", label: "Spike",       icon: Zap    },
+    { id: "block", label: "Block",       icon: Shield },
+    { id: "tip",   label: "Tip",         icon: Hand   },
+    { id: "error", label: "Rival error", icon: X      },
+  ];
+
+  const renderStatBar = (pt, v1, v2) => {
     const total = (v1 || 0) + (v2 || 0) || 1;
+    const Icon = pt.icon;
     return (
-      <div key={label} className="mb-2.5">
-        <div className="flex justify-between mb-[3px]">
+      <div key={pt.id} className="mb-2.5">
+        <div className="flex justify-between mb-[3px] items-center">
           <span className="text-[11px] font-bold text-accent">{v1}</span>
-          <span className="text-[10px] font-semibold text-dim">{label}</span>
+          <span className="text-[10px] font-semibold text-dim flex items-center gap-1">
+            <Icon size={11} /> {pt.label}
+          </span>
           <span className="text-[11px] font-bold text-free">{v2}</span>
         </div>
         <div className="flex h-[6px] rounded-[3px] overflow-hidden bg-alt">
@@ -103,81 +123,74 @@ const GameStats = ({
         </div>
       )}
 
-      {/* ── Back arrow (undo) ── */}
+      {/* ── Undo last point ── */}
       {hasHistory && !pendingUndo && (
         <button
           onClick={onRequestUndo}
           className="flex items-center gap-1.5 text-dim text-[13px] font-semibold mb-3 bg-transparent border-0 cursor-pointer px-0 py-1"
         >
-          <span className="text-[18px] leading-none">←</span>
+          <Undo2 size={16} />
           <span>Undo last point</span>
         </button>
       )}
 
       {/* ── Pill tabs ── */}
-      <div className="flex bg-alt rounded-[10px] p-[3px] mb-3">
-        {[
+      <PillTabs
+        items={[
           { id: "overview", label: "Overview" },
           { id: "stats",    label: "Stats"    },
           { id: "history",  label: "History"  },
-        ].map(item => (
-          <button
-            key={item.id}
-            onClick={() => setTab(item.id)}
-            className={`flex-1 py-[7px] rounded-[8px] text-[10px] font-semibold cursor-pointer border-0 transition-all ${
-              tab === item.id
-                ? "bg-surface text-accent shadow-sm"
-                : "bg-transparent text-dim"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+        ]}
+        active={tab}
+        onChange={setTab}
+        className="mb-3"
+      />
 
       {/* ── Overview tab ── */}
       {tab === "overview" && (
         <>
-          {/* Winner banner — always dark bg for contrast */}
-          <div className="bg-[#0D1B2A] rounded-[16px] px-4 py-4 mb-3 text-center">
-            <div className="text-[32px] mb-1.5">🏆</div>
-            <div className="text-[10px] font-bold text-[#7A8EA0] uppercase tracking-wide mb-0.5">
-              WINNER!
+          {/* Winner banner — gradient + accent border per design handoff §5.3 */}
+          <div className={`${winnerGradient} ${winnerBorder} border rounded-[14px] px-4 py-4 mb-3 text-center`}>
+            <div className="flex justify-center mb-1.5">
+              <Trophy size={32} className={winnerColor} />
             </div>
-            <div className={`text-[20px] font-extrabold mb-1 ${winnerIsTeam1 ? "text-accent" : "text-free"}`}>
+            <div className={`text-[10px] font-bold uppercase tracking-[0.5px] mb-1 ${winnerColor}`}>
+              Winner
+            </div>
+            <div className={`font-display text-[30px] leading-none mb-1 ${winnerColor}`}>
               {tName(winnerIsTeam1 ? team1Id : team2Id)}
             </div>
-            <div className="text-[12px] text-[#7A8EA0] mb-3">
+            <div className="text-[12px] text-dim mb-3">
               {teamPlayerIds(winnerIsTeam1 ? team1Id : team2Id)
                 .map(pid => playerName(pid).split(" ")[0])
                 .join(" · ")}
             </div>
             {sets.length === 1 ? (
-              <div className="flex gap-3 items-center justify-center mb-2">
-                <span className={`text-[32px] font-extrabold ${sets[0].winner === 1 ? "text-accent" : "text-[#7A8EA0]"}`}>{sets[0].s1}</span>
-                <span className="text-[18px] text-[#7A8EA0]">–</span>
-                <span className={`text-[32px] font-extrabold ${sets[0].winner === 2 ? "text-free" : "text-[#7A8EA0]"}`}>{sets[0].s2}</span>
+              <div className="flex gap-3 items-center justify-center mb-1">
+                <span className={`font-display text-[40px] leading-none ${sets[0].winner === 1 ? "text-accent" : "text-dim"}`}>{sets[0].s1}</span>
+                <span className="text-[18px] text-dim">–</span>
+                <span className={`font-display text-[40px] leading-none ${sets[0].winner === 2 ? "text-free" : "text-dim"}`}>{sets[0].s2}</span>
               </div>
             ) : (
               <>
                 <div className="flex justify-center gap-4 mb-3">
                   <div className="text-center">
-                    <div className="text-[11px] text-[#7A8EA0] mb-1">Sets</div>
+                    <div className="text-[11px] text-dim mb-1">Sets</div>
                     <div className="flex gap-1.5 items-center">
-                      <span className={`text-[20px] font-extrabold ${winnerIsTeam1 ? "text-accent" : "text-[#7A8EA0]"}`}>{t1Sets}</span>
-                      <span className="text-[12px] text-[#7A8EA0]">-</span>
-                      <span className={`text-[20px] font-extrabold ${!winnerIsTeam1 ? "text-free" : "text-[#7A8EA0]"}`}>{t2Sets}</span>
+                      <span className={`font-display text-[28px] leading-none ${winnerIsTeam1 ? "text-accent" : "text-dim"}`}>{t1Sets}</span>
+                      <span className="text-[12px] text-dim">-</span>
+                      <span className={`font-display text-[28px] leading-none ${!winnerIsTeam1 ? "text-free" : "text-dim"}`}>{t2Sets}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-center gap-1.5">
                   {sets.map((s, i) => (
-                    <div key={i} className="bg-white/5 rounded-[8px] px-2.5 py-[5px] text-center">
-                      <div className="text-[9px] text-[#7A8EA0] mb-1">Set {i + 1}</div>
+                    <div key={i} className="bg-bg rounded-[8px] px-2.5 py-[5px] text-center">
+                      <div className="text-[9px] text-dim mb-1">Set {i + 1}</div>
                       <div className="flex gap-[3px] items-center justify-center">
-                        <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-[#7A8EA0]"}`}>{s.s1}</span>
-                        <span className="text-[9px] text-[#7A8EA0]">-</span>
-                        <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-[#7A8EA0]"}`}>{s.s2}</span>
+                        <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-dim"}`}>{s.s1}</span>
+                        <span className="text-[9px] text-dim">-</span>
+                        <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-dim"}`}>{s.s2}</span>
                       </div>
                     </div>
                   ))}
@@ -187,10 +200,8 @@ const GameStats = ({
           </div>
 
           {/* Total points */}
-          <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
-            <div className="text-[10px] font-bold text-accent uppercase tracking-wide mb-1.5">
-              TOTAL POINTS
-            </div>
+          <AppCard className="px-3.5 py-3 mb-3">
+            <SectionLabel color="accent">Total points</SectionLabel>
             <div className="flex justify-between items-center mb-2.5">
               <div className="text-center flex-1">
                 <div className="text-[10px] text-dim">{tName(team1Id)}</div>
@@ -218,14 +229,11 @@ const GameStats = ({
                 ))}
               </div>
             )}
-          </div>
+          </AppCard>
 
           {/* Streaks & players table */}
-          <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
-            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">
-              STREAKS &amp; PLAYERS
-            </div>
-            {/* Streak cards side by side */}
+          <AppCard className="px-3.5 py-3 mb-3">
+            <SectionLabel>Streaks &amp; players</SectionLabel>
             <div className="flex gap-2 mb-3">
               {[
                 { tn: 1, st: s1, tid: team1Id, isTeam1: true  },
@@ -239,14 +247,13 @@ const GameStats = ({
                     <div className={`text-[10px] font-bold ${isTeam1 ? "text-accent" : "text-free"}`}>{tName(tid)}</div>
                     <div className="text-[9px] text-dim">Best streak</div>
                   </div>
-                  <div className={`text-[20px] font-extrabold ${isTeam1 ? "text-accent" : "text-free"}`}>
-                    🔥 {st.bestStreak}
+                  <div className={`flex items-center gap-1 font-display text-[24px] leading-none ${isTeam1 ? "text-accent" : "text-free"}`}>
+                    <Flame size={16} /> {st.bestStreak}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Players table */}
             <div className="rounded-[10px] overflow-hidden border border-line">
               <div className="flex px-2.5 py-1.5 bg-alt">
                 <span className="flex-1 text-[9px] font-bold text-dim">PLAYER</span>
@@ -277,7 +284,7 @@ const GameStats = ({
                 );
               })}
             </div>
-          </div>
+          </AppCard>
         </>
       )}
 
@@ -285,29 +292,23 @@ const GameStats = ({
       {tab === "stats" && (
         <>
           {/* Points by type */}
-          <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
+          <AppCard className="px-3.5 py-3 mb-3">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
-              <span className="text-[10px] font-bold text-dim uppercase tracking-wide">HOW POINTS WERE WON</span>
+              <span className="text-[10px] font-bold text-dim uppercase tracking-wide">How points were won</span>
               <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
             </div>
-            {renderStatBar("🎯 Ace",         s1.byType.ace,   s2.byType.ace)}
-            {renderStatBar("💥 Remate",      s1.byType.spike, s2.byType.spike)}
-            {renderStatBar("🛡️ Bloqueo",     s1.byType.block, s2.byType.block)}
-            {renderStatBar("🤏 Finta",       s1.byType.tip,   s2.byType.tip)}
-            {renderStatBar("❌ Error rival", s1.byType.error, s2.byType.error)}
+            {POINT_TYPES.map(pt => renderStatBar(pt, s1.byType[pt.id], s2.byType[pt.id]))}
             <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
               <span className="font-bold text-accent">{tName(team1Id)}</span>
               <span className="text-dim">comparison</span>
               <span className="font-bold text-free">{tName(team2Id)}</span>
             </div>
-          </div>
+          </AppCard>
 
           {/* Serve efficiency */}
-          <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
-            <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">
-              SERVE EFFICIENCY
-            </div>
+          <AppCard className="px-3.5 py-3 mb-3">
+            <SectionLabel>Serve efficiency</SectionLabel>
             <div className="flex gap-2">
               {[
                 { tn: 1, st: s1, tid: team1Id, isTeam1: true  },
@@ -321,7 +322,7 @@ const GameStats = ({
                     className={`flex-1 rounded-[10px] px-2.5 py-2.5 text-center ${isTeam1 ? "bg-accent/15" : "bg-free/15"}`}
                   >
                     <div className={`text-[11px] font-bold mb-1.5 ${isTeam1 ? "text-accent" : "text-free"}`}>{tName(tid)}</div>
-                    <div className={`text-[22px] font-extrabold mb-1 leading-none ${isTeam1 ? "text-accent" : "text-free"}`}>{pct}%</div>
+                    <div className={`font-display text-[28px] mb-1 leading-none ${isTeam1 ? "text-accent" : "text-free"}`}>{pct}%</div>
                     <div className="flex justify-around">
                       <div>
                         <div className="text-[14px] font-bold text-text">{st.whileServing}</div>
@@ -336,18 +337,16 @@ const GameStats = ({
                 );
               })}
             </div>
-          </div>
+          </AppCard>
 
           {/* Timing */}
           {(matchDuration || longestRally) && (
-            <div className="bg-surface rounded-xl border border-line px-3.5 py-3 mb-3">
-              <div className="text-[10px] font-bold text-dim uppercase tracking-wide mb-2">
-                Timing
-              </div>
+            <AppCard className="px-3.5 py-3 mb-3">
+              <SectionLabel>Timing</SectionLabel>
               <div className="flex gap-2">
                 {matchDuration && (
                   <div className="flex-1 rounded-[10px] px-2.5 py-2.5 text-center bg-alt">
-                    <div className="text-[20px] font-extrabold text-text leading-none mb-1">
+                    <div className="font-display text-[26px] text-text leading-none mb-1">
                       {matchDuration}
                     </div>
                     <div className="text-[9px] text-dim uppercase">Match duration</div>
@@ -355,23 +354,23 @@ const GameStats = ({
                 )}
                 {longestRally && (
                   <div className="flex-1 rounded-[10px] px-2.5 py-2.5 text-center bg-alt">
-                    <div className="text-[20px] font-extrabold text-text leading-none mb-1">
+                    <div className="font-display text-[26px] text-text leading-none mb-1">
                       {longestRally}
                     </div>
                     <div className="text-[9px] text-dim uppercase">Longest rally</div>
                   </div>
                 )}
               </div>
-            </div>
+            </AppCard>
           )}
         </>
       )}
 
       {/* ── History tab ── */}
       {tab === "history" && (
-        <div className="bg-surface rounded-xl border border-line overflow-hidden mb-3">
+        <AppCard className="p-0 overflow-hidden mb-3">
           <div className="px-3.5 py-2.5 bg-alt text-[12px] font-bold text-accent tracking-wide uppercase">
-            HISTORY
+            History
           </div>
           {[...log].reverse().map((entry) => {
             if (!entry.team) return (
@@ -382,17 +381,25 @@ const GameStats = ({
             const isTeam1   = entry.team === 1;
             const teamColor = isTeam1 ? "text-accent" : "text-free";
             const teamBg    = isTeam1 ? "bg-accent/15" : "bg-free/15";
+            const ptType    = POINT_TYPES.find(pt => pt.id === entry.pointType);
+            const PtIcon    = ptType?.icon;
             return (
               <div key={entry.id} className="flex items-center px-3.5 py-2 gap-2 border-b border-line last:border-b-0">
                 <span className="text-[11px] font-bold text-accent w-9 flex-shrink-0">
                   {entry.t1}–{entry.t2}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] text-text truncate">
-                    {entry.pointTypeIcon || "🏐"} {entry.pointTypeLabel || "Punto"}
-                    {entry.scoringPlayerId ? ` · ${playerName(entry.scoringPlayerId)}` : ""}
+                  <div className="text-[11px] text-text truncate flex items-center gap-1">
+                    {PtIcon ? <PtIcon size={11} className="flex-shrink-0" /> : <Volleyball size={11} className="flex-shrink-0" />}
+                    <span className="truncate">
+                      {ptType?.label || entry.pointTypeLabel || "Punto"}
+                      {entry.scoringPlayerId ? ` · ${playerName(entry.scoringPlayerId)}` : ""}
+                    </span>
                   </div>
-                  <div className="text-[9px] text-dim">🏐 {playerName(entry.serverPlayerId)}</div>
+                  <div className="text-[9px] text-dim flex items-center gap-1">
+                    <Volleyball size={9} className="flex-shrink-0" />
+                    {playerName(entry.serverPlayerId)}
+                  </div>
                 </div>
                 <span className={`text-[9px] font-semibold ${teamColor} ${teamBg} px-1.5 py-0.5 rounded-[4px] flex-shrink-0`}>
                   {tName(isTeam1 ? team1Id : team2Id)}
@@ -400,7 +407,7 @@ const GameStats = ({
               </div>
             );
           })}
-        </div>
+        </AppCard>
       )}
 
       {/* ── CTAs ── */}
@@ -409,27 +416,29 @@ const GameStats = ({
         const finalS1 = sets.reduce((acc, s) => acc + (s.winner === 1 ? 1 : 0), 0);
         const finalS2 = sets.reduce((acc, s) => acc + (s.winner === 2 ? 1 : 0), 0);
         return (
-          <button
-            onClick={() => !isSaving && onSaveResult(activeTourMatchId, finalS1, finalS2, winnerTeamId, log, sets)}
+          <AppButton
+            variant="success"
             disabled={isSaving}
-            className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-success text-white border-0 cursor-pointer mb-2.5 disabled:opacity-70 flex items-center justify-center gap-2"
+            onClick={() => !isSaving && onSaveResult(activeTourMatchId, finalS1, finalS2, winnerTeamId, log, sets)}
+            className="mb-2.5"
           >
             {isSaving ? (
-              <>
+              <span className="flex items-center gap-2">
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
                 Saving…
-              </>
-            ) : '✓ Save result'}
-          </button>
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Check size={16} /> Save result
+              </span>
+            )}
+          </AppButton>
         );
       })()}
       {reset && (
-        <button
-          onClick={reset}
-          className="w-full min-h-[44px] rounded-xl text-[14px] font-bold bg-accent text-white border-0 cursor-pointer"
-        >
+        <AppButton variant="accent" onClick={reset}>
           New match
-        </button>
+        </AppButton>
       )}
 
     </div>

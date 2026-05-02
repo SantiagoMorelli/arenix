@@ -339,7 +339,7 @@ export default function TournamentSetupWizard() {
       <div className="screen__top">
         <div className="flex items-center gap-3 px-4 py-3">
           <button
-            onClick={() => step > 0 ? setStep(step - 1) : navigate(`/league/${id}`)}
+            onClick={() => step > 0 ? setStep(step - 1) : navigate('/')}
             className="w-8 h-8 flex items-center justify-center rounded-xl bg-surface border border-line cursor-pointer text-text flex-shrink-0"
           >
             <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

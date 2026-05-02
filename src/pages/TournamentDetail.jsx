@@ -45,7 +45,9 @@ export default function TournamentDetail() {
   const isGuest = !session
 
   // ── Overlay state ──────────────────────────────────────────────────────────
-  const [showTournamentStats, setShowTournamentStats] = useState(false)
+  const [showTournamentStats, setShowTournamentStats] = useState(
+    () => Boolean(location.state?.showStats),
+  )
   const [selectedStatsMatch,  setSelectedStatsMatch]  = useState(null)
 
   // ── Header / delete state ──────────────────────────────────────────────────
@@ -77,6 +79,17 @@ export default function TournamentDetail() {
     }, 500)
     return () => clearTimeout(tbDebounceRef.current)
   }, [tbOptions, tid])
+
+  // Guard against stale nav state opening the stats overlay on a non-completed tournament.
+  useEffect(() => {
+    if (
+      location.state?.showStats &&
+      tournament &&
+      tournament.status !== 'completed'
+    ) {
+      setShowTournamentStats(false)
+    }
+  }, [location.state?.showStats, tournament])
 
   if (loading) {
     return (

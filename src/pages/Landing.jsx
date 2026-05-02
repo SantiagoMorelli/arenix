@@ -135,7 +135,11 @@ function TournamentRow({ tournament, leagueId, navigate }) {
   const iconColor = isLive ? 'text-success'  : isCompleted ? 'text-dim'    : 'text-accent'
 
   function handleClick() {
-    if (leagueId) navigate(`/league/${leagueId}/tournament/${tournament.id}`)
+    if (!leagueId) return
+    navigate(
+      `/league/${leagueId}/tournament/${tournament.id}`,
+      isCompleted ? { state: { showStats: true } } : undefined,
+    )
   }
 
   return (

@@ -226,6 +226,11 @@ export default function LiveScoreboard({
   const rot = live.serveRotation
   const nextSrv = rot[(live.serveIndex + 1) % rot.length]
 
+  const leftTeamNum  = live.side.t1 === 'left' ? 1 : 2
+  const rightTeamNum = live.side.t2 === 'right' ? 2 : 1
+  const leftScoreColor  = live.lastScoringTeam === leftTeamNum  ? 'text-accent' : 'text-dim'
+  const rightScoreColor = live.lastScoringTeam === rightTeamNum ? 'text-free'   : 'text-dim'
+
   const renderServerInfo = (teamNum) => {
     const isServing = currentSrv.team === teamNum
     const slotsForTeam = rot.filter(r => r.team === teamNum)
@@ -376,7 +381,7 @@ export default function LiveScoreboard({
             <div className="text-[11px] text-dim text-center px-4 max-w-full mb-2 leading-tight">
               {getTeamPlayerNames(live.side.t1 === 'left' ? live.team1Id : live.team2Id)}
             </div>
-            <div className={`text-[80px] sm:text-[110px] font-black leading-none tracking-tighter drop-shadow-sm ${currentSrv.team === (live.side.t1 === 'left' ? 1 : 2) ? C.text : 'text-dim'}`}>
+            <div className={`text-[80px] sm:text-[110px] font-black leading-none tracking-tighter drop-shadow-sm ${leftScoreColor}`}>
               {live.side.t1 === 'left' ? live.score1 : live.score2}
             </div>
 
@@ -413,7 +418,7 @@ export default function LiveScoreboard({
             <div className="text-[11px] text-dim text-center px-4 max-w-full mb-2 leading-tight">
               {getTeamPlayerNames(live.side.t2 === 'right' ? live.team2Id : live.team1Id)}
             </div>
-            <div className={`text-[80px] sm:text-[110px] font-black leading-none tracking-tighter drop-shadow-sm ${currentSrv.team === (live.side.t2 === 'right' ? 2 : 1) ? C.text : 'text-dim'}`}>
+            <div className={`text-[80px] sm:text-[110px] font-black leading-none tracking-tighter drop-shadow-sm ${rightScoreColor}`}>
               {live.side.t2 === 'right' ? live.score2 : live.score1}
             </div>
 

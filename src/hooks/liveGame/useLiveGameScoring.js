@@ -53,6 +53,8 @@ export function useLiveGameScoring({
   const [sets, setSets]               = useState([]);
   const [winner, setWinner]           = useState(null);
   const [pointsToWin, setPointsToWin] = useState(initialPointsToWin);
+  const [lastScoringTeam, setLastScoringTeam] = useState(null);
+  const flashTimerRef = useRef(null);
 
   // ── Pending-dialog flags ───────────────────────────────────────────────────
   const [pendingSideChange, setPendingSideChange]     = useState(null);
@@ -66,6 +68,8 @@ export function useLiveGameScoring({
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [log]);
+
+  useEffect(() => () => { if (flashTimerRef.current) clearTimeout(flashTimerRef.current); }, []);
 
   // ── Serve rotation (memoized) ──────────────────────────────────────────────
   // getRotationInputs() is a stable getter; we also depend on serveIndex so
@@ -103,6 +107,8 @@ export function useLiveGameScoring({
     if (snap.pointsToWin !== undefined) setPointsToWin(snap.pointsToWin);
     // Reset undo: clear winner when restoring a mid-game state
     if (snap.winner === undefined) setWinner(null);
+    setLastScoringTeam(null);
+    if (flashTimerRef.current) { clearTimeout(flashTimerRef.current); flashTimerRef.current = null; }
   };
 
   // ── applyPoint (internal) ──────────────────────────────────────────────────
@@ -116,6 +122,10 @@ export function useLiveGameScoring({
     setSide(newSide);
     setPoints(newPoints);
     setLog(prev => [...prev, logEntry]);
+
+    setLastScoringTeam(logEntry.team);
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => setLastScoringTeam(null), 1500);
 
     const isWin = (s, opp) => s >= pointsToWin && s - opp >= 2;
     if (isWin(newS1, newS2)) endSet(1, newS1, newS2, newServeIndex);
@@ -254,6 +264,8 @@ export function useLiveGameScoring({
     setWinner(null); setPointsToWin(initialPointsToWin);
     setPendingSideChange(null); setPendingPoint(null);
     setPendingPlayerSelect(null); setPendingEnd(false);
+    setLastScoringTeam(null);
+    if (flashTimerRef.current) { clearTimeout(flashTimerRef.current); flashTimerRef.current = null; }
   };
 
   // ── applySavedScoring: restore scoring fields from persisted snapshot ──────
@@ -268,6 +280,7 @@ export function useLiveGameScoring({
     // State
     score1, score2, serveIndex, side, setSide, points,
     log, logRef, sets, winner, pointsToWin, setPointsToWin,
+    lastScoringTeam,
     // Derived
     serveRotation, currentServer,
     serverTeam: currentServer.team,

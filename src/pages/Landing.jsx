@@ -719,10 +719,8 @@ export default function Landing() {
 
   const joinedLeagueIds = useMemo(() => new Set(myLeagues.map(l => l.id)), [myLeagues])
 
-  // Only show My Leagues section for admins / league creators
-  const showMyLeagues = isLoggedIn && (
-    isSuperAdmin || canCreateLeague || myLeagues.some(l => l.myRole === 'admin')
-  )
+  // Show My Leagues section for any logged-in user who belongs to at least one league
+  const showMyLeagues = isLoggedIn && myLeagues.length > 0
 
   // Flatten tournaments for chip counts (unfiltered)
   const allTourneys = useMemo(
@@ -746,7 +744,7 @@ export default function Landing() {
       return { ...l, tournaments: trs }
     }).filter(l => l.tournaments.length || (filter === 'all' && !q))
     filtered.sort((a, b) => (joinedLeagueIds.has(b.id) ? 1 : 0) - (joinedLeagueIds.has(a.id) ? 1 : 0))
-    return filtered.slice(0, 1)
+    return filtered.slice(0, 4)
   }, [publicLeagues, query, filter, joinedLeagueIds])
 
   const displayName   = profile?.full_name?.split(' ')[0] || 'Player'
@@ -942,7 +940,7 @@ export default function Landing() {
         {/* ── Featured league section ── */}
         <div className="flex items-baseline justify-between px-4 pt-2 pb-0">
           <span className="text-[11px] font-bold uppercase tracking-[1.2px] text-accent">
-            Featured league
+            Public Leagues
           </span>
           <span className="text-[10px] text-dim tracking-[0.4px]">
             {publicLeagues.length} total · worldwide

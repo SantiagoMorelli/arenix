@@ -56,6 +56,13 @@ export async function getMyLeagues() {
       leagueMap.get(row.league_id).myRoles.push(row.role)
     }
   }
+  // Promote myRole to the highest-privilege role in myRoles
+  const roleRank = { admin: 2, scorer: 1, member: 0 }
+  for (const entry of leagueMap.values()) {
+    entry.myRole = entry.myRoles.reduce((best, r) =>
+      (roleRank[r] ?? 0) > (roleRank[best] ?? 0) ? r : best
+    , entry.myRole)
+  }
   return [...leagueMap.values()]
 }
 

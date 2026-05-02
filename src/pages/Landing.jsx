@@ -721,7 +721,8 @@ export default function Landing() {
 
   // Only show My Leagues section for admins / league creators
   const showMyLeagues = isLoggedIn && (
-    isSuperAdmin || canCreateLeague || myLeagues.some(l => l.myRole === 'admin')
+    isSuperAdmin || canCreateLeague ||
+    myLeagues.some(l => l.myRole === 'admin' || l.myRoles?.includes('admin'))
   )
 
   // Flatten tournaments for chip counts (unfiltered)

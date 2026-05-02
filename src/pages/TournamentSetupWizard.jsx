@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Plus } from 'lucide-react'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { createTournament } from '../services/tournamentService'
+import { addPlayer } from '../services/playerService'
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 import { useToast } from '../components/ToastContext'
+import AddPlayerSheet from '../components/AddPlayerSheet'
 
 const FORMAT_OPTIONS = [
   { id: 'group',    label: 'Group + Knockout' },
@@ -163,7 +166,7 @@ export default function TournamentSetupWizard() {
   const { id }    = useParams()
   const { showError } = useToast()
 
-  const { league } = useLeague(id)
+  const { league, refetch } = useLeague(id)
   const { isAdmin } = useLeagueRole(id)
 
   const [step, setStep] = useState(0)
@@ -183,6 +186,8 @@ export default function TournamentSetupWizard() {
   const [proposedTeams,    setProposedTeams]    = useState([])
   const [pickingForTeamId, setPickingForTeamId] = useState(null)
   const [confirmedAuto,    setConfirmedAuto]    = useState(false)
+
+  const [showAddPlayer, setShowAddPlayer] = useState(false)
 
   // Step 2 state
   const [formatMode,      setFormatMode]      = useState('group')
@@ -231,6 +236,12 @@ export default function TournamentSetupWizard() {
   // ── Player picking ────────────────────────────────────────────────────────
   const togglePickedPlayer = pid =>
     setPickedPlayers(prev => prev.includes(pid) ? prev.filter(x => x !== pid) : [...prev, pid])
+
+  async function handleAddPlayer({ name, level, sex }) {
+    const newPlayer = await addPlayer(id, { name, level, sex })
+    await refetch()
+    setPickedPlayers(prev => [...prev, newPlayer.id])
+  }
 
   // ── Auto-generate teams ───────────────────────────────────────────────────
   const toggleParam = p => {
@@ -459,12 +470,20 @@ export default function TournamentSetupWizard() {
                   <div className="text-[11px] font-bold text-accent uppercase tracking-widest">
                     Players ({pickedPlayers.length} selected)
                   </div>
-                  <button
-                    onClick={() => setPickedPlayers(allSelected ? [] : allPlayerIds)}
-                    className="text-[11px] font-semibold text-accent bg-transparent border-0 cursor-pointer"
-                  >
-                    {allSelected ? 'Deselect all' : 'Select all'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowAddPlayer(true)}
+                      className="w-[34px] h-[34px] rounded-[10px] bg-surface border border-line flex items-center justify-center text-dim cursor-pointer flex-shrink-0"
+                    >
+                      <Plus size={16} />
+                    </button>
+                    <button
+                      onClick={() => setPickedPlayers(allSelected ? [] : allPlayerIds)}
+                      className="text-[11px] font-semibold text-accent bg-transparent border-0 cursor-pointer"
+                    >
+                      {allSelected ? 'Deselect all' : 'Select all'}
+                    </button>
+                  </div>
                 </div>
               )
             })()}
@@ -509,6 +528,11 @@ export default function TournamentSetupWizard() {
                   )
                 })}
             </div>
+            <AddPlayerSheet
+              open={showAddPlayer}
+              onClose={() => setShowAddPlayer(false)}
+              onAdd={handleAddPlayer}
+            />
           </div>
         )}
 

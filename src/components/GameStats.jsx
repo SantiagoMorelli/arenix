@@ -89,11 +89,6 @@ const GameStats = ({
     const playerByType = {};
     const playerErrors = {};
     if (team) teamPlayerIds(tid).forEach(pid => {
-      playerPts[pid] = pts.filter(e =>
-        e.scoringPlayerId != null
-          ? e.scoringPlayerId === pid
-          : e.serverPlayerId === pid
-      ).length;
       const pScored = pts.filter(e => e.scoringPlayerId === pid);
       playerByType[pid] = {
         ace:   pScored.filter(e => e.pointType === "ace").length,
@@ -101,13 +96,17 @@ const GameStats = ({
         block: pScored.filter(e => e.pointType === "block").length,
         tip:   pScored.filter(e => e.pointType === "tip").length,
       };
+      // PTS = ace + spike + block + tip (active contributions only, not opponent errors)
+      playerPts[pid] = pScored.length;
       playerErrors[pid] = pointLog.filter(e => e.errorPlayerId === pid).length;
     });
     return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerByType, playerErrors };
   };
 
   const s1 = statFor(1), s2 = statFor(2);
-  const winnerIsTeam1 = winner === 1;
+  // Derive winner from sets array (ground truth) — avoids any prop value ambiguity
+  const derivedWinnerTeam = t1Sets > t2Sets ? 1 : t2Sets > t1Sets ? 2 : (winner === 1 ? 1 : 2);
+  const winnerIsTeam1 = derivedWinnerTeam === 1;
   const winnerColor = winnerIsTeam1 ? "text-accent" : "text-free";
   const winnerBorder = winnerIsTeam1 ? "border-accent/40" : "border-free/40";
   const winnerGradient = winnerIsTeam1
@@ -239,9 +238,9 @@ const GameStats = ({
             </div>
             {sets.length === 1 ? (
               <div className="flex gap-3 items-center justify-center mb-1">
-                <span className={`font-display text-[40px] leading-none ${sets[0].winner === 1 ? "text-accent" : "text-dim"}`}>{sets[0].s1}</span>
+                <span className={`font-display leading-none ${winnerIsTeam1 ? "text-[44px] text-accent" : "text-[36px] text-accent/70"}`}>{sets[0].s1}</span>
                 <span className="text-[18px] text-dim">–</span>
-                <span className={`font-display text-[40px] leading-none ${sets[0].winner === 2 ? "text-free" : "text-dim"}`}>{sets[0].s2}</span>
+                <span className={`font-display leading-none ${!winnerIsTeam1 ? "text-[44px] text-free" : "text-[36px] text-free/70"}`}>{sets[0].s2}</span>
               </div>
             ) : (
               <>
@@ -249,9 +248,9 @@ const GameStats = ({
                   <div className="text-center">
                     <div className="text-[11px] text-dim mb-1">Sets</div>
                     <div className="flex gap-1.5 items-center">
-                      <span className={`font-display text-[28px] leading-none ${winnerIsTeam1 ? "text-accent" : "text-dim"}`}>{t1Sets}</span>
+                      <span className={`font-display text-[28px] leading-none ${winnerIsTeam1 ? "text-accent" : "text-accent/60"}`}>{t1Sets}</span>
                       <span className="text-[12px] text-dim">-</span>
-                      <span className={`font-display text-[28px] leading-none ${!winnerIsTeam1 ? "text-free" : "text-dim"}`}>{t2Sets}</span>
+                      <span className={`font-display text-[28px] leading-none ${!winnerIsTeam1 ? "text-free" : "text-free/60"}`}>{t2Sets}</span>
                     </div>
                   </div>
                 </div>
@@ -260,9 +259,9 @@ const GameStats = ({
                     <div key={i} className="bg-bg rounded-[8px] px-2.5 py-[5px] text-center">
                       <div className="text-[9px] text-dim mb-1">Set {i + 1}</div>
                       <div className="flex gap-[3px] items-center justify-center">
-                        <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-dim"}`}>{s.s1}</span>
+                        <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-accent/60"}`}>{s.s1}</span>
                         <span className="text-[9px] text-dim">-</span>
-                        <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-dim"}`}>{s.s2}</span>
+                        <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-free/60"}`}>{s.s2}</span>
                       </div>
                     </div>
                   ))}
@@ -330,24 +329,24 @@ const GameStats = ({
             </div>
           </AppCard>
 
-          {/* Total points */}
-          <AppCard className="px-3.5 py-3 mb-3">
-            <SectionLabel color="accent">Total points</SectionLabel>
-            <div className="flex justify-between items-center mb-2.5">
-              <div className="text-center flex-1">
-                <div className="text-[10px] text-dim">{tName(team1Id)}</div>
-                <div className="font-display text-[52px] text-accent leading-none">{s1.total}</div>
+          {/* Total points — only shown for multi-set; 1-set score is already in the banner */}
+          {sets.length > 1 && (
+            <AppCard className="px-3.5 py-3 mb-3">
+              <SectionLabel color="accent">Total points</SectionLabel>
+              <div className="flex justify-between items-center mb-2.5">
+                <div className="text-center flex-1">
+                  <div className="text-[10px] text-dim">{tName(team1Id)}</div>
+                  <div className="font-display text-[52px] text-accent leading-none">{s1.total}</div>
+                </div>
+                <div className="text-center text-dim text-[11px]">
+                  <div className="font-display text-[22px]">–</div>
+                  {s1.total + s2.total} total
+                </div>
+                <div className="text-center flex-1">
+                  <div className="text-[10px] text-dim">{tName(team2Id)}</div>
+                  <div className="font-display text-[52px] text-free leading-none">{s2.total}</div>
+                </div>
               </div>
-              <div className="text-center text-dim text-[11px]">
-                <div className="font-display text-[22px]">–</div>
-                {s1.total + s2.total} total
-              </div>
-              <div className="text-center flex-1">
-                <div className="text-[10px] text-dim">{tName(team2Id)}</div>
-                <div className="font-display text-[52px] text-free leading-none">{s2.total}</div>
-              </div>
-            </div>
-            {sets.length > 0 && (
               <div className="flex gap-2">
                 {sets.map((s, i) => (
                   <div key={i} className="flex-1 bg-alt rounded-[10px] p-2 text-center">
@@ -359,8 +358,8 @@ const GameStats = ({
                   </div>
                 ))}
               </div>
-            )}
-          </AppCard>
+            </AppCard>
+          )}
 
           {/* TOP PERFORMERS */}
           <AppCard className="px-3.5 py-3 mb-3">

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Trophy, Flame, Target, Zap, Shield, Hand, X, Check,
-  Volleyball, Undo2, ArrowUpDown, Repeat,
+  Volleyball, Undo2, ArrowUpDown, Repeat, Equal, Activity,
 } from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
 import { AppCard, AppButton, PillTabs, SectionLabel } from "./ui-new";
@@ -18,6 +18,17 @@ const calcLeadStats = (pointLog) => {
     prevLeader = leader;
   });
   return { maxLead, maxLeadTeam, changes };
+};
+
+const calcDynamics = (pointLog) => {
+  let timesTied = 0;
+  let closePoints = 0;
+  pointLog.forEach(e => {
+    const diff = Math.abs(e.t1 - e.t2);
+    if (diff === 0) timesTied++;
+    if (diff <= 2) closePoints++;
+  });
+  return { timesTied, closePoints };
 };
 
 const calcMVP = (allPlayerIds, s1, s2, t1PlayerIds) => {
@@ -118,6 +129,7 @@ const GameStats = ({
   const allIds = [...t1Ids, ...t2Ids];
   const mvp = calcMVP(allIds, s1, s2, t1Ids);
   const leadStats = calcLeadStats(pointLog);
+  const dynStats  = calcDynamics(pointLog);
 
   const POINT_TYPES = [
     { id: "ace",   label: "Ace",         icon: Target },
@@ -443,11 +455,13 @@ const GameStats = ({
               <span className="text-[10px] font-bold text-dim uppercase tracking-wide">How points were won</span>
               <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
             </div>
-            {POINT_TYPES.map(pt => renderStatBar(pt, s1.byType[pt.id], s2.byType[pt.id]))}
+            {POINT_TYPES
+              .filter(pt => (s1.byType[pt.id] || 0) + (s2.byType[pt.id] || 0) > 0)
+              .map(pt => renderStatBar(pt, s1.byType[pt.id], s2.byType[pt.id]))}
             <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
-              <span className="font-bold text-accent">{tName(team1Id)}</span>
-              <span className="text-dim">comparison</span>
-              <span className="font-bold text-free">{tName(team2Id)}</span>
+              <span className="font-bold text-accent">{s1.total}</span>
+              <span className="text-dim">total</span>
+              <span className="font-bold text-free">{s2.total}</span>
             </div>
           </AppCard>
 
@@ -489,30 +503,6 @@ const GameStats = ({
             <SectionLabel>Match dynamics</SectionLabel>
             <div className="flex gap-2">
               <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <ArrowUpDown size={16} className="text-dim mx-auto mb-1.5" />
-                <div className={`font-display text-[24px] leading-none mb-0.5 ${leadStats.maxLeadTeam === 1 ? "text-accent" : leadStats.maxLeadTeam === 2 ? "text-free" : "text-text"}`}>
-                  {leadStats.maxLead > 0 ? `+${leadStats.maxLead}` : "0"}
-                </div>
-                {leadStats.maxLeadTeam && (
-                  <div className="text-[10px] text-dim truncate px-1">
-                    {tName(leadStats.maxLeadTeam === 1 ? team1Id : team2Id).split(" ")[0]}
-                  </div>
-                )}
-                <div className="text-[9px] text-dim uppercase mt-1">Biggest lead</div>
-              </div>
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <Repeat size={16} className="text-dim mx-auto mb-1.5" />
-                <div className="font-display text-[24px] text-text leading-none mb-0.5">
-                  {leadStats.changes}
-                </div>
-                <div className="text-[10px] text-dim">
-                  lead {leadStats.changes === 1 ? "change" : "changes"}
-                </div>
-                <div className="text-[9px] text-dim uppercase mt-1">
-                  {leadStats.changes === 0 ? "No lead change" : leadStats.changes <= 2 ? "Steady match" : "Back & forth"}
-                </div>
-              </div>
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
                 <Flame size={16} className="text-dim mx-auto mb-1.5" />
                 <div className="font-display text-[24px] text-text leading-none mb-0.5">
                   {Math.max(s1.bestStreak, s2.bestStreak)}
@@ -523,6 +513,26 @@ const GameStats = ({
                     : tName(team2Id).split(" ")[0]}
                 </div>
                 <div className="text-[9px] text-dim uppercase mt-1">Best streak</div>
+              </div>
+              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
+                <Equal size={16} className="text-dim mx-auto mb-1.5" />
+                <div className="font-display text-[24px] text-text leading-none mb-0.5">
+                  {dynStats.timesTied}
+                </div>
+                <div className="text-[10px] text-dim">
+                  {dynStats.timesTied > 5 ? "Neck & neck" : dynStats.timesTied >= 2 ? "Some tension" : "Dominated"}
+                </div>
+                <div className="text-[9px] text-dim uppercase mt-1">Times tied</div>
+              </div>
+              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
+                <Activity size={16} className="text-dim mx-auto mb-1.5" />
+                <div className="font-display text-[24px] text-text leading-none mb-0.5">
+                  {dynStats.closePoints}
+                </div>
+                <div className="text-[10px] text-dim">
+                  margin ≤ 2
+                </div>
+                <div className="text-[9px] text-dim uppercase mt-1">Clutch points</div>
               </div>
             </div>
           </AppCard>

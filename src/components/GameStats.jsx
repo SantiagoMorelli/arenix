@@ -111,7 +111,8 @@ const GameStats = ({
       playerPts[pid] = pScored.length;
       playerErrors[pid] = pointLog.filter(e => e.errorPlayerId === pid).length;
     });
-    return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerByType, playerErrors };
+    const unattributed = pts.filter(e => !e.scoringPlayerId).length;
+    return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerByType, playerErrors, unattributed };
   };
 
   const s1 = statFor(1), s2 = statFor(2);
@@ -395,6 +396,18 @@ const GameStats = ({
                   {tName(team1Id)}
                 </div>
                 {t1Ids.map(pid => renderPerformerRow(pid, s1, true, mvp?.pid === pid))}
+                {s1.unattributed > 0 && (
+                  <div className="flex items-center gap-2.5 py-2 border-b border-line last:border-b-0 opacity-50">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold bg-line text-dim">—</div>
+                    <div className="w-[64px] flex-shrink-0 text-[11px] text-dim italic">Rival errors</div>
+                    <div className="flex items-center gap-[6px] flex-1 min-w-0">
+                      <span className="text-[12px] font-bold text-dim w-[26px] text-center">{s1.unattributed}</span>
+                      {["ace","spk","blk","tip","err"].map(k => (
+                        <span key={k} className="text-[11px] text-dim/40 w-[26px] text-center">—</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -405,6 +418,18 @@ const GameStats = ({
                   {tName(team2Id)}
                 </div>
                 {t2Ids.map(pid => renderPerformerRow(pid, s2, false, mvp?.pid === pid))}
+                {s2.unattributed > 0 && (
+                  <div className="flex items-center gap-2.5 py-2 border-b border-line last:border-b-0 opacity-50">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold bg-line text-dim">—</div>
+                    <div className="w-[64px] flex-shrink-0 text-[11px] text-dim italic">Rival errors</div>
+                    <div className="flex items-center gap-[6px] flex-1 min-w-0">
+                      <span className="text-[12px] font-bold text-dim w-[26px] text-center">{s2.unattributed}</span>
+                      {["ace","spk","blk","tip","err"].map(k => (
+                        <span key={k} className="text-[11px] text-dim/40 w-[26px] text-center">—</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

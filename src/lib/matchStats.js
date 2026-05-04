@@ -216,6 +216,69 @@ export function calcServeTimeline(pid, pointLog) {
     }));
 }
 
+// ── Match dynamics moment lists ─────────────────────────────────────────────
+
+// The longest streak in the match: which team scored it and the contributing
+// points. Returns { team: 1|2|null, length, points: [...] }.
+export function calcBestStreakRun(pointLog) {
+  let bestLen = 0, bestTeam = null, bestStart = -1;
+  let curLen = 0, curTeam = null, curStart = 0;
+  pointLog.forEach((e, i) => {
+    if (e.team === curTeam) {
+      curLen++;
+    } else {
+      curTeam = e.team;
+      curLen = 1;
+      curStart = i;
+    }
+    if (curLen > bestLen) {
+      bestLen = curLen;
+      bestTeam = curTeam;
+      bestStart = curStart;
+    }
+  });
+  if (bestStart < 0) return { team: null, length: 0, points: [] };
+  return {
+    team: bestTeam,
+    length: bestLen,
+    points: pointLog.slice(bestStart, bestStart + bestLen),
+  };
+}
+
+// Every point where the score was tied immediately AFTER that point landed.
+export function calcTiedMoments(pointLog) {
+  return pointLog.filter(e => e.t1 === e.t2);
+}
+
+// Every point played within a 2-point margin (inclusive). Useful for "clutch".
+export function calcClutchMoments(pointLog) {
+  return pointLog.filter(e => Math.abs(e.t1 - e.t2) <= 2);
+}
+
+// Every point where `pid` either scored or made the error.
+// Returns entries with a `kind` flag: "scored" | "error".
+export function calcMvpMoments(pid, pointLog) {
+  const out = [];
+  pointLog.forEach(e => {
+    if (e.scoringPlayerId === pid) out.push({ ...e, kind: "scored" });
+    else if (e.errorPlayerId === pid) out.push({ ...e, kind: "error" });
+  });
+  return out;
+}
+
+// The runner-up to MVP by net pts. Same scoring rule as calcMVP, returns the
+// 2nd-place entry or null.
+export function calcRunnerUp(allPlayerIds, s1, s2, t1PlayerIds, mvpPid) {
+  const ranked = allPlayerIds
+    .filter(pid => pid !== mvpPid)
+    .map(pid => {
+      const st = t1PlayerIds.includes(pid) ? s1 : s2;
+      return { pid, net: (st.playerPts[pid] || 0) - (st.playerErrors[pid] || 0) };
+    })
+    .sort((a, b) => b.net - a.net);
+  return ranked[0] || null;
+}
+
 // Streak metrics over a serve timeline.
 //   longest  = longest run of consecutive won serves
 //   trailing = current run at the end of the timeline (won or lost; sign via .won)

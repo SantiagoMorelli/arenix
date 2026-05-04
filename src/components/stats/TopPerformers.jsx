@@ -1,14 +1,10 @@
-import { useState, useMemo } from "react";
-import { Flame, Target, TrendingUp, Users, Volleyball } from "lucide-react";
+import { Flame, Target, TrendingUp, Users } from "lucide-react";
 import { AppCard, SectionLabel } from "../ui-new";
 import ExpandableStatCard from "./ExpandableStatCard";
 import MiniSparkline from "./MiniSparkline";
 import {
   calcClutchPoints, calcPeakWindow, calcCumulativeSeries, calcHeadToHead,
 } from "../../lib/matchStats";
-import { formatDuration } from "../../lib/utils";
-import { POINT_TYPE_BY_ID } from "./pointTypes";
-import PlayerDonutChart, { SLICE_LABELS_PLURAL } from "./PlayerDonutChart";
 
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
@@ -148,108 +144,17 @@ function StatChip({ value, bold, color = "text-dim" }) {
 // ── Detail panel ───────────────────────────────────────────────────────────
 
 function PerformerDetail({ pid, isTeam1, pointLog, teammatePid, rivalPid, firstName }) {
-  const [activeType, setActiveType] = useState(null);
-  const [selectedInlineId, setSelectedInlineId] = useState(null);
-
+  const clutch = calcClutchPoints(pid, pointLog);
+  const peak = calcPeakWindow(pid, pointLog, 5);
+  const series = calcCumulativeSeries(pid, pointLog);
   const accent = isTeam1 ? "text-accent" : "text-free";
   const teamSparkColor = isTeam1 ? "var(--color-accent, #F5A623)" : "var(--color-free, #00BCD4)";
-
-  const byType = useMemo(() => ({
-    ace:   pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === "ace").length,
-    spike: pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === "spike").length,
-    block: pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === "block").length,
-    tip:   pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === "tip").length,
-  }), [pid, pointLog]);
-
-  const errors = useMemo(
-    () => pointLog.filter(e => e.errorPlayerId === pid).length,
-    [pid, pointLog],
-  );
-
-  const filteredPoints = useMemo(() => {
-    if (!activeType) return [];
-    if (activeType === "error") return pointLog.filter(e => e.errorPlayerId === pid);
-    return pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === activeType);
-  }, [activeType, pid, pointLog]);
-
-  const startTs = pointLog[0]?.timestamp;
-
-  const clutch = calcClutchPoints(pid, pointLog);
-  const peak   = calcPeakWindow(pid, pointLog, 5);
-  const series = calcCumulativeSeries(pid, pointLog);
 
   const teammateH2H = teammatePid ? calcHeadToHead(pid, teammatePid, pointLog) : null;
   const rivalH2H    = rivalPid    ? calcHeadToHead(pid, rivalPid,    pointLog) : null;
 
-  const handleTypeSelect = (type) => {
-    setActiveType(type);
-    setSelectedInlineId(null);
-  };
-
   return (
     <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2">
-      {/* Donut chart */}
-      <PlayerDonutChart
-        byType={byType}
-        errors={errors}
-        activeType={activeType}
-        onTypeSelect={handleTypeSelect}
-      />
-
-      {/* Filtered point list */}
-      {activeType && filteredPoints.length > 0 && (
-        <div className="mb-3 rounded-[8px] overflow-hidden border border-line/60">
-          <div className="bg-alt px-2.5 py-1.5">
-            <span className="text-[9px] font-bold text-dim uppercase tracking-wide">
-              {SLICE_LABELS_PLURAL[activeType]} · {filteredPoints.length} {filteredPoints.length === 1 ? "moment" : "moments"}
-            </span>
-          </div>
-          {filteredPoints.map(e => {
-            const isSelected  = e.id === selectedInlineId;
-            const tOfMatch    = startTs && e.timestamp ? formatDuration(e.timestamp - startTs) : null;
-            const ptType      = POINT_TYPE_BY_ID[e.pointType];
-            const PtIcon      = ptType?.icon || Volleyball;
-            const isErr       = e.pointType === "error";
-            const attributedId = isErr ? e.errorPlayerId : e.scoringPlayerId;
-            return (
-              <div key={e.id} className="border-b border-line last:border-b-0">
-                <button
-                  type="button"
-                  onClick={() => setSelectedInlineId(isSelected ? null : e.id)}
-                  className="flex items-center gap-2.5 w-full px-2.5 py-2 bg-transparent border-0 cursor-pointer text-left"
-                >
-                  <span className="font-display text-[14px] leading-none text-text w-9 flex-shrink-0 tabular-nums">
-                    {e.t1}–{e.t2}
-                  </span>
-                  <PtIcon size={11} className={`flex-shrink-0 ${isTeam1 ? "text-accent" : "text-free"}`} />
-                  <span className="text-[11px] text-dim flex-1 truncate">
-                    {[tOfMatch, attributedId && firstName(attributedId)].filter(Boolean).join(" · ")}
-                  </span>
-                  {e.serverPlayerId && (
-                    <span className="text-[9px] text-dim/50 flex-shrink-0 tabular-nums">
-                      Srv {firstName(e.serverPlayerId)}
-                    </span>
-                  )}
-                </button>
-
-                {isSelected && (
-                  <div className="bg-bg/80 px-2.5 py-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
-                    <MiniRow label={isErr ? "Error by" : "Scored by"} value={attributedId ? firstName(attributedId) : "—"} />
-                    <MiniRow label="Server" value={e.serverPlayerId ? firstName(e.serverPlayerId) : "—"} />
-                    {e.setNum != null && <MiniRow label="Set" value={`Set ${e.setNum + 1}`} />}
-                    {tOfMatch && <MiniRow label="Time" value={tOfMatch} />}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {activeType && filteredPoints.length === 0 && (
-        <p className="text-[11px] text-dim text-center py-2 mb-3">No moments recorded</p>
-      )}
-
       {/* 2x2 stat grid */}
       <div className="grid grid-cols-2 gap-2 mb-2.5">
         <DetailStat
@@ -304,15 +209,6 @@ function PerformerDetail({ pid, isTeam1, pointLog, teammatePid, rivalPid, firstN
           />
         </div>
       )}
-    </div>
-  );
-}
-
-function MiniRow({ label, value }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[8px] font-bold text-dim uppercase tracking-wide">{label}</span>
-      <span className="text-[11px] text-text">{value}</span>
     </div>
   );
 }

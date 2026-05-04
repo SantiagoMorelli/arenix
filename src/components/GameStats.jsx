@@ -1,53 +1,18 @@
 import React, { useState } from "react";
 import {
-  Trophy, Flame, Target, Zap, Shield, Hand, X, Check,
-  Volleyball, Undo2, ArrowUpDown, Repeat, Equal, Activity,
+  Trophy, Flame, X, Check,
+  Volleyball, Undo2, Equal, Activity,
 } from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
 import { AppCard, AppButton, PillTabs, SectionLabel } from "./ui-new";
-
-// ── Pure stat helpers ──────────────────────────────────────────────────────────
-
-const calcLeadStats = (pointLog) => {
-  let maxLead = 0, maxLeadTeam = null, changes = 0, prevLeader = null;
-  pointLog.forEach(e => {
-    const diff = e.t1 - e.t2;
-    const leader = diff > 0 ? 1 : diff < 0 ? 2 : prevLeader;
-    if (Math.abs(diff) > maxLead) { maxLead = Math.abs(diff); maxLeadTeam = diff > 0 ? 1 : 2; }
-    if (leader && prevLeader !== null && leader !== prevLeader) changes++;
-    prevLeader = leader;
-  });
-  return { maxLead, maxLeadTeam, changes };
-};
-
-const calcDynamics = (pointLog) => {
-  let timesTied = 0;
-  let closePoints = 0;
-  pointLog.forEach(e => {
-    const diff = Math.abs(e.t1 - e.t2);
-    if (diff === 0) timesTied++;
-    if (diff <= 2) closePoints++;
-  });
-  return { timesTied, closePoints };
-};
-
-const calcMVP = (allPlayerIds, s1, s2, t1PlayerIds) => {
-  return allPlayerIds
-    .map(pid => {
-      const st = t1PlayerIds.includes(pid) ? s1 : s2;
-      return { pid, net: (st.playerPts[pid] || 0) - (st.playerErrors[pid] || 0) };
-    })
-    .sort((a, b) => b.net - a.net)[0] || null;
-};
-
-const calcServeStats = (pointLog, pid) => {
-  const serves = pointLog.filter(e => e.team && e.serverPlayerId === pid);
-  const wins = serves.filter(e => e.team === e.serverTeam).length;
-  const aces = serves.filter(e => e.pointType === "ace").length;
-  return { count: serves.length, pct: serves.length ? Math.round(wins / serves.length * 100) : 0, aces };
-};
-
-// ── Component ──────────────────────────────────────────────────────────────────
+import {
+  calcLeadStats, calcDynamics, calcMVP,
+} from "../lib/matchStats";
+import { POINT_TYPES } from "./stats/pointTypes";
+import MatchFlow from "./stats/MatchFlow";
+import MatchHighlights from "./stats/MatchHighlights";
+import TopPerformers from "./stats/TopPerformers";
+import ServeBreakdown from "./stats/ServeBreakdown";
 
 const GameStats = ({
   winner,
@@ -66,8 +31,8 @@ const GameStats = ({
 }) => {
   const [tab, setTab] = useState("overview");
 
-  const getTeam    = id => teams.find(tm => tm.id === id);
-  const getPlayer  = id => {
+  const getTeam   = id => teams.find(tm => tm.id === id);
+  const getPlayer = id => {
     if (id && id.startsWith("free_")) return { id, name: id.slice(5) };
     return players.find(p => p.id === id);
   };
@@ -107,7 +72,6 @@ const GameStats = ({
         block: pScored.filter(e => e.pointType === "block").length,
         tip:   pScored.filter(e => e.pointType === "tip").length,
       };
-      // PTS = ace + spike + block + tip (active contributions only, not opponent errors)
       playerPts[pid] = pScored.length;
       playerErrors[pid] = pointLog.filter(e => e.errorPlayerId === pid).length;
     });
@@ -116,7 +80,6 @@ const GameStats = ({
   };
 
   const s1 = statFor(1), s2 = statFor(2);
-  // Derive winner from sets array (ground truth) — avoids any prop value ambiguity
   const derivedWinnerTeam = t1Sets > t2Sets ? 1 : t2Sets > t1Sets ? 2 : (winner === 1 ? 1 : 2);
   const winnerIsTeam1 = derivedWinnerTeam === 1;
   const winnerColor = winnerIsTeam1 ? "text-accent" : "text-free";
@@ -131,14 +94,6 @@ const GameStats = ({
   const mvp = calcMVP(allIds, s1, s2, t1Ids);
   const leadStats = calcLeadStats(pointLog);
   const dynStats  = calcDynamics(pointLog);
-
-  const POINT_TYPES = [
-    { id: "ace",   label: "Ace",         icon: Target },
-    { id: "spike", label: "Spike",       icon: Zap    },
-    { id: "block", label: "Block",       icon: Shield },
-    { id: "tip",   label: "Tip",         icon: Hand   },
-    { id: "error", label: "Rival error", icon: X      },
-  ];
 
   const renderStatBar = (pt, v1, v2) => {
     const total = (v1 || 0) + (v2 || 0) || 1;
@@ -160,43 +115,9 @@ const GameStats = ({
     );
   };
 
-  // ── Performer row (design handoff §5.3: avatar + name + stats + flame) ──────
-  const renderPerformerRow = (pid, stat, isTeam1, isMVP) => {
-    const pts  = stat.playerPts[pid] || 0;
-    const bt   = stat.playerByType[pid] || {};
-    const err  = stat.playerErrors[pid] || 0;
-    const initials = firstName(pid).slice(0, 2).toUpperCase();
-    const avatarBg   = isTeam1 ? "bg-accent/20 text-accent" : "bg-free/20 text-free";
-    const teamColor  = isTeam1 ? "text-accent" : "text-free";
-
-    return (
-      <div key={pid} className="flex items-center gap-2.5 py-2.5 border-b border-line last:border-b-0">
-        {/* Avatar */}
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${avatarBg}`}>
-          {initials}
-        </div>
-        {/* Name + MVP flame */}
-        <div className="flex items-center gap-1 min-w-0 w-[64px] flex-shrink-0">
-          <span className="text-[12px] font-semibold text-text truncate">{firstName(pid)}</span>
-          {isMVP && <Flame size={12} className={teamColor} />}
-        </div>
-        {/* Stats chips */}
-        <div className="flex items-center gap-[6px] flex-1 min-w-0 flex-wrap">
-          <StatChip label="PTS" value={pts} bold color="text-text" />
-          <StatChip label="ACE" value={bt.ace   || 0} />
-          <StatChip label="SPK" value={bt.spike || 0} />
-          <StatChip label="BLK" value={bt.block || 0} />
-          <StatChip label="TIP" value={bt.tip   || 0} />
-          <StatChip label="ERR" value={err} color={err > 0 ? "text-error" : "text-dim"} />
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div>
 
-      {/* ── Undo confirmation strip ── */}
       {pendingUndo && (
         <div className="bg-error text-white px-4 py-2.5 flex items-center justify-between text-[13px] font-bold rounded-xl mb-3">
           <span>Undo last point?</span>
@@ -207,7 +128,6 @@ const GameStats = ({
         </div>
       )}
 
-      {/* ── Undo last point ── */}
       {hasHistory && !pendingUndo && (
         <button
           onClick={onRequestUndo}
@@ -218,7 +138,6 @@ const GameStats = ({
         </button>
       )}
 
-      {/* ── Pill tabs ── */}
       <PillTabs
         items={[
           { id: "overview", label: "Overview" },
@@ -230,7 +149,6 @@ const GameStats = ({
         className="mb-3"
       />
 
-      {/* ── Overview tab ── */}
       {tab === "overview" && (
         <>
           {/* Winner banner */}
@@ -282,67 +200,28 @@ const GameStats = ({
               </>
             )}
 
-            {/* Score Momentum Strip */}
-            {pointLog.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-line/60">
-                <div className="text-[9px] text-dim uppercase tracking-wide mb-1.5">Match flow</div>
-                <div className="flex flex-wrap gap-[2px] justify-center">
-                  {pointLog.map(e => (
-                    <div
-                      key={e.id}
-                      className={`w-[5px] h-[5px] rounded-[1px] ${e.team === 1 ? "bg-accent" : "bg-free"}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            <MatchFlow
+              pointLog={pointLog}
+              getPlayer={getPlayer}
+              getTeam={getTeam}
+              team1Id={team1Id}
+              team2Id={team2Id}
+            />
           </div>
 
-          {/* Match Highlights */}
-          <AppCard className="px-3.5 py-3 mb-3">
-            <SectionLabel>Match highlights</SectionLabel>
-            <div className="flex gap-2">
-              {/* MVP */}
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <Flame size={14} className={mvp && t1Ids.includes(mvp.pid) ? "text-accent mx-auto mb-1" : "text-free mx-auto mb-1"} />
-                <div className="text-[12px] font-bold text-text leading-tight">
-                  {mvp ? firstName(mvp.pid) : "—"}
-                </div>
-                {mvp && (
-                  <div className="text-[10px] text-dim mt-0.5">
-                    {mvp.net > 0 ? "+" : ""}{mvp.net} net pts
-                  </div>
-                )}
-                <div className="text-[9px] text-dim uppercase mt-1">MVP</div>
-              </div>
-              {/* Biggest Lead */}
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <ArrowUpDown size={14} className="text-dim mx-auto mb-1" />
-                <div className={`text-[12px] font-bold leading-tight ${leadStats.maxLeadTeam === 1 ? "text-accent" : leadStats.maxLeadTeam === 2 ? "text-free" : "text-text"}`}>
-                  {leadStats.maxLead > 0 ? `+${leadStats.maxLead}` : "—"}
-                </div>
-                {leadStats.maxLeadTeam && leadStats.maxLead > 0 && (
-                  <div className="text-[10px] text-dim mt-0.5 truncate px-1">
-                    {tName(leadStats.maxLeadTeam === 1 ? team1Id : team2Id).split(" ")[0]}
-                  </div>
-                )}
-                <div className="text-[9px] text-dim uppercase mt-1">Biggest lead</div>
-              </div>
-              {/* Lead Changes */}
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <Repeat size={14} className="text-dim mx-auto mb-1" />
-                <div className="text-[12px] font-bold text-text leading-tight">
-                  {leadStats.changes}
-                </div>
-                <div className="text-[10px] text-dim mt-0.5">
-                  {leadStats.changes === 1 ? "time" : "times"}
-                </div>
-                <div className="text-[9px] text-dim uppercase mt-1">Lead changes</div>
-              </div>
-            </div>
-          </AppCard>
+          <MatchHighlights
+            pointLog={pointLog}
+            mvp={mvp}
+            leadStats={leadStats}
+            t1Ids={t1Ids}
+            getPlayer={getPlayer}
+            getTeam={getTeam}
+            team1Id={team1Id}
+            team2Id={team2Id}
+            teamPlayerStats={{ 1: s1, 2: s2 }}
+          />
 
-          {/* Total points — only shown for multi-set; 1-set score is already in the banner */}
+          {/* Total points — multi-set only; single-set score is in the banner */}
           {sets.length > 1 && (
             <AppCard className="px-3.5 py-3 mb-3">
               <SectionLabel color="accent">Total points</SectionLabel>
@@ -374,106 +253,34 @@ const GameStats = ({
             </AppCard>
           )}
 
-          {/* TOP PERFORMERS */}
-          <AppCard className="px-3.5 py-3 mb-3">
-            <SectionLabel>Top performers</SectionLabel>
+          <TopPerformers
+            pointLog={pointLog}
+            s1={s1}
+            s2={s2}
+            t1Ids={t1Ids}
+            t2Ids={t2Ids}
+            mvp={mvp}
+            getPlayer={getPlayer}
+            getTeam={getTeam}
+            team1Id={team1Id}
+            team2Id={team2Id}
+          />
 
-            {/* Column header */}
-            <div className="flex items-center gap-2.5 pb-1.5 mb-0.5">
-              <div className="w-7 flex-shrink-0" />
-              <div className="w-[64px] flex-shrink-0" />
-              <div className="flex items-center gap-[6px] flex-1 flex-wrap">
-                {["PTS","ACE","SPK","BLK","TIP","ERR"].map(h => (
-                  <span key={h} className={`text-[8px] font-bold uppercase tracking-wide w-[26px] text-center ${h === "ERR" ? "text-error/60" : "text-dim/60"}`}>{h}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Team 1 */}
-            {t1Ids.length > 0 && (
-              <>
-                <div className="text-[9px] font-bold text-accent uppercase tracking-wide mb-0.5 pl-[37px]">
-                  {tName(team1Id)}
-                </div>
-                {t1Ids.map(pid => renderPerformerRow(pid, s1, true, mvp?.pid === pid))}
-                {s1.unattributed > 0 && (
-                  <div className="flex items-center gap-2.5 py-2 border-b border-line last:border-b-0 opacity-50">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold bg-line text-dim">—</div>
-                    <div className="w-[64px] flex-shrink-0 text-[11px] text-dim italic">Rival errors</div>
-                    <div className="flex items-center gap-[6px] flex-1 min-w-0">
-                      <span className="text-[12px] font-bold text-dim w-[26px] text-center">{s1.unattributed}</span>
-                      {["ace","spk","blk","tip","err"].map(k => (
-                        <span key={k} className="text-[11px] text-dim/40 w-[26px] text-center">—</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Team 2 */}
-            {t2Ids.length > 0 && (
-              <>
-                <div className={`text-[9px] font-bold text-free uppercase tracking-wide mb-0.5 pl-[37px] ${t1Ids.length > 0 ? "mt-2" : ""}`}>
-                  {tName(team2Id)}
-                </div>
-                {t2Ids.map(pid => renderPerformerRow(pid, s2, false, mvp?.pid === pid))}
-                {s2.unattributed > 0 && (
-                  <div className="flex items-center gap-2.5 py-2 border-b border-line last:border-b-0 opacity-50">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold bg-line text-dim">—</div>
-                    <div className="w-[64px] flex-shrink-0 text-[11px] text-dim italic">Rival errors</div>
-                    <div className="flex items-center gap-[6px] flex-1 min-w-0">
-                      <span className="text-[12px] font-bold text-dim w-[26px] text-center">{s2.unattributed}</span>
-                      {["ace","spk","blk","tip","err"].map(k => (
-                        <span key={k} className="text-[11px] text-dim/40 w-[26px] text-center">—</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Serve breakdown */}
-            {allIds.length > 0 && (
-              <>
-                <div className="mt-3 pt-3 border-t border-line">
-                  <SectionLabel>Serve breakdown</SectionLabel>
-                  <div className="rounded-[10px] overflow-hidden border border-line">
-                    <div className="flex px-2.5 py-1.5 bg-alt">
-                      <span className="flex-1 text-[9px] font-bold text-dim">PLAYER</span>
-                      <span className="w-10 text-[9px] font-bold text-dim text-center">SRV</span>
-                      <span className="w-12 text-[9px] font-bold text-dim text-center">WIN%</span>
-                      <span className="w-10 text-[9px] font-bold text-dim text-center">ACES</span>
-                    </div>
-                    {allIds.map(pid => {
-                      const isTeam1 = t1Ids.includes(pid);
-                      const sv = calcServeStats(pointLog, pid);
-                      return (
-                        <div key={pid} className="flex items-center px-2.5 py-[7px] border-b border-line last:border-b-0">
-                          <div className="flex-1 flex items-center gap-[5px] min-w-0">
-                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isTeam1 ? "bg-accent" : "bg-free"}`} />
-                            <span className="text-[11px] text-text truncate">{firstName(pid)}</span>
-                          </div>
-                          <span className="w-10 text-[11px] text-dim text-center">{sv.count}</span>
-                          <span className={`w-12 text-[11px] font-bold text-center ${sv.pct >= 60 ? "text-success" : sv.pct >= 40 ? "text-text" : "text-error"}`}>
-                            {sv.count ? `${sv.pct}%` : "—"}
-                          </span>
-                          <span className="w-10 text-[11px] text-dim text-center">{sv.aces}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-          </AppCard>
+          {allIds.length > 0 && (
+            <AppCard className="px-3.5 py-3 mb-3">
+              <ServeBreakdown
+                pointLog={pointLog}
+                allIds={allIds}
+                t1Ids={t1Ids}
+                getPlayer={getPlayer}
+              />
+            </AppCard>
+          )}
         </>
       )}
 
-      {/* ── Stats tab ── */}
       {tab === "stats" && (
         <>
-          {/* Points by type */}
           <AppCard className="px-3.5 py-3 mb-3">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
@@ -490,7 +297,6 @@ const GameStats = ({
             </div>
           </AppCard>
 
-          {/* Serve efficiency */}
           <AppCard className="px-3.5 py-3 mb-3">
             <SectionLabel>Serve efficiency</SectionLabel>
             <div className="flex gap-2">
@@ -523,7 +329,6 @@ const GameStats = ({
             </div>
           </AppCard>
 
-          {/* Match Dynamics */}
           <AppCard className="px-3.5 py-3 mb-3">
             <SectionLabel>Match dynamics</SectionLabel>
             <div className="flex gap-2">
@@ -562,7 +367,6 @@ const GameStats = ({
             </div>
           </AppCard>
 
-          {/* Timing */}
           {(matchDuration || longestRally) && (
             <AppCard className="px-3.5 py-3 mb-3">
               <SectionLabel>Timing</SectionLabel>
@@ -589,7 +393,6 @@ const GameStats = ({
         </>
       )}
 
-      {/* ── History tab ── */}
       {tab === "history" && (
         <AppCard className="p-0 overflow-hidden mb-3">
           <div className="px-3.5 py-2.5 bg-alt text-[12px] font-bold text-accent tracking-wide uppercase">
@@ -633,7 +436,6 @@ const GameStats = ({
         </AppCard>
       )}
 
-      {/* ── CTAs ── */}
       {onSaveResult && activeTourMatchId && (() => {
         const winnerTeamId = winner === 1 ? team1Id : team2Id;
         const finalS1 = sets.reduce((acc, s) => acc + (s.winner === 1 ? 1 : 0), 0);
@@ -667,12 +469,5 @@ const GameStats = ({
     </div>
   );
 };
-
-// ── Tiny helper component for stat chips ──────────────────────────────────────
-const StatChip = ({ label, value, bold, color = "text-dim" }) => (
-  <div className="flex flex-col items-center w-[26px]">
-    <span className={`text-[11px] ${bold ? "font-bold text-text" : `font-semibold ${color}`}`}>{value}</span>
-  </div>
-);
 
 export default GameStats;

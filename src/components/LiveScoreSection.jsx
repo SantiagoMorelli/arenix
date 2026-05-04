@@ -1,5 +1,6 @@
 import React from "react";
 import { useLiveGame, loadSaved } from "../hooks/useLiveGame";
+import { ERROR_SUBTYPES } from "../hooks/liveGame/pointTypes";
 import GameSetupScreen from "./GameSetupScreen";
 import GameStats from "./GameStats";
 import ScoreBoard from "./ScoreBoard";
@@ -18,10 +19,11 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     score1, score2, serveIndex, side, points,
     log, logRef, sets, winner, pointsToWin, history,
     pendingSideChange, pendingUndo, pendingPoint, setPendingPoint,
-    pendingPlayerSelect,
+    pendingErrorSubtype, pendingPlayerSelect,
     pendingEnd,
     serveRotation, currentServer, playerName, tName, POINT_TYPES,
-    addPoint, confirmPointType, confirmPlayer, confirmSideChange,
+    addPoint, confirmPointType, confirmErrorSubtype, cancelErrorSubtype,
+    confirmPlayer, confirmSideChange,
     reset, requestUndo, confirmUndo, cancelUndo,
     requestEnd, confirmEnd, cancelEnd,
   } = useLiveGame({ teams, players, informalMode: false, tournamentMatches, preloadMatchId, setsPerMatch });
@@ -273,6 +275,45 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
             </button>
             <button
               onClick={() => setPendingPoint(null)}
+              className="w-full bg-transparent border-0 text-dim text-[14px] cursor-pointer py-1.5"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Error subtype bottom sheet ── */}
+      {pendingErrorSubtype && (
+        <div className="fixed inset-0 z-[200] bg-black/60 flex items-end justify-center">
+          <div className="bg-bg rounded-t-[24px] px-5 pt-4 pb-9 w-full max-w-[480px] shadow-[0_-12px_40px_rgba(0,0,0,0.25)]">
+            <div className="w-9 h-1 bg-alt rounded-full mx-auto mb-3.5" />
+            <div className="text-center mb-4">
+              <div className="inline-block rounded-[10px] px-4 py-1.5 bg-error/10">
+                <div className="text-[11px] text-dim uppercase tracking-wide">Rival error</div>
+                <div className="font-display text-[22px] tracking-wide text-error">
+                  {tName(pendingErrorSubtype.teamNum === 1 ? team2Id : team1Id)}
+                </div>
+              </div>
+            </div>
+            <div className="font-display text-[18px] text-text tracking-wide mb-3.5 text-center">
+              WHAT KIND OF ERROR?
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 mb-3">
+              {ERROR_SUBTYPES.map(es => (
+                <button
+                  key={es.id}
+                  onClick={() => confirmErrorSubtype(es.id)}
+                  className="bg-alt border-2 border-line rounded-[14px] px-2.5 py-3.5 cursor-pointer text-center"
+                >
+                  <div className="text-[26px] mb-1">{es.icon}</div>
+                  <div className="font-bold text-[14px] text-text">{es.label}</div>
+                  <div className="text-[11px] text-dim mt-0.5">{es.desc}</div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={cancelErrorSubtype}
               className="w-full bg-transparent border-0 text-dim text-[14px] cursor-pointer py-1.5"
             >
               Cancel

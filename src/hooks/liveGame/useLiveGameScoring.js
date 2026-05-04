@@ -58,6 +58,7 @@ export function useLiveGameScoring({
   // ── Pending-dialog flags ───────────────────────────────────────────────────
   const [pendingSideChange, setPendingSideChange]     = useState(null);
   const [pendingPoint, setPendingPoint]               = useState(null);
+  const [pendingErrorSubtype, setPendingErrorSubtype] = useState(null);
   const [pendingPlayerSelect, setPendingPlayerSelect] = useState(null);
   const [pendingEnd, setPendingEnd]                   = useState(false);
 
@@ -151,7 +152,7 @@ export function useLiveGameScoring({
   };
 
   // ── resolvePoint ───────────────────────────────────────────────────────────
-  const resolvePoint = (teamNum, ptId, playerId = null) => {
+  const resolvePoint = (teamNum, ptId, playerId = null, errorType = null) => {
     const newS1     = teamNum === 1 ? score1 + 1 : score1;
     const newS2     = teamNum === 2 ? score2 + 1 : score2;
     const newPoints = points + 1;
@@ -190,6 +191,7 @@ export function useLiveGameScoring({
       sideBeforePoint: { ...side }, sideChange: isSideChange, streak,
       scoringPlayerId: ptId !== "error" ? playerId : null,
       errorPlayerId:   ptId === "error" ? playerId : null,
+      errorType:       ptId === "error" ? errorType : null,
       msg: pt.icon + " " + pt.label + " • " + tName(teamNum === 1 ? team1Id : team2Id) + " • " + newS1 + ":" + newS2,
     };
 
@@ -212,16 +214,27 @@ export function useLiveGameScoring({
     setPendingPoint(null);
     if (ptId === "ace") {
       resolvePoint(teamNum, ptId, currentServer.playerId);
+    } else if (ptId === "error") {
+      setPendingErrorSubtype({ teamNum });
     } else {
       setPendingPlayerSelect({ teamNum, ptId });
     }
   };
 
+  const confirmErrorSubtype = (subtypeId) => {
+    if (!pendingErrorSubtype) return;
+    const { teamNum } = pendingErrorSubtype;
+    setPendingErrorSubtype(null);
+    setPendingPlayerSelect({ teamNum, ptId: "error", errorType: subtypeId });
+  };
+
+  const cancelErrorSubtype = () => setPendingErrorSubtype(null);
+
   const confirmPlayer = (playerId) => {
     if (!pendingPlayerSelect) return;
-    const { teamNum, ptId } = pendingPlayerSelect;
+    const { teamNum, ptId, errorType = null } = pendingPlayerSelect;
     setPendingPlayerSelect(null);
-    resolvePoint(teamNum, ptId, playerId);
+    resolvePoint(teamNum, ptId, playerId, errorType);
   };
 
   const confirmSideChange = () => {
@@ -257,6 +270,7 @@ export function useLiveGameScoring({
     setSide({ t1: "left", t2: "right" }); setLog([]); setSets([]);
     setWinner(null); setPointsToWin(initialPointsToWin);
     setPendingSideChange(null); setPendingPoint(null);
+    setPendingErrorSubtype(null);
     setPendingPlayerSelect(null); setPendingEnd(false);
     setLastScoringTeam(null);
   };
@@ -281,10 +295,12 @@ export function useLiveGameScoring({
     // Dialog flags
     pendingSideChange,
     pendingPoint, setPendingPoint,
+    pendingErrorSubtype,
     pendingPlayerSelect,
     pendingEnd,
     // Actions
-    addPoint, confirmPointType, confirmPlayer, confirmSideChange,
+    addPoint, confirmPointType, confirmErrorSubtype, cancelErrorSubtype,
+    confirmPlayer, confirmSideChange,
     requestEnd, confirmEnd, cancelEnd,
     // Internal helpers exposed for composer
     setServeIndex,

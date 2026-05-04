@@ -217,6 +217,7 @@ export function useLiveGame({
     pendingUndo:          undo.pendingUndo,
     pendingPoint:         scoring.pendingPoint,
     setPendingPoint:      scoring.setPendingPoint,
+    pendingErrorSubtype:  scoring.pendingErrorSubtype,
     pendingPlayerSelect:  scoring.pendingPlayerSelect,
     pendingEnd:           scoring.pendingEnd,
 
@@ -229,10 +230,12 @@ export function useLiveGame({
     POINT_TYPES:    scoring.POINT_TYPES,
 
     // Actions
-    addPoint:          scoring.addPoint,
-    confirmPointType:  scoring.confirmPointType,
-    confirmPlayer:     scoring.confirmPlayer,
-    confirmSideChange: scoring.confirmSideChange,
+    addPoint:            scoring.addPoint,
+    confirmPointType:    scoring.confirmPointType,
+    confirmErrorSubtype: scoring.confirmErrorSubtype,
+    cancelErrorSubtype:  scoring.cancelErrorSubtype,
+    confirmPlayer:       scoring.confirmPlayer,
+    confirmSideChange:   scoring.confirmSideChange,
     reset,
     requestUndo:  undo.requestUndo,
     confirmUndo:  undo.confirmUndo,

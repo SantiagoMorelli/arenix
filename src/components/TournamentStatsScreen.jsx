@@ -1,39 +1,35 @@
 import { useMemo, useState } from 'react'
 import {
-  ChevronLeft, Trophy, Medal, Target, Zap, Shield, Bomb,
-  Dumbbell, Flame, RotateCcw, Clock, Volleyball,
+  ChevronLeft, Trophy, Medal, Target, Zap, Shield, Bomb, Hand, Send,
+  Dumbbell, Flame, RotateCcw, Clock, Volleyball, ChevronRight,
 } from 'lucide-react'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings } from '../lib/standings'
 import { getAllMatches } from '../lib/tournament'
+import { computePlayerStats, rankPlayersByStat } from '../lib/tournamentStats'
 import { AppCard, SectionLabel } from './ui-new'
 import TieBreakerControls from './standings/TieBreakerControls'
+import AwardRankingSheet from './stats/AwardRankingSheet'
+import MatchBreakdownSheet from './stats/MatchBreakdownSheet'
+import TeamDetailSheet from './stats/TeamDetailSheet'
+import PlayerTournamentDetailSheet from './stats/PlayerTournamentDetailSheet'
+
+// ─── Awards configuration ────────────────────────────────────────────────────
+// Add a new award by appending an entry. `gateKey` + `minThreshold` filter out
+// players that don't meet the qualifier (e.g. "Most Efficient Server" needs
+// at least 10 serves before its win-rate is meaningful).
+const TOURNAMENT_AWARDS = [
+  { id: 'top-scorer',      title: 'Top Scorer',          Icon: Trophy, statKey: 'points',      valueLabel: 'pts'    },
+  { id: 'ace-king',        title: 'Ace King',            Icon: Target, statKey: 'aces',        valueLabel: 'aces'   },
+  { id: 'spike-machine',   title: 'Spike Machine',       Icon: Zap,    statKey: 'spikes',      valueLabel: 'spikes' },
+  { id: 'block-master',    title: 'Block Master',        Icon: Shield, statKey: 'blocks',      valueLabel: 'blocks' },
+  { id: 'tip-master',      title: 'Tip Master',          Icon: Hand,   statKey: 'tips',        valueLabel: 'tips'   },
+  { id: 'efficient-server',title: 'Most Efficient Server', Icon: Send, statKey: 'serveWinPct', valueLabel: '%',
+    minThreshold: 10, gateKey: 'serves', secondaryKey: 'serves', secondaryLabel: 'serves' },
+  { id: 'glass-cannon',    title: 'Glass Cannon',        Icon: Bomb,   statKey: 'errors',      valueLabel: 'errors', funny: true },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function computePlayerStats(allMatches) {
-  const stats = {}
-  for (const m of allMatches) {
-    if (!m.played || !m.log?.length) continue
-    for (const entry of m.log) {
-      if (entry.scoringPlayerId) {
-        const pid = entry.scoringPlayerId
-        if (!stats[pid]) stats[pid] = { points: 0, aces: 0, spikes: 0, blocks: 0, tips: 0, errors: 0 }
-        stats[pid].points++
-        if (entry.pointType === 'ace')   stats[pid].aces++
-        if (entry.pointType === 'spike') stats[pid].spikes++
-        if (entry.pointType === 'block') stats[pid].blocks++
-        if (entry.pointType === 'tip')   stats[pid].tips++
-      }
-      if (entry.errorPlayerId) {
-        const pid = entry.errorPlayerId
-        if (!stats[pid]) stats[pid] = { points: 0, aces: 0, spikes: 0, blocks: 0, tips: 0, errors: 0 }
-        stats[pid].errors++
-      }
-    }
-  }
-  return stats
-}
 
 function computeMatchRecords(allMatches) {
   const played = allMatches.filter(m => m.played && m.team1 && m.team2)
@@ -180,15 +176,19 @@ function Podium({ tournament, leaguePlayers }) {
 }
 
 function AwardCard(props) {
-  const { Icon, title, playerName, value, valueLabel, funny = false } = props
+  const { Icon, title, playerName, value, valueLabel, funny = false, onClick } = props
   const accentText = funny ? 'text-error' : 'text-accent'
   return (
     <AppCard
-      className={`rounded-2xl p-4 flex flex-col gap-1.5 ${
+      className={`rounded-2xl p-4 flex flex-col gap-1.5 cursor-pointer active:opacity-80 transition-opacity ${
         funny ? 'bg-error/10 border-error/30' : ''
       }`}
+      onClick={onClick}
     >
-      <Icon size={22} className={accentText} />
+      <div className="flex items-center justify-between">
+        <Icon size={22} className={accentText} />
+        <ChevronRight size={14} className="text-dim" />
+      </div>
       <div className={`text-[10px] font-bold uppercase tracking-[0.5px] ${accentText}`}>
         {title}
       </div>
@@ -200,34 +200,20 @@ function AwardCard(props) {
   )
 }
 
-function Awards({ playerStats, leaguePlayers }) {
-  const playerName = pid => {
-    const p = leaguePlayers.find(x => x.id === pid)
-    return p ? (p.displayName || p.nickname || p.name) : 'Unknown'
-  }
+function Awards({ playerStats, leaguePlayers, onSelectAward }) {
+  const cards = TOURNAMENT_AWARDS.map(award => {
+    const ranked = rankPlayersByStat(playerStats, award.statKey, {
+      leaguePlayers,
+      minThreshold: award.minThreshold || 0,
+      gateKey: award.gateKey,
+      secondaryKey: award.secondaryKey,
+    })
+    if (!ranked.length) return null
+    const winner = ranked[0]
+    return { award, winner, ranked }
+  }).filter(Boolean)
 
-  const best = (key) => {
-    const entries = Object.entries(playerStats)
-    if (!entries.length) return null
-    const [pid, val] = entries.reduce((best, cur) => cur[1][key] > best[1][key] ? cur : best)
-    return val[key] > 0 ? { pid, value: val[key] } : null
-  }
-
-  const topScorer  = best('points')
-  const aceKing    = best('aces')
-  const spikeMach  = best('spikes')
-  const blockMast  = best('blocks')
-  const glassCan   = best('errors')
-
-  const awards = [
-    topScorer && { Icon: Trophy, title: 'Top Scorer',    pid: topScorer.pid, value: topScorer.value, label: 'pts',    funny: false },
-    aceKing   && { Icon: Target, title: 'Ace King',      pid: aceKing.pid,   value: aceKing.value,   label: 'aces',   funny: false },
-    spikeMach && { Icon: Zap,    title: 'Spike Machine', pid: spikeMach.pid, value: spikeMach.value, label: 'spikes', funny: false },
-    blockMast && { Icon: Shield, title: 'Block Master',  pid: blockMast.pid, value: blockMast.value, label: 'blocks', funny: false },
-    glassCan  && { Icon: Bomb,   title: 'Glass Cannon',  pid: glassCan.pid,  value: glassCan.value,  label: 'errors', funny: true  },
-  ].filter(Boolean)
-
-  if (!awards.length) {
+  if (!cards.length) {
     return (
       <div className="px-4 text-[13px] text-dim text-center py-4">
         No live match stats recorded
@@ -238,26 +224,27 @@ function Awards({ playerStats, leaguePlayers }) {
   return (
     <div className="px-4">
       <div className="grid grid-cols-2 gap-3">
-        {awards.map(a => (
+        {cards.map(({ award, winner, ranked }) => (
           <AwardCard
-            key={a.title}
-            Icon={a.Icon}
-            title={a.title}
-            playerName={playerName(a.pid)}
-            value={a.value}
-            valueLabel={a.label}
-            funny={a.funny}
+            key={award.id}
+            Icon={award.Icon}
+            title={award.title}
+            playerName={winner.name}
+            value={winner.value}
+            valueLabel={award.valueLabel}
+            funny={!!award.funny}
+            onClick={() => onSelectAward({ award, ranked })}
           />
         ))}
       </div>
       <div className="text-[11px] text-dim text-center mt-3">
-        Awards based on live matches only
+        Tap an award to see the full ranking
       </div>
     </div>
   )
 }
 
-function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = false }) {
+function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = false, onSelectTeam }) {
   const allMatches = getAllMatches(tournament)
   const rows = calcOverallStandings(tournament.teams, allMatches, leaguePlayers, tbOptions)
 
@@ -281,37 +268,50 @@ function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = fals
             <span className="w-8 text-center text-[10px] font-bold text-dim">PTS</span>
           </div>
         </div>
-        {rows.map((row, i) => (
-          <div
-            key={row.id}
-            className={`flex items-center px-3.5 py-2.5 ${i < rows.length - 1 ? 'border-b border-line' : ''} ${i === 0 ? 'bg-accent/15' : ''}`}
-          >
-            <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>{i + 1}</span>
-            <div className="flex-1 overflow-hidden pr-2">
-              <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
-              {row.playerNames && <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>}
-            </div>
-            <span className="w-6 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
-            <span className="w-6 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
-            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pf}</span>
-            <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pa}</span>
-            <span className={`w-7 text-center text-[13px] font-semibold flex-shrink-0 ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
-              {row.pd > 0 ? '+' + row.pd : row.pd}
-            </span>
-            <span className="w-8 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
-          </div>
-        ))}
+        {rows.map((row, i) => {
+          const team = tournament.teams.find(t => t.id === row.id)
+          return (
+            <button
+              key={row.id}
+              onClick={() => team && onSelectTeam(team)}
+              className={`w-full flex items-center px-3.5 py-2.5 text-left bg-transparent border-0 cursor-pointer active:bg-alt/50 transition-colors ${i < rows.length - 1 ? 'border-b border-line' : ''} ${i === 0 ? 'bg-accent/15' : ''}`}
+            >
+              <span className={`w-[20px] text-[13px] font-bold ${i === 0 ? 'text-accent' : 'text-dim'}`}>{i + 1}</span>
+              <div className="flex-1 overflow-hidden pr-2">
+                <div className="text-[13px] font-semibold text-text truncate">{row.name}</div>
+                {row.playerNames && <div className="text-[10px] text-dim mt-0.5 truncate">{row.playerNames}</div>}
+              </div>
+              <span className="w-6 text-center text-[13px] font-semibold text-success flex-shrink-0">{row.wins}</span>
+              <span className="w-6 text-center text-[13px] font-semibold text-error flex-shrink-0">{row.losses}</span>
+              <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pf}</span>
+              <span className="w-7 text-center text-[13px] font-semibold text-text flex-shrink-0">{row.pa}</span>
+              <span className={`w-7 text-center text-[13px] font-semibold flex-shrink-0 ${row.pd > 0 ? 'text-success' : row.pd < 0 ? 'text-error' : 'text-text'}`}>
+                {row.pd > 0 ? '+' + row.pd : row.pd}
+              </span>
+              <span className="w-8 text-center text-[13px] font-bold text-accent flex-shrink-0">{row.pts}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div className="text-[11px] text-dim text-center mt-3">
+        Tap a team to see player stats
       </div>
     </div>
   )
 }
 
 function RecordCard(props) {
-  const { Icon, title, line1, line2 } = props
+  const { Icon, title, line1, line2, onClick } = props
   if (!line1) return null
   return (
-    <AppCard className="rounded-2xl p-4">
-      <Icon size={20} className="text-accent mb-1.5" />
+    <AppCard
+      className="rounded-2xl p-4 cursor-pointer active:opacity-80 transition-opacity"
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <Icon size={20} className="text-accent" />
+        <ChevronRight size={14} className="text-dim" />
+      </div>
       <div className="text-[10px] font-bold text-accent uppercase tracking-[0.5px] mb-1">{title}</div>
       <div className="text-[13px] font-bold text-text leading-snug">{line1}</div>
       {line2 && <div className="text-[11px] text-dim mt-0.5">{line2}</div>}
@@ -319,7 +319,7 @@ function RecordCard(props) {
   )
 }
 
-function MatchRecords({ records, tournament }) {
+function MatchRecords({ records, tournament, onSelectRecord }) {
   if (!records) return <div className="px-4 text-[13px] text-dim text-center py-4">No matches played yet</div>
 
   const tName = id => tournament.teams.find(t => t.id === id)?.name || '?'
@@ -333,12 +333,14 @@ function MatchRecords({ records, tournament }) {
         title="Most Dominant"
         line1={mostDominant ? `${tName(mostDominant.winner)} wins` : null}
         line2={mostDominant ? `${mostDominant.score1}–${mostDominant.score2} (${dominance} pt gap)` : null}
+        onClick={mostDominant ? () => onSelectRecord({ match: mostDominant, title: 'Most Dominant' }) : undefined}
       />
       <RecordCard
         Icon={Flame}
         title="Highest Scoring"
         line1={highestScoring ? `${tName(highestScoring.team1)} vs ${tName(highestScoring.team2)}` : null}
         line2={highestScoring ? `${highestScoring.score1}–${highestScoring.score2} (${highScore} total pts)` : null}
+        onClick={highestScoring ? () => onSelectRecord({ match: highestScoring, title: 'Highest Scoring' }) : undefined}
       />
       {longestStreak && (
         <RecordCard
@@ -346,6 +348,7 @@ function MatchRecords({ records, tournament }) {
           title="Longest Streak"
           line1={`${longestStreak.streak} in a row`}
           line2={`${tName(longestStreak.team === 1 ? longestStreak.match.team1 : longestStreak.match.team2)} · ${longestStreak.match.label}`}
+          onClick={() => onSelectRecord({ match: longestStreak.match, title: 'Longest Streak' })}
         />
       )}
       {biggestComeback && (
@@ -354,6 +357,7 @@ function MatchRecords({ records, tournament }) {
           title="Best Comeback"
           line1={`${tName(biggestComeback.team)} came back`}
           line2={`Down ${biggestComeback.deficit} pts · ${biggestComeback.match.label}`}
+          onClick={() => onSelectRecord({ match: biggestComeback.match, title: 'Best Comeback' })}
         />
       )}
       {longestGame && (
@@ -362,6 +366,7 @@ function MatchRecords({ records, tournament }) {
           title="Longest Game"
           line1={`${tName(longestGame.match.team1)} vs ${tName(longestGame.match.team2)}`}
           line2={`${formatDuration(longestGame.duration)} · ${longestGame.match.label}`}
+          onClick={() => onSelectRecord({ match: longestGame.match, title: 'Longest Game' })}
         />
       )}
       {longestRally && (
@@ -370,6 +375,7 @@ function MatchRecords({ records, tournament }) {
           title="Longest Rally"
           line1={formatDuration(longestRally.duration)}
           line2={`${tName(longestRally.match.team1)} vs ${tName(longestRally.match.team2)} · ${longestRally.match.label}`}
+          onClick={() => onSelectRecord({ match: longestRally.match, title: 'Longest Rally' })}
         />
       )}
     </div>
@@ -387,6 +393,18 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
   const [localTbOptions, setLocalTbOptions] = useState(DEFAULT_TB)
   const effectiveTbOptions = tbOptions ?? localTbOptions
   const effectiveOnTbOptionsChange = onTbOptionsChange ?? setLocalTbOptions
+
+  // ── Drill-down sheet state ───────────────────────────────────────────────
+  // One state slot keeps the screen simple; only one sheet is ever open.
+  const [activeSheet, setActiveSheet] = useState(null)
+  // shape: { kind: 'award'|'match'|'team'|'player', payload: ... }
+
+  const closeSheet = () => setActiveSheet(null)
+
+  const playerNameOf = (pid) => {
+    const p = leaguePlayers.find(x => x.id === pid)
+    return p ? (p.displayName || p.nickname || p.name) : 'Player'
+  }
 
   return (
     <div className="absolute inset-0 z-[110] bg-bg flex flex-col overflow-hidden">
@@ -426,7 +444,11 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
           <div className="px-4 mb-3">
             <SectionLabel>Player Awards</SectionLabel>
           </div>
-          <Awards playerStats={playerStats} leaguePlayers={leaguePlayers} />
+          <Awards
+            playerStats={playerStats}
+            leaguePlayers={leaguePlayers}
+            onSelectAward={({ award, ranked }) => setActiveSheet({ kind: 'award', payload: { award, ranked } })}
+          />
         </div>
 
         <div className="h-px bg-line mx-4 mb-5" />
@@ -439,7 +461,13 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
           <div className="px-4 mb-3">
             {isAdmin && <TieBreakerControls teams={tournament.teams} value={effectiveTbOptions} onChange={effectiveOnTbOptionsChange} accent="accent" />}
           </div>
-          <StandingsSection tournament={tournament} leaguePlayers={leaguePlayers} tbOptions={effectiveTbOptions} isAdmin={isAdmin} />
+          <StandingsSection
+            tournament={tournament}
+            leaguePlayers={leaguePlayers}
+            tbOptions={effectiveTbOptions}
+            isAdmin={isAdmin}
+            onSelectTeam={(team) => setActiveSheet({ kind: 'team', payload: { team } })}
+          />
         </div>
 
         <div className="h-px bg-line mx-4 mb-5" />
@@ -449,10 +477,60 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
           <div className="px-4 mb-3">
             <SectionLabel>Match Records</SectionLabel>
           </div>
-          <MatchRecords records={records} tournament={tournament} />
+          <MatchRecords
+            records={records}
+            tournament={tournament}
+            onSelectRecord={({ match, title }) => setActiveSheet({ kind: 'match', payload: { match, title } })}
+          />
         </div>
 
       </div>
+
+      {/* ── Drill-down sheets ─────────────────────────────────────────────── */}
+      <AwardRankingSheet
+        open={activeSheet?.kind === 'award'}
+        onClose={closeSheet}
+        title={activeSheet?.payload?.award?.title}
+        Icon={activeSheet?.payload?.award?.Icon}
+        funny={activeSheet?.payload?.award?.funny}
+        valueLabel={activeSheet?.payload?.award?.valueLabel}
+        secondaryLabel={activeSheet?.payload?.award?.secondaryLabel}
+        entries={activeSheet?.payload?.ranked || []}
+      />
+
+      <MatchBreakdownSheet
+        open={activeSheet?.kind === 'match'}
+        onClose={closeSheet}
+        match={activeSheet?.payload?.match}
+        tournament={tournament}
+        leaguePlayers={leaguePlayers}
+        recordTitle={activeSheet?.payload?.title}
+      />
+
+      <TeamDetailSheet
+        open={activeSheet?.kind === 'team'}
+        onClose={closeSheet}
+        team={activeSheet?.payload?.team}
+        allMatches={allMatches}
+        leaguePlayers={leaguePlayers}
+        onSelectPlayer={(pid) => setActiveSheet({
+          kind: 'player',
+          payload: { pid, name: playerNameOf(pid), prevTeam: activeSheet?.payload?.team },
+        })}
+      />
+
+      <PlayerTournamentDetailSheet
+        open={activeSheet?.kind === 'player'}
+        onClose={() => {
+          // Pop back to the team sheet that opened this player view.
+          const prev = activeSheet?.payload?.prevTeam
+          if (prev) setActiveSheet({ kind: 'team', payload: { team: prev } })
+          else closeSheet()
+        }}
+        playerId={activeSheet?.payload?.pid}
+        playerName={activeSheet?.payload?.name}
+        allMatches={allMatches}
+      />
     </div>
   )
 }

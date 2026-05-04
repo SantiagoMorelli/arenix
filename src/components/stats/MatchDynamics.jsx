@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Flame, Equal, Activity, Volleyball } from "lucide-react";
-import { AppCard, SectionLabel } from "../ui-new";
+import { AppCard } from "../ui-new";
 import { formatDuration } from "../../lib/utils";
 import {
   calcBestStreakRun, calcTiedMoments, calcClutchMoments,
 } from "../../lib/matchStats";
 import { POINT_TYPE_BY_ID } from "./pointTypes";
+import { SectionLabelWithHelp } from "./StatInfo";
+import { EXPLANATIONS } from "./explanations";
 
 /**
  * Match Dynamics card (Stats tab). Three tiles share a single inline
@@ -24,6 +26,7 @@ import { POINT_TYPE_BY_ID } from "./pointTypes";
  */
 export default function MatchDynamics({
   pointLog, s1, s2, getTeam, getPlayer, team1Id, team2Id, dynStats,
+  helpMode = false,
 }) {
   const [open, setOpen] = useState(null); // "streak" | "tied" | "clutch" | null
   const tName = id => getTeam(id)?.name || "?";
@@ -44,7 +47,9 @@ export default function MatchDynamics({
 
   return (
     <AppCard className="px-3.5 py-3 mb-3">
-      <SectionLabel>Match dynamics</SectionLabel>
+      <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.matchDynamics}>
+        Match dynamics
+      </SectionLabelWithHelp>
 
       <div className="flex gap-2">
         <Tile

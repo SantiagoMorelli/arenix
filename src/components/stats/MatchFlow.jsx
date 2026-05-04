@@ -4,6 +4,8 @@ import { formatDuration } from "../../lib/utils";
 import { cumulativeMargin } from "../../lib/matchStats";
 import MiniSparkline from "./MiniSparkline";
 import { POINT_TYPE_BY_ID } from "./pointTypes";
+import { HelpInlineButton, InfoPanel } from "./StatInfo";
+import { EXPLANATIONS } from "./explanations";
 
 /**
  * Interactive Match Flow strip.
@@ -35,8 +37,10 @@ import { POINT_TYPE_BY_ID } from "./pointTypes";
 export default function MatchFlow({
   pointLog, getTeam, getPlayer, team1Id, team2Id, setsCount = 1,
   selectedId: selectedIdProp, setSelectedId: setSelectedIdProp,
+  helpMode = false,
 }) {
   const [internalId, setInternalId] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const isControlled = selectedIdProp !== undefined && typeof setSelectedIdProp === "function";
   const selectedId = isControlled ? selectedIdProp : internalId;
   const setSelectedId = isControlled ? setSelectedIdProp : setInternalId;
@@ -57,10 +61,20 @@ export default function MatchFlow({
 
   return (
     <div className="mt-3 pt-3 border-t border-line/60">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[9px] text-dim uppercase tracking-wide">Match flow</span>
+      <div className="flex items-center justify-between mb-1.5 gap-2">
+        <span className="text-[9px] text-dim uppercase tracking-wide flex items-center gap-1.5">
+          Match flow
+          <HelpInlineButton
+            helpMode={helpMode}
+            open={helpOpen}
+            onToggle={() => setHelpOpen(o => !o)}
+          />
+        </span>
         <span className="text-[9px] text-dim/70">Tap a point</span>
       </div>
+      <InfoPanel open={helpMode && helpOpen}>
+        {EXPLANATIONS.matchFlow}
+      </InfoPanel>
 
       {/* Dot row — tappable */}
       <div className="flex flex-wrap gap-[2px] justify-center">

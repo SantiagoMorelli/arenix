@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import GameStats from './GameStats'
+import { ERROR_SUBTYPES } from '../hooks/liveGame/pointTypes'
 const QRExportModal = lazy(() => import('./QRExportModal'))
 import { useBattery } from '../hooks/useBattery'
 import { useWakeLock } from '../hooks/useWakeLock'
@@ -132,6 +133,39 @@ export default function LiveScoreboard({
           ))}
         </div>
         <button onClick={() => live.setPendingPoint(null)} className="w-full py-4 mt-4 rounded-xl text-dim font-bold tracking-widest uppercase border-0 bg-transparent active:bg-surface transition-colors">
+          Cancel
+        </button>
+      </div>
+    )
+  }
+
+  // ── Error subtype dialog ─────────────────────────────────────────────────
+  if (live.pendingErrorSubtype) {
+    return (
+      <div className="absolute inset-0 z-50 bg-bg flex flex-col pt-12 pb-6 px-4">
+        <div className="text-center mb-8">
+          <div className="text-[24px] font-black text-error mb-2">Rival error</div>
+          <div className="text-[13px] text-dim font-medium uppercase tracking-widest">What kind of error?</div>
+        </div>
+        <div className="flex flex-col gap-3 flex-1">
+          {ERROR_SUBTYPES.map(es => (
+            <button
+              key={es.id}
+              onClick={() => live.confirmErrorSubtype(es.id)}
+              className="w-full bg-surface border border-line/50 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-95 transition-transform"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-[26px]">{es.icon}</span>
+                <div className="text-left">
+                  <div className="text-[16px] font-bold text-text mb-1">{es.label}</div>
+                  <div className="text-[12px] text-dim">{es.desc}</div>
+                </div>
+              </div>
+              <span className="text-[18px] text-error font-bold">→</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={live.cancelErrorSubtype} className="w-full py-4 mt-4 rounded-xl text-dim font-bold tracking-widest uppercase border-0 bg-transparent active:bg-surface transition-colors">
           Cancel
         </button>
       </div>

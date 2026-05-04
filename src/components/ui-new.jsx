@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { X } from 'lucide-react'
 
 /**
  * New Tailwind-based UI primitives.
@@ -298,6 +299,45 @@ export function PageHeader({ title, onBack, rightSlot }) {
       ) : (
         <div className="w-[38px] flex-shrink-0" />
       )}
+    </div>
+  )
+}
+
+/* ─── AppSheet ────────────────────────────────────────────────────────────── */
+/**
+ * Bottom sheet primitive. Slides up from the bottom with a scrim. Mirrors the
+ * pattern used in AddPlayerSheet, but centralises it so any drill-down sheet
+ * can reuse it without duplicating the markup.
+ *
+ * Props:
+ *   open      boolean
+ *   onClose   fn        — called when scrim or close button is tapped
+ *   title     string?   — optional header text
+ *   icon      ReactNode? — optional icon on the left of the title
+ *   children  ReactNode
+ */
+export function AppSheet({ open, onClose, title, icon, children }) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative z-[151] w-full bg-surface rounded-t-2xl px-4 pt-2 pb-8 max-h-[88vh] overflow-y-auto shadow-2xl">
+        <div className="w-9 h-1 bg-line rounded-full mx-auto mb-3" />
+        {(title || icon) && (
+          <div className="flex items-center gap-2 mb-3">
+            {icon && <div className="flex-shrink-0">{icon}</div>}
+            <div className="flex-1 text-[15px] font-bold text-text leading-tight">{title}</div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-full bg-alt flex items-center justify-center text-dim cursor-pointer border-0 flex-shrink-0"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   )
 }

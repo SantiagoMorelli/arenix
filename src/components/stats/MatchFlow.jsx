@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Volleyball } from "lucide-react";
+import { Volleyball, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { formatDuration } from "../../lib/utils";
 import { cumulativeMargin } from "../../lib/matchStats";
 import MiniSparkline from "./MiniSparkline";
@@ -11,20 +11,35 @@ import { POINT_TYPE_BY_ID } from "./pointTypes";
  *   • Each point becomes a tappable dot. Selected dot rings + scales.
  *   • Below the dots, a margin sparkline (cumulative t1 - t2) plots momentum.
  *   • When a dot is selected, an inline PointDetailPanel appears beneath the
- *     sparkline with time-of-match, server, winner, score, point type, and
- *     "time since previous point" (rally-duration proxy — labeled honestly).
+ *     sparkline with time-of-match, server, scorer/error player, winner,
+ *     score, point type, and time-since-previous-point (rally proxy).
  *
  * Tapping the same dot again deselects.
  *
- * Props:
+ * Selection can be controlled by a parent (so other cards — Biggest Lead,
+ * Lead Changes, Match Dynamics — can highlight their moment in the strip):
+ *   selectedId    string|null   — when provided + setSelectedId provided,
+ *                                 the component runs in controlled mode.
+ *   setSelectedId fn(id|null)
+ *
+ * If only one of those is provided, internal state is used.
+ *
+ * Other props:
  *   pointLog   array  — log entries already filtered to e.team !== null
  *   getTeam    fn(id)
  *   getPlayer  fn(id)
  *   team1Id    string
  *   team2Id    string
+ *   setsCount  number — total sets played (hides "Set X" when 1)
  */
-export default function MatchFlow({ pointLog, getTeam, getPlayer, team1Id, team2Id }) {
-  const [selectedId, setSelectedId] = useState(null);
+export default function MatchFlow({
+  pointLog, getTeam, getPlayer, team1Id, team2Id, setsCount = 1,
+  selectedId: selectedIdProp, setSelectedId: setSelectedIdProp,
+}) {
+  const [internalId, setInternalId] = useState(null);
+  const isControlled = selectedIdProp !== undefined && typeof setSelectedIdProp === "function";
+  const selectedId = isControlled ? selectedIdProp : internalId;
+  const setSelectedId = isControlled ? setSelectedIdProp : setInternalId;
 
   if (pointLog.length === 0) return null;
 
@@ -98,13 +113,14 @@ export default function MatchFlow({ pointLog, getTeam, getPlayer, team1Id, team2
           firstName={firstName}
           team1Id={team1Id}
           team2Id={team2Id}
+          setsCount={setsCount}
         />
       )}
     </div>
   );
 }
 
-function PointDetailPanel({ point, prev, startTs, getTeam, firstName, team1Id, team2Id }) {
+function PointDetailPanel({ point, prev, startTs, getTeam, firstName, team1Id, team2Id, setsCount }) {
   const isTeam1Winner = point.team === 1;
   const winnerColor = isTeam1Winner ? "text-accent" : "text-free";
   const winnerName = getTeam(isTeam1Winner ? team1Id : team2Id)?.name || "?";
@@ -122,13 +138,21 @@ function PointDetailPanel({ point, prev, startTs, getTeam, firstName, team1Id, t
   const serverIsTeam1 = point.serverTeam === 1;
   const serverDot = serverIsTeam1 ? "bg-accent" : "bg-free";
 
+  // For a "rival error" point, scoringPlayerId is null and errorPlayerId carries
+  // the opposing player who made the mistake. Otherwise scoringPlayerId is set.
+  const isError = point.pointType === "error";
+  const attributedId = isError ? point.errorPlayerId : point.scoringPlayerId;
+  const attributedLabel = isError ? "Error by" : "Scored by";
+  const AttributedIcon = isError ? AlertTriangle : CheckCircle2;
+  const attributedTone = isError ? "text-error" : "text-text";
+
   return (
     <div className="mt-3 bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 text-left">
-      {/* Header line: time + score */}
+      {/* Header line: time + point + (set if multi-set) + score */}
       <div className="flex items-baseline justify-between mb-1.5">
         <span className="text-[10px] font-bold text-dim uppercase tracking-wide">
           {tOfMatch ? `${tOfMatch} · ` : ""}Point {point.pointNum ?? ""}
-          {point.setNum != null ? ` · Set ${point.setNum + 1}` : ""}
+          {setsCount > 1 && point.setNum != null ? ` · Set ${point.setNum + 1}` : ""}
         </span>
         <span className="font-display text-[22px] leading-none">
           <span className="text-accent">{point.t1}</span>
@@ -149,7 +173,16 @@ function PointDetailPanel({ point, prev, startTs, getTeam, firstName, team1Id, t
         </DetailRow>
 
         <DetailRow label="Won by">
-          <span className={`${winnerColor} font-bold`}>{winnerName.split(" ")[0]}</span>
+          <span className={`${winnerColor} font-bold truncate inline-block max-w-full`}>{winnerName}</span>
+        </DetailRow>
+
+        <DetailRow label={attributedLabel}>
+          {attributedId ? (
+            <span className={`flex items-center gap-1 ${attributedTone}`}>
+              <AttributedIcon size={11} />
+              <span className="truncate">{firstName(attributedId)}</span>
+            </span>
+          ) : <span className="text-dim">—</span>}
         </DetailRow>
 
         <DetailRow label="Point type">

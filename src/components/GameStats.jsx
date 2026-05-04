@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
-  Trophy, Flame, X, Check,
-  Volleyball, Undo2, Equal, Activity,
+  Trophy, Check, Volleyball, Undo2,
 } from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
 import { AppCard, AppButton, PillTabs, SectionLabel } from "./ui-new";
@@ -13,6 +12,7 @@ import MatchFlow from "./stats/MatchFlow";
 import MatchHighlights from "./stats/MatchHighlights";
 import TopPerformers from "./stats/TopPerformers";
 import ServeBreakdown from "./stats/ServeBreakdown";
+import MatchDynamics from "./stats/MatchDynamics";
 
 const GameStats = ({
   winner,
@@ -30,6 +30,7 @@ const GameStats = ({
   onCancelUndo,
 }) => {
   const [tab, setTab] = useState("overview");
+  const [selectedPointId, setSelectedPointId] = useState(null);
 
   const getTeam   = id => teams.find(tm => tm.id === id);
   const getPlayer = id => {
@@ -206,6 +207,9 @@ const GameStats = ({
               getTeam={getTeam}
               team1Id={team1Id}
               team2Id={team2Id}
+              setsCount={sets.length}
+              selectedId={selectedPointId}
+              setSelectedId={setSelectedPointId}
             />
           </div>
 
@@ -214,11 +218,14 @@ const GameStats = ({
             mvp={mvp}
             leadStats={leadStats}
             t1Ids={t1Ids}
+            allPlayerIds={allIds}
             getPlayer={getPlayer}
             getTeam={getTeam}
             team1Id={team1Id}
             team2Id={team2Id}
             teamPlayerStats={{ 1: s1, 2: s2 }}
+            selectedPointId={selectedPointId}
+            onPointSelect={setSelectedPointId}
           />
 
           {/* Total points — multi-set only; single-set score is in the banner */}
@@ -329,43 +336,16 @@ const GameStats = ({
             </div>
           </AppCard>
 
-          <AppCard className="px-3.5 py-3 mb-3">
-            <SectionLabel>Match dynamics</SectionLabel>
-            <div className="flex gap-2">
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <Flame size={16} className="text-dim mx-auto mb-1.5" />
-                <div className="font-display text-[24px] text-text leading-none mb-0.5">
-                  {Math.max(s1.bestStreak, s2.bestStreak)}
-                </div>
-                <div className="text-[10px] text-dim truncate px-1">
-                  {s1.bestStreak >= s2.bestStreak
-                    ? tName(team1Id).split(" ")[0]
-                    : tName(team2Id).split(" ")[0]}
-                </div>
-                <div className="text-[9px] text-dim uppercase mt-1">Best streak</div>
-              </div>
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <Equal size={16} className="text-dim mx-auto mb-1.5" />
-                <div className="font-display text-[24px] text-text leading-none mb-0.5">
-                  {dynStats.timesTied}
-                </div>
-                <div className="text-[10px] text-dim">
-                  {dynStats.timesTied > 5 ? "Neck & neck" : dynStats.timesTied >= 2 ? "Some tension" : "Dominated"}
-                </div>
-                <div className="text-[9px] text-dim uppercase mt-1">Times tied</div>
-              </div>
-              <div className="flex-1 bg-alt rounded-[10px] px-2.5 py-2.5 text-center">
-                <Activity size={16} className="text-dim mx-auto mb-1.5" />
-                <div className="font-display text-[24px] text-text leading-none mb-0.5">
-                  {dynStats.closePoints}
-                </div>
-                <div className="text-[10px] text-dim">
-                  margin ≤ 2
-                </div>
-                <div className="text-[9px] text-dim uppercase mt-1">Clutch points</div>
-              </div>
-            </div>
-          </AppCard>
+          <MatchDynamics
+            pointLog={pointLog}
+            s1={s1}
+            s2={s2}
+            getTeam={getTeam}
+            getPlayer={getPlayer}
+            team1Id={team1Id}
+            team2Id={team2Id}
+            dynStats={dynStats}
+          />
 
           {(matchDuration || longestRally) && (
             <AppCard className="px-3.5 py-3 mb-3">

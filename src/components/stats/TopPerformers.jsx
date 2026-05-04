@@ -1,10 +1,12 @@
 import { Flame, Target, TrendingUp, Users } from "lucide-react";
-import { AppCard, SectionLabel } from "../ui-new";
+import { AppCard } from "../ui-new";
 import ExpandableStatCard from "./ExpandableStatCard";
 import MiniSparkline from "./MiniSparkline";
 import {
   calcClutchPoints, calcPeakWindow, calcCumulativeSeries, calcHeadToHead,
 } from "../../lib/matchStats";
+import { SectionLabelWithHelp } from "./StatInfo";
+import { EXPLANATIONS } from "./explanations";
 
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
@@ -23,6 +25,7 @@ import {
  */
 export default function TopPerformers({
   pointLog, s1, s2, t1Ids, t2Ids, mvp, getPlayer, getTeam, team1Id, team2Id,
+  helpMode = false,
 }) {
   const tName = id => getTeam(id)?.name || "?";
   const firstName = id => (getPlayer(id)?.name || "?").split(" ")[0];
@@ -71,7 +74,9 @@ export default function TopPerformers({
 
   return (
     <AppCard className="px-3.5 py-3 mb-3">
-      <SectionLabel>Top performers</SectionLabel>
+      <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.topPerformers}>
+        Top performers
+      </SectionLabelWithHelp>
 
       <div className="flex items-center gap-2.5 pb-1.5 mb-0.5">
         <div className="w-7 flex-shrink-0" />

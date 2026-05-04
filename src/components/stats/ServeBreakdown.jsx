@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Volleyball } from "lucide-react";
-import { SectionLabel } from "../ui-new";
 import ExpandableStatCard from "./ExpandableStatCard";
 import SegmentStrip from "./SegmentStrip";
 import { formatDuration } from "../../lib/utils";
@@ -8,6 +7,8 @@ import {
   calcServeStats, calcServeTimeline, calcServeStreaks,
 } from "../../lib/matchStats";
 import { POINT_TYPE_BY_ID } from "./pointTypes";
+import { SectionLabelWithHelp } from "./StatInfo";
+import { EXPLANATIONS } from "./explanations";
 
 /**
  * Serve breakdown table — each player row is expandable to reveal a chronological
@@ -20,14 +21,16 @@ import { POINT_TYPE_BY_ID } from "./pointTypes";
  *   t1Ids       string[]   — team1 ids (for color dot)
  *   getPlayer   fn(id)
  */
-export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer }) {
+export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer, helpMode = false }) {
   if (allIds.length === 0) return null;
   const firstName = id => (getPlayer(id)?.name || "?").split(" ")[0];
   const startTs = pointLog[0]?.timestamp;
 
   return (
     <div className="mt-3 pt-3 border-t border-line">
-      <SectionLabel>Serve breakdown</SectionLabel>
+      <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveBreakdown}>
+        Serve breakdown
+      </SectionLabelWithHelp>
       <div className="rounded-[10px] overflow-hidden border border-line">
         <div className="flex px-2.5 py-1.5 bg-alt">
           <span className="flex-1 text-[9px] font-bold text-dim">PLAYER</span>

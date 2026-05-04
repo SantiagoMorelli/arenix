@@ -3,7 +3,7 @@ import {
   Trophy, Check, Volleyball, Undo2,
 } from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
-import { AppCard, AppButton, PillTabs, SectionLabel } from "./ui-new";
+import { AppCard, AppButton, PillTabs } from "./ui-new";
 import {
   calcLeadStats, calcDynamics, calcMVP,
 } from "../lib/matchStats";
@@ -13,6 +13,10 @@ import MatchHighlights from "./stats/MatchHighlights";
 import TopPerformers from "./stats/TopPerformers";
 import ServeBreakdown from "./stats/ServeBreakdown";
 import MatchDynamics from "./stats/MatchDynamics";
+import {
+  HelpToggle, SectionLabelWithHelp, HelpInlineButton, InfoPanel,
+} from "./stats/StatInfo";
+import { EXPLANATIONS } from "./stats/explanations";
 
 const GameStats = ({
   winner,
@@ -31,6 +35,9 @@ const GameStats = ({
 }) => {
   const [tab, setTab] = useState("overview");
   const [selectedPointId, setSelectedPointId] = useState(null);
+  const [helpMode, setHelpMode] = useState(false);
+  const [pointTypesHelpOpen, setPointTypesHelpOpen] = useState(false);
+  const [historyHelpOpen, setHistoryHelpOpen] = useState(false);
 
   const getTeam   = id => teams.find(tm => tm.id === id);
   const getPlayer = id => {
@@ -139,16 +146,19 @@ const GameStats = ({
         </button>
       )}
 
-      <PillTabs
-        items={[
-          { id: "overview", label: "Overview" },
-          { id: "stats",    label: "Stats"    },
-          { id: "history",  label: "History"  },
-        ]}
-        active={tab}
-        onChange={setTab}
-        className="mb-3"
-      />
+      <div className="flex items-center gap-2 mb-3">
+        <PillTabs
+          items={[
+            { id: "overview", label: "Overview" },
+            { id: "stats",    label: "Stats"    },
+            { id: "history",  label: "History"  },
+          ]}
+          active={tab}
+          onChange={setTab}
+          className="flex-1"
+        />
+        <HelpToggle on={helpMode} onChange={setHelpMode} />
+      </div>
 
       {tab === "overview" && (
         <>
@@ -210,6 +220,7 @@ const GameStats = ({
               setsCount={sets.length}
               selectedId={selectedPointId}
               setSelectedId={setSelectedPointId}
+              helpMode={helpMode}
             />
           </div>
 
@@ -226,12 +237,19 @@ const GameStats = ({
             teamPlayerStats={{ 1: s1, 2: s2 }}
             selectedPointId={selectedPointId}
             onPointSelect={setSelectedPointId}
+            helpMode={helpMode}
           />
 
           {/* Total points — multi-set only; single-set score is in the banner */}
           {sets.length > 1 && (
             <AppCard className="px-3.5 py-3 mb-3">
-              <SectionLabel color="accent">Total points</SectionLabel>
+              <SectionLabelWithHelp
+                color="accent"
+                helpMode={helpMode}
+                explanation={EXPLANATIONS.totalPoints}
+              >
+                Total points
+              </SectionLabelWithHelp>
               <div className="flex justify-between items-center mb-2.5">
                 <div className="text-center flex-1">
                   <div className="text-[10px] text-dim">{tName(team1Id)}</div>
@@ -271,6 +289,7 @@ const GameStats = ({
             getTeam={getTeam}
             team1Id={team1Id}
             team2Id={team2Id}
+            helpMode={helpMode}
           />
 
           {allIds.length > 0 && (
@@ -280,6 +299,7 @@ const GameStats = ({
                 allIds={allIds}
                 t1Ids={t1Ids}
                 getPlayer={getPlayer}
+                helpMode={helpMode}
               />
             </AppCard>
           )}
@@ -291,9 +311,19 @@ const GameStats = ({
           <AppCard className="px-3.5 py-3 mb-3">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
-              <span className="text-[10px] font-bold text-dim uppercase tracking-wide">How points were won</span>
+              <span className="text-[10px] font-bold text-dim uppercase tracking-wide flex items-center gap-1.5">
+                How points were won
+                <HelpInlineButton
+                  helpMode={helpMode}
+                  open={pointTypesHelpOpen}
+                  onToggle={() => setPointTypesHelpOpen(o => !o)}
+                />
+              </span>
               <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
             </div>
+            <InfoPanel open={helpMode && pointTypesHelpOpen}>
+              {EXPLANATIONS.pointTypes}
+            </InfoPanel>
             {POINT_TYPES
               .filter(pt => (s1.byType[pt.id] || 0) + (s2.byType[pt.id] || 0) > 0)
               .map(pt => renderStatBar(pt, s1.byType[pt.id], s2.byType[pt.id]))}
@@ -305,7 +335,9 @@ const GameStats = ({
           </AppCard>
 
           <AppCard className="px-3.5 py-3 mb-3">
-            <SectionLabel>Serve efficiency</SectionLabel>
+            <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveEfficiency}>
+              Serve efficiency
+            </SectionLabelWithHelp>
             <div className="flex gap-2">
               {[
                 { tn: 1, st: s1, tid: team1Id, isTeam1: true  },
@@ -345,11 +377,14 @@ const GameStats = ({
             team1Id={team1Id}
             team2Id={team2Id}
             dynStats={dynStats}
+            helpMode={helpMode}
           />
 
           {(matchDuration || longestRally) && (
             <AppCard className="px-3.5 py-3 mb-3">
-              <SectionLabel>Timing</SectionLabel>
+              <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.timing}>
+                Timing
+              </SectionLabelWithHelp>
               <div className="flex gap-2">
                 {matchDuration && (
                   <div className="flex-1 rounded-[10px] px-2.5 py-2.5 text-center bg-alt">
@@ -375,8 +410,18 @@ const GameStats = ({
 
       {tab === "history" && (
         <AppCard className="p-0 overflow-hidden mb-3">
-          <div className="px-3.5 py-2.5 bg-alt text-[12px] font-bold text-accent tracking-wide uppercase">
-            History
+          <div className="px-3.5 py-2.5 bg-alt text-[12px] font-bold text-accent tracking-wide uppercase flex items-center justify-between gap-2">
+            <span>History</span>
+            <HelpInlineButton
+              helpMode={helpMode}
+              open={historyHelpOpen}
+              onToggle={() => setHistoryHelpOpen(o => !o)}
+            />
+          </div>
+          <div className="px-3.5">
+            <InfoPanel open={helpMode && historyHelpOpen}>
+              {EXPLANATIONS.history}
+            </InfoPanel>
           </div>
           {[...log].reverse().map((entry) => {
             if (!entry.team) return (

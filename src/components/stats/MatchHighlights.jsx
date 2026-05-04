@@ -2,12 +2,14 @@ import { useState } from "react";
 import {
   Flame, ArrowUpDown, Repeat, ArrowRight, CheckCircle2, AlertTriangle,
 } from "lucide-react";
-import { AppCard, SectionLabel } from "../ui-new";
+import { AppCard } from "../ui-new";
 import { formatDuration } from "../../lib/utils";
 import {
   calcLeadMoments, calcLeadChangeList, calcMvpMoments, calcRunnerUp,
 } from "../../lib/matchStats";
 import { POINT_TYPE_BY_ID } from "./pointTypes";
+import { SectionLabelWithHelp } from "./StatInfo";
+import { EXPLANATIONS } from "./explanations";
 
 /**
  * Three-tile highlights card: MVP / Biggest Lead / Lead Changes.
@@ -35,7 +37,7 @@ import { POINT_TYPE_BY_ID } from "./pointTypes";
  */
 export default function MatchHighlights({
   pointLog, mvp, leadStats, t1Ids, allPlayerIds, getPlayer, getTeam, team1Id, team2Id,
-  teamPlayerStats, selectedPointId, onPointSelect,
+  teamPlayerStats, selectedPointId, onPointSelect, helpMode = false,
 }) {
   const [open, setOpen] = useState(null); // "mvp" | "lead" | "changes" | null
   const tName = id => getTeam(id)?.name || "?";
@@ -51,7 +53,9 @@ export default function MatchHighlights({
 
   return (
     <AppCard className="px-3.5 py-3 mb-3">
-      <SectionLabel>Match highlights</SectionLabel>
+      <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.matchHighlights}>
+        Match highlights
+      </SectionLabelWithHelp>
 
       <div className="flex gap-2">
         <Tile

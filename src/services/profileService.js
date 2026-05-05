@@ -1,6 +1,19 @@
 import { supabase } from '../lib/supabase'
 
 /**
+ * Fetch a single user's public profile by userId.
+ */
+export async function getUserProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, nickname, avatar_url, gender, country')
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  return data
+}
+
+/**
  * Fetch every profile row, ordered by full_name.
  * Returns { data, error } (raw Supabase shape).
  */

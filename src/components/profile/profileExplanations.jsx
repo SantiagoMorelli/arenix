@@ -13,9 +13,7 @@ export const PROFILE_EXPLANATIONS = {
       Achievements are badges you earn by reaching milestones in your game —
       play enough matches, land a streak, dominate your serve, or climb the
       rankings. Each badge shows your progress with a ring around it; once the
-      ring is full, you unlock it. Tap any category chip to filter by type.
-      The sound icon (top-right) controls a short chime that plays the moment
-      a new badge is unlocked — mute it if you prefer silence.
+      ring is full, you unlock it.
     </>
   ),
 
@@ -73,7 +71,7 @@ export const PROFILE_EXPLANATIONS = {
       A quick summary of your career numbers across all league matches.
       &ldquo;Points per match&rdquo; counts individual scoring plays you were credited with.
       &ldquo;Serve win %&rdquo; and &ldquo;Side-out %&rdquo; are the two most important efficiency
-      metrics in pickleball. &ldquo;Best win streak&rdquo; is your longest consecutive
+      metrics in Volleyball. &ldquo;Best win streak&rdquo; is your longest consecutive
       winning run across any period.
     </>
   ),

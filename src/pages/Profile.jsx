@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Settings as SettingsIcon, ChevronLeft } from 'lucide-react'
 import { SectionLabel, AppToast, PillTabs } from '../components/ui-new'
+import { HelpToggle, InfoPanel } from '../components/stats/StatInfo'
+import { PROFILE_EXPLANATIONS } from '../components/profile/profileExplanations'
 import { useAuth } from '../contexts/AuthContext'
 import { usePlayerStats } from '../hooks/usePlayerStats'
 import { useAchievementUnlocks } from '../hooks/useAchievementUnlocks'
@@ -15,6 +17,7 @@ import PlayerStatsSection from '../components/profile/PlayerStatsSection'
 import TournamentDrillSheet from '../components/profile/sheets/TournamentDrillSheet'
 import MatchDrillSheet from '../components/profile/sheets/MatchDrillSheet'
 import PointDrillSheet from '../components/profile/sheets/PointDrillSheet'
+import MatchStatsOverlay from '../components/tournament/MatchStatsOverlay'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatShortDate(ms) {
@@ -29,7 +32,7 @@ const PROFILE_TABS = [
 ]
 
 // ─── Stats tab (slim summary) ─────────────────────────────────────────────────
-function StatsTab({ stats }) {
+function StatsTab({ stats, helpMode }) {
   const PCT = (n) => `${Math.round((n || 0) * 100)}%`
   const acesPerMatch = stats.totalMatches > 0
     ? ((stats.serving?.aces || 0) / stats.totalMatches).toFixed(1)
@@ -47,8 +50,13 @@ function StatsTab({ stats }) {
   ]
   return (
     <div>
-      <SectionLabel color="dim">Performance</SectionLabel>
-      <div className="bg-surface rounded-xl border border-line px-3.5 mb-2">
+      <div className="flex items-center justify-between mb-0">
+        <SectionLabel color="dim">Performance</SectionLabel>
+      </div>
+      <InfoPanel open={helpMode}>
+        {PROFILE_EXPLANATIONS.performance}
+      </InfoPanel>
+      <div className="bg-surface rounded-xl border border-line px-3.5 mb-2 mt-2.5">
         {rows.map((s, i) => (
           <div
             key={s.l}
@@ -64,10 +72,15 @@ function StatsTab({ stats }) {
 }
 
 // ─── Leagues tab ──────────────────────────────────────────────────────────────
-function LeaguesTab({ leagues, navigate, profile }) {
+function LeaguesTab({ leagues, navigate, profile, helpMode }) {
   return (
     <div className="flex flex-col gap-2">
-      <SectionLabel color="accent">My Leagues</SectionLabel>
+      <div className="flex items-center justify-between mb-0">
+        <SectionLabel color="accent">My Leagues</SectionLabel>
+      </div>
+      <InfoPanel open={helpMode}>
+        {PROFILE_EXPLANATIONS.leagues}
+      </InfoPanel>
 
       {leagues.length === 0 && (
         <div className="text-center text-[13px] text-dim py-8 border border-dashed border-line rounded-xl">
@@ -136,10 +149,15 @@ function LeaguesTab({ leagues, navigate, profile }) {
 }
 
 // ─── Matches tab ──────────────────────────────────────────────────────────────
-function MatchesTab({ matches }) {
+function MatchesTab({ matches, helpMode, onMatchPress }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <SectionLabel color="dim">Recent Matches</SectionLabel>
+      <div className="flex items-center justify-between mb-0">
+        <SectionLabel color="dim">Recent Matches</SectionLabel>
+      </div>
+      <InfoPanel open={helpMode}>
+        {PROFILE_EXPLANATIONS.matches}
+      </InfoPanel>
 
       {matches.length === 0 && (
         <div className="text-center text-[13px] text-dim py-8 border border-dashed border-line rounded-xl">
@@ -148,7 +166,11 @@ function MatchesTab({ matches }) {
       )}
 
       {matches.slice(0, 30).map((m) => (
-        <div key={m.matchId} className="bg-surface rounded-xl px-3.5 py-2.5 border border-line">
+        <div
+          key={m.matchId}
+          onClick={() => onMatchPress?.(m)}
+          className="bg-surface rounded-xl px-3.5 py-2.5 border border-line cursor-pointer active:opacity-80 transition-opacity"
+        >
           <div className="flex justify-between items-center mb-1.5">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-dim">{formatShortDate(m.date)}</span>
@@ -185,10 +207,18 @@ export default function Profile() {
   const [toast, setToast] = useState(null)
   const [recentlyUnlockedId, setRecentlyUnlockedId] = useState(null)
 
+  // Per-tab help mode
+  const [statsHelpMode, setStatsHelpMode] = useState(false)
+  const [leaguesHelpMode, setLeaguesHelpMode] = useState(false)
+  const [matchesHelpMode, setMatchesHelpMode] = useState(false)
+
   // Drill-down sheet stack
   const [drillTournament, setDrillTournament] = useState(null)
   const [drillAnnotatedMatch, setDrillAnnotatedMatch] = useState(null)
   const [tournamentSheetOpen, setTournamentSheetOpen] = useState(false)
+
+  // Match stats overlay (full GameStats) from the Matches tab
+  const [statsOverlayMatch, setStatsOverlayMatch] = useState(null)
 
   const { loading, bundle, rawLeagues } = usePlayerStats(profile)
 
@@ -275,6 +305,46 @@ export default function Profile() {
     return { ...tour, players: lg.players }
   }, [drillTournament, rawLeagues])
 
+  // ── Match stats overlay (Matches tab → full GameStats) ──
+  /**
+   * Look up the raw match object from rawLeagues using the matchId + leagueId
+   * + tournamentId stored in the recentMatches entry.
+   */
+  function handleMatchPress(m) {
+    if (!m.leagueId || !m.tournamentId) return
+    const lg = rawLeagues.find(l => l.id === m.leagueId)
+    if (!lg) return
+    const tour = lg.tournaments?.find(t => t.id === m.tournamentId)
+    if (!tour) return
+
+    // getAllMatches equivalent (inline)
+    const allMatches = [
+      ...((tour.groups || []).flatMap(g => g.matches || [])),
+      ...((tour.knockout?.rounds || []).flatMap(r => r.matches || [])),
+      ...(tour.matches || []),
+    ]
+    const rawMatch = allMatches.find(x => x.id === m.matchId)
+    if (!rawMatch) return
+
+    setStatsOverlayMatch({
+      match: rawMatch,
+      tournament: { ...tour, players: lg.players },
+      leaguePlayers: lg.players || [],
+      leagueId: lg.id,
+      tournamentId: tour.id,
+    })
+  }
+
+  // ── Tab-level help toggle helper ──
+  function helpToggleForTab(tab) {
+    if (tab === 'stats')   return { on: statsHelpMode,   onChange: setStatsHelpMode }
+    if (tab === 'leagues') return { on: leaguesHelpMode, onChange: setLeaguesHelpMode }
+    if (tab === 'matches') return { on: matchesHelpMode, onChange: setMatchesHelpMode }
+    return { on: false, onChange: () => {} }
+  }
+
+  const currentHelp = helpToggleForTab(activeTab)
+
   if (loading) {
     return (
       <div className="flex flex-col h-screen bg-bg text-text items-center justify-center">
@@ -336,17 +406,41 @@ export default function Profile() {
             />
           )}
 
-          {/* Existing tabs */}
-          <PillTabs
-            items={PROFILE_TABS}
-            active={activeTab}
-            onChange={setActiveTab}
-            className="mb-3"
-          />
+          {/* Tabs row with help toggle */}
+          <div className="flex items-center gap-1 mb-3">
+            <PillTabs
+              items={PROFILE_TABS}
+              active={activeTab}
+              onChange={(id) => {
+                setActiveTab(id)
+                // reset help mode when switching tabs
+                setStatsHelpMode(false)
+                setLeaguesHelpMode(false)
+                setMatchesHelpMode(false)
+              }}
+              className="mb-0 flex-1"
+            />
+            <HelpToggle on={currentHelp.on} onChange={currentHelp.onChange} />
+          </div>
 
-          {bundle && activeTab === 'stats'   && <StatsTab stats={bundle} />}
-          {activeTab === 'leagues' && <LeaguesTab leagues={rawLeagues} navigate={navigate} profile={profile} />}
-          {bundle && activeTab === 'matches' && <MatchesTab matches={bundle.recentMatches || []} />}
+          {bundle && activeTab === 'stats'   && (
+            <StatsTab stats={bundle} helpMode={statsHelpMode} />
+          )}
+          {activeTab === 'leagues' && (
+            <LeaguesTab
+              leagues={rawLeagues}
+              navigate={navigate}
+              profile={profile}
+              helpMode={leaguesHelpMode}
+            />
+          )}
+          {bundle && activeTab === 'matches' && (
+            <MatchesTab
+              matches={bundle.recentMatches || []}
+              helpMode={matchesHelpMode}
+              onMatchPress={handleMatchPress}
+            />
+          )}
 
         </div>
       </main>
@@ -374,6 +468,21 @@ export default function Profile() {
         rawTournament={drillRawTournament}
         leaguePlayers={drillRawTournament?.players}
       />
+
+      {/* Full GameStats overlay for matches tab */}
+      {statsOverlayMatch && (
+        <MatchStatsOverlay
+          match={statsOverlayMatch.match}
+          tournament={statsOverlayMatch.tournament}
+          leaguePlayers={statsOverlayMatch.leaguePlayers}
+          isAdmin={false}
+          leagueId={statsOverlayMatch.leagueId}
+          tournamentId={statsOverlayMatch.tournamentId}
+          navigate={navigate}
+          onClose={() => setStatsOverlayMatch(null)}
+          onSaved={() => setStatsOverlayMatch(null)}
+        />
+      )}
 
     </div>
   )

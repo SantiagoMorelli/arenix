@@ -139,6 +139,8 @@ export function usePlayerStats(profile) {
                 opponentName: teamName(opposingTeamId, tour),
                 tournamentName: tour.name,
                 leagueName: league.name,
+                leagueId: league.id,
+                tournamentId: tour.id,
               })
             }
           }

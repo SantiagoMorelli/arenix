@@ -98,3 +98,30 @@ body {
 .dot-pulse {
   animation: dot-pulse 1.4s ease-in-out infinite;
 }
+
+/* Achievement unlock pop */
+@keyframes unlock-pop {
+  0%   { transform: scale(0.85); box-shadow: 0 0 0 0 rgb(245 166 35 / 0); }
+  40%  { transform: scale(1.08); box-shadow: 0 0 0 8px rgb(245 166 35 / 0.35); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgb(245 166 35 / 0); }
+}
+.animate-unlock-pop {
+  animation: unlock-pop 650ms cubic-bezier(.2,.9,.3,1.1);
+}
+
+/* Confetti dot fan-out */
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) scale(1);   opacity: 1; }
+  100% { transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(.4); opacity: 0; }
+}
+.confetti-dot {
+  animation: confetti-fly 700ms ease-out forwards;
+}
+
+/* Honor user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-unlock-pop,
+  .confetti-dot {
+    animation: none !important;
+  }
+}

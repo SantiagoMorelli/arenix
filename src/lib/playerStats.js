@@ -1,0 +1,423 @@
+/**
+ * Player-centric aggregations for the Profile page.
+ *
+ * Pure functions, no React, no Supabase. Operate on "annotated matches" —
+ * each match enriched with the player's perspective:
+ *
+ *   {
+ *     match,           // raw match (with .log, .sets, .score1, .score2, .winner, ...)
+ *     pid,             // league-specific player.id used inside match.log
+ *     playerTeamNum,   // 1 | 2
+ *     playerTeamId,
+ *     opposingTeamId,
+ *     tournamentId,
+ *     tournamentName,
+ *     leagueId,
+ *     leagueName,
+ *     date,
+ *     finishRank?,
+ *   }
+ *
+ * The same user can have a different `player.id` in each league, so the
+ * per-match `pid` is the source of truth — never `profile.id`.
+ *
+ * Conventions:
+ *   - All percentages are returned as fractions in [0, 1].
+ *   - All counts are integers.
+ *   - When there is no data, percentages are 0 and counts are 0 (never NaN).
+ */
+
+const PCT = (num, den) => (den > 0 ? num / den : 0)
+
+/* ─── Serving ─────────────────────────────────────────────────────────────── */
+
+export function computeServingStats(annotated) {
+  let totalServes = 0
+  let aces = 0
+  let serveErrors = 0
+  let serveWins = 0
+  let longestRun = 0
+  let currentRun = 0
+  const setBuckets = new Map()
+
+  for (const a of annotated) {
+    const log = a.match.log || []
+    const pid = a.pid
+    currentRun = 0
+
+    for (const e of log) {
+      if (!e.team) continue
+
+      const isMyServe = e.serverPlayerId === pid
+      const isMyServeError =
+        e.pointType === 'error' &&
+        e.errorPlayerId === pid &&
+        e.errorType === 'serve'
+
+      if (isMyServe || isMyServeError) {
+        const setKey = `${a.match.id}:${e.setNum || 0}`
+        const bucket = setBuckets.get(setKey) || {
+          serves: 0, wins: 0, aces: 0, errors: 0,
+          setNum: e.setNum || 0, matchId: a.match.id,
+        }
+        if (isMyServe) {
+          totalServes++
+          bucket.serves++
+          const wonRally = e.team === e.serverTeam
+          if (wonRally) {
+            serveWins++
+            bucket.wins++
+            currentRun++
+            if (currentRun > longestRun) longestRun = currentRun
+          } else {
+            currentRun = 0
+          }
+          if (e.pointType === 'ace' && wonRally) {
+            aces++
+            bucket.aces++
+          }
+        }
+        if (isMyServeError) {
+          serveErrors++
+          bucket.errors++
+          totalServes++
+          currentRun = 0
+        }
+        setBuckets.set(setKey, bucket)
+      } else {
+        currentRun = 0
+      }
+    }
+  }
+
+  const setBySet = Array.from(setBuckets.values()).map(b => ({
+    matchId: b.matchId,
+    setNum: b.setNum,
+    serves: b.serves,
+    wins: b.wins,
+    aces: b.aces,
+    errors: b.errors,
+    serveWinPct: PCT(b.wins, b.serves),
+  }))
+
+  let bestSet = null
+  for (const s of setBySet) {
+    if (s.serves < 4) continue
+    if (!bestSet || s.serveWinPct > bestSet.serveWinPct) bestSet = s
+  }
+
+  return {
+    totalServes,
+    aces,
+    serveErrors,
+    serveWins,
+    serveInPlayPct: totalServes > 0 ? (totalServes - serveErrors) / totalServes : 0,
+    serveWinPct: PCT(serveWins, totalServes),
+    aceRate: PCT(aces, totalServes),
+    errorRate: PCT(serveErrors, totalServes),
+    longestServingRun: longestRun,
+    setBySet,
+    bestSet,
+  }
+}
+
+/* ─── Pressure ────────────────────────────────────────────────────────────── */
+
+function thresholdForSet(match, setNum) {
+  const s = match.sets?.[setNum - 1]
+  if (!s) return 21
+  return Math.max(s.s1 || 0, s.s2 || 0)
+}
+
+export function computePressureStats(annotated) {
+  let clutchPlayed = 0
+  let clutchWon = 0
+  let clutchLost = 0
+  let receives = 0
+  let receivesWon = 0
+  let comebackPoints = 0
+  let decidingSetWins = 0
+  let decidingSetLosses = 0
+
+  for (const a of annotated) {
+    const m = a.match
+    const log = m.log || []
+    const pid = a.pid
+    const isLastSetDecider = (m.sets?.length || 0) >= 3
+    const lastSetIdx = (m.sets?.length || 1) - 1
+
+    if (isLastSetDecider) {
+      const lastSet = m.sets[lastSetIdx]
+      const wonLast = a.playerTeamNum === 1
+        ? (lastSet?.s1 || 0) > (lastSet?.s2 || 0)
+        : (lastSet?.s2 || 0) > (lastSet?.s1 || 0)
+      if (wonLast) decidingSetWins++; else decidingSetLosses++
+    }
+
+    for (const e of log) {
+      if (!e.team) continue
+      const setNum = e.setNum || 1
+      const setIdx = setNum - 1
+      const setIsDeciding = isLastSetDecider && setIdx === lastSetIdx
+      const threshold = thresholdForSet(m, setNum)
+
+      const myAfter = a.playerTeamNum === 1 ? (e.t1 || 0) : (e.t2 || 0)
+      const oppAfter = a.playerTeamNum === 1 ? (e.t2 || 0) : (e.t1 || 0)
+      const myBefore = e.team === a.playerTeamNum ? myAfter - 1 : myAfter
+      const oppBefore = e.team === a.playerTeamNum ? oppAfter : oppAfter - 1
+
+      const nearEnd = Math.max(myAfter, oppAfter) >= threshold - 3
+      if (setIsDeciding || nearEnd) {
+        clutchPlayed++
+        if (e.team === a.playerTeamNum) clutchWon++; else clutchLost++
+      }
+
+      if (e.serverTeam && e.serverTeam !== a.playerTeamNum) {
+        receives++
+        if (e.team === a.playerTeamNum) receivesWon++
+      }
+
+      if (
+        e.scoringPlayerId === pid &&
+        e.team === a.playerTeamNum &&
+        myBefore - oppBefore <= -2
+      ) {
+        comebackPoints++
+      }
+    }
+  }
+
+  return {
+    clutchPlayed,
+    clutchWon,
+    clutchLost,
+    clutchWinPct: PCT(clutchWon, clutchPlayed),
+    receives,
+    receivesWon,
+    sideOutPct: PCT(receivesWon, receives),
+    comebackPoints,
+    decidingSetWins,
+    decidingSetLosses,
+    decidingSetWinPct: PCT(decidingSetWins, decidingSetWins + decidingSetLosses),
+  }
+}
+
+/* ─── Strengths ───────────────────────────────────────────────────────────── */
+
+export function computeStrengths(annotated, leagueAverages) {
+  const byType = { ace: 0, spike: 0, block: 0, tip: 0 }
+  const errorsByType = { net: 0, out: 0, serve: 0, other: 0, untyped: 0 }
+  let totalScoring = 0
+  let totalErrors = 0
+
+  for (const a of annotated) {
+    const log = a.match.log || []
+    const pid = a.pid
+    for (const e of log) {
+      if (e.scoringPlayerId === pid && byType[e.pointType] !== undefined) {
+        byType[e.pointType]++
+        totalScoring++
+      }
+      if (e.errorPlayerId === pid) {
+        totalErrors++
+        const sub = e.errorType
+        if (sub && errorsByType[sub] !== undefined) errorsByType[sub]++
+        else errorsByType.untyped++
+      }
+    }
+  }
+
+  const ranked = Object.entries(byType).sort((a, b) => b[1] - a[1])
+  const topShot = ranked[0]?.[1] > 0 ? ranked[0][0] : null
+  const topShotShare = totalScoring > 0 ? (ranked[0]?.[1] || 0) / totalScoring : 0
+
+  const nonZero = ranked.filter(([, v]) => v > 0)
+  const weakestShot = nonZero.length >= 2 ? nonZero[nonZero.length - 1][0] : null
+
+  const errorRanked = Object.entries(errorsByType)
+    .filter(([k]) => k !== 'untyped')
+    .sort((a, b) => b[1] - a[1])
+  const topErrorType = errorRanked[0]?.[1] > 0 ? errorRanked[0][0] : null
+
+  let vsLeague = null
+  if (leagueAverages && totalScoring > 0) {
+    vsLeague = {}
+    for (const k of Object.keys(byType)) {
+      const mine = byType[k] / totalScoring
+      const avg = leagueAverages[k] || 0
+      vsLeague[k] = mine - avg
+    }
+  }
+
+  return {
+    byType,
+    errorsByType,
+    totalScoring,
+    totalErrors,
+    topShot,
+    topShotShare,
+    weakestShot,
+    topErrorType,
+    vsLeague,
+  }
+}
+
+/* ─── Playstyle ───────────────────────────────────────────────────────────── */
+
+export function computePlaystyle(annotated, strengths) {
+  const total = strengths.totalScoring
+  const share = total > 0
+    ? {
+        ace: strengths.byType.ace / total,
+        spike: strengths.byType.spike / total,
+        block: strengths.byType.block / total,
+        tip: strengths.byType.tip / total,
+      }
+    : { ace: 0, spike: 0, block: 0, tip: 0 }
+
+  let label = 'All-rounder'
+  if (share.spike >= 0.45) label = 'Aggressor'
+  else if (share.ace >= 0.18) label = 'Server'
+  else if (share.block >= 0.25) label = 'Defender'
+
+  const attempts = strengths.totalScoring + strengths.totalErrors
+  const riskProfile = attempts > 0 ? strengths.totalErrors / attempts : 0
+
+  const consistencyByMatch = []
+  for (const a of annotated) {
+    let mine = 0
+    let team = 0
+    const log = a.match.log || []
+    const pid = a.pid
+    for (const e of log) {
+      if (e.team !== a.playerTeamNum) continue
+      team++
+      if (e.scoringPlayerId === pid) mine++
+    }
+    consistencyByMatch.push({
+      matchId: a.match.id,
+      share: team > 0 ? mine / team : 0,
+      points: mine,
+    })
+  }
+
+  const shares = consistencyByMatch.map(c => c.share).filter(s => s > 0)
+  let consistency = 1
+  if (shares.length >= 2) {
+    const mean = shares.reduce((s, v) => s + v, 0) / shares.length
+    const variance = shares.reduce((s, v) => s + (v - mean) ** 2, 0) / shares.length
+    consistency = Math.max(0, 1 - Math.sqrt(variance) * 2)
+  }
+
+  return {
+    label,
+    share,
+    riskProfile,
+    consistencyByMatch,
+    consistency,
+  }
+}
+
+/* ─── Tournament breakdown ────────────────────────────────────────────────── */
+
+export function computeByTournament(annotated) {
+  const by = new Map()
+  for (const a of annotated) {
+    if (!by.has(a.tournamentId)) {
+      by.set(a.tournamentId, {
+        leagueId: a.leagueId,
+        leagueName: a.leagueName,
+        tournamentId: a.tournamentId,
+        tournamentName: a.tournamentName,
+        date: a.date,
+        finishRank: a.finishRank ?? null,
+        matches: [],
+        wins: 0,
+        losses: 0,
+        points: 0,
+        aces: 0,
+        spikes: 0,
+        serves: 0,
+        serveWins: 0,
+        serveWinPct: 0,
+      })
+    }
+    const t = by.get(a.tournamentId)
+    t.matches.push(a)
+    if (a.match.winner === a.playerTeamId) t.wins++
+    else if (a.match.winner) t.losses++
+  }
+
+  for (const t of by.values()) {
+    for (const a of t.matches) {
+      const log = a.match.log || []
+      const pid = a.pid
+      for (const e of log) {
+        if (e.scoringPlayerId === pid) {
+          t.points++
+          if (e.pointType === 'ace') t.aces++
+          if (e.pointType === 'spike') t.spikes++
+        }
+        if (e.team && e.serverPlayerId === pid) {
+          t.serves++
+          if (e.team === e.serverTeam) t.serveWins++
+        }
+      }
+    }
+    t.serveWinPct = t.serves > 0 ? t.serveWins / t.serves : 0
+  }
+
+  return Array.from(by.values()).sort((a, b) => (b.date || 0) - (a.date || 0))
+}
+
+/* ─── Win streak ──────────────────────────────────────────────────────────── */
+
+export function computeWinStreak(annotated) {
+  const ordered = [...annotated].sort((a, b) => (a.date || 0) - (b.date || 0))
+  let best = 0
+  let cur = 0
+  for (const a of ordered) {
+    const won = a.match.winner === a.playerTeamId
+    if (won) {
+      cur++
+      if (cur > best) best = cur
+    } else {
+      cur = 0
+    }
+  }
+  return { bestStreak: best, currentStreak: cur }
+}
+
+/* ─── Headline bundle ─────────────────────────────────────────────────────── */
+
+export function computeAllPlayerStats(annotated) {
+  const serving = computeServingStats(annotated)
+  const pressure = computePressureStats(annotated)
+  const strengths = computeStrengths(annotated)
+  const playstyle = computePlaystyle(annotated, strengths)
+  const byTournament = computeByTournament(annotated)
+  const streaks = computeWinStreak(annotated)
+
+  let wins = 0
+  let losses = 0
+  for (const a of annotated) {
+    if (a.match.winner === a.playerTeamId) wins++
+    else if (a.match.winner) losses++
+  }
+  const totalMatches = wins + losses
+
+  return {
+    totalMatches,
+    wins,
+    losses,
+    winRate: PCT(wins, totalMatches),
+    bestWinStreak: streaks.bestStreak,
+    currentWinStreak: streaks.currentStreak,
+    serving,
+    pressure,
+    strengths,
+    playstyle,
+    byType: strengths.byType,
+    byTournament,
+  }
+}

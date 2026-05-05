@@ -67,6 +67,40 @@ export async function getMyLeagues() {
 }
 
 /**
+ * Fetch the leagues a given user belongs to (same shape as getMyLeagues but
+ * for an arbitrary userId — used by admin player profile view).
+ */
+export async function getLeaguesByUserId(userId) {
+  const { data, error } = await supabase
+    .from('league_member_roles')
+    .select('league_id, role, granted_at, leagues(*)')
+    .eq('user_id', userId)
+    .order('granted_at', { ascending: true })
+
+  if (error) throw error
+
+  const leagueMap = new Map()
+  for (const row of data || []) {
+    if (!leagueMap.has(row.league_id)) {
+      leagueMap.set(row.league_id, {
+        ...normalizeLeague(row.leagues),
+        myRole:  row.role,
+        myRoles: [row.role],
+      })
+    } else {
+      leagueMap.get(row.league_id).myRoles.push(row.role)
+    }
+  }
+  const roleRank = { admin: 2, scorer: 1, member: 0 }
+  for (const entry of leagueMap.values()) {
+    entry.myRole = entry.myRoles.reduce((best, r) =>
+      (roleRank[r] ?? 0) > (roleRank[best] ?? 0) ? r : best
+    , entry.myRole)
+  }
+  return [...leagueMap.values()]
+}
+
+/**
  * Fetch a single league with full nested data:
  * players, tournaments (with teams + groups + knockout + matches).
  */

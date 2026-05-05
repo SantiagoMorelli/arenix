@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AddPlayerSheet from './AddPlayerSheet'
 
 // ── Avatar color ───────────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ const CheckIcon  = ({ size = 11 }) => <Svg size={size} className="shrink-0"><pol
 const EditIcon   = () => <Svg size={14} className="shrink-0"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></Svg>
 const XIcon      = ({ size = 14 }) => <Svg size={size} className="shrink-0"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Svg>
 const LinkIcon   = ({ size = 14 }) => <Svg size={size} className="shrink-0"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></Svg>
+const UserIcon   = ({ size = 14 }) => <Svg size={size} className="shrink-0"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></Svg>
 
 // ── Shared data ────────────────────────────────────────────────────────────────
 const GENDERS      = [{ k: 'F', l: 'Female' }, { k: 'M', l: 'Male' }, { k: 'X', l: 'Other' }]
@@ -90,6 +92,7 @@ function Avatar({ player, size, dotBorder, showDot = true }) {
 function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState(null)
+  const navigate              = useNavigate()
 
   const PROFILE_TO_SEX = { male: 'M', female: 'F', other: 'X' }
 
@@ -246,6 +249,12 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
               </button>
             )}
           </div>
+          <button
+            onClick={() => { onClose(); navigate(`/league/${player.leagueId}/player/${player.id}`) }}
+            className="w-full flex items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-alt border border-line text-text text-[13px] font-semibold cursor-pointer mb-2"
+          >
+            <UserIcon size={14} /> View Profile
+          </button>
           <button
             onClick={onRemove}
             className="w-full flex items-center justify-center gap-1.5 min-h-[44px] rounded-xl border border-error/40 text-error text-[13px] font-bold cursor-pointer bg-transparent"

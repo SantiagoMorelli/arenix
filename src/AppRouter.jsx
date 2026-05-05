@@ -47,6 +47,7 @@ const FreePlaySession      = lazy(() => import('./pages/FreePlaySession'))
 const FreePlayLiveMatch    = lazy(() => import('./pages/FreePlayLiveMatch'))
 const FreePlayJoin         = lazy(() => import('./pages/FreePlayJoin'))
 const LeaguePublicView     = lazy(() => import('./pages/LeaguePublicView'))
+const PlayerProfile        = lazy(() => import('./pages/PlayerProfile'))
 
 // ── Suspense fallback ──────────────────────────────────────────────────────────
 function RouteFallback() {
@@ -150,6 +151,7 @@ export default function AppRouter() {
             <Route path="tournament/new"        element={<ProtectedRoute><TournamentSetupWizard /></ProtectedRoute>} />
             <Route path="tournament/:tid"       element={<TournamentDetail />} />
             <Route path="tournament/:tid/match/:mid" element={<ProtectedRoute><LiveMatch /></ProtectedRoute>} />
+            <Route path="player/:pid"               element={<ProtectedRoute><PlayerProfile /></ProtectedRoute>} />
           </Route>
 
         </Routes>

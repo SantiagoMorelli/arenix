@@ -1,6 +1,12 @@
 /**
  * Achievements grid with category filter chips, progress rings on locked
  * badges, and a pop animation on the recently-unlocked badge.
+ *
+ * Default filter: 'milestones' (avoids overwhelming the user with all 18
+ * badges at once on first load).
+ *
+ * Help toggle: same pattern as GameStats — a ? button next to the section
+ * header expands an InfoPanel explaining how achievements work.
  */
 import { useState } from 'react'
 import {
@@ -9,8 +15,10 @@ import {
   Users, Volume2, VolumeX, Zap,
 } from 'lucide-react'
 import { SectionLabel } from '../ui-new'
+import { HelpToggle, InfoPanel } from '../stats/StatInfo'
 import { CATEGORIES, summarizeByCategory } from '../../lib/achievements'
 import { isSoundOn, setSoundOn } from '../../lib/chime'
+import { PROFILE_EXPLANATIONS } from './profileExplanations'
 
 const ICONS = {
   Award, Crown, Flame, Globe, Hourglass, PlayCircle, Repeat, Rocket,
@@ -98,8 +106,11 @@ function Badge({ achievement, isPopping }) {
 }
 
 export default function AchievementsSection({ achievements, recentlyUnlockedId }) {
-  const [filter, setFilter] = useState('all')
+  // Default to 'milestones' so landing on profile doesn't show all 18 badges.
+  const [filter, setFilter] = useState('milestones')
   const [soundOn, setLocalSoundOn] = useState(isSoundOn())
+  const [helpOpen, setHelpOpen] = useState(false)
+
   const summary = summarizeByCategory(achievements || [])
   const filtered = (achievements || []).filter(
     a => filter === 'all' || a.category === filter
@@ -116,21 +127,30 @@ export default function AchievementsSection({ achievements, recentlyUnlockedId }
 
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between mb-2.5">
+      {/* Header row: label + ? toggle + sound toggle */}
+      <div className="flex items-center justify-between mb-0">
         <SectionLabel color="accent">
           Achievements <span className="text-dim font-normal">· {totalUnlocked}/{total}</span>
         </SectionLabel>
-        <button
-          onClick={toggleSound}
-          aria-label={soundOn ? 'Mute unlock sound' : 'Unmute unlock sound'}
-          className="text-dim cursor-pointer bg-transparent border-0 p-1 -mt-1.5"
-        >
-          {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
-        </button>
+        <div className="flex items-center gap-0.5 -mt-1.5">
+          <HelpToggle on={helpOpen} onChange={setHelpOpen} />
+          <button
+            onClick={toggleSound}
+            aria-label={soundOn ? 'Mute unlock sound' : 'Unmute unlock sound'}
+            className="text-dim cursor-pointer bg-transparent border-0 p-1 w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:text-text"
+          >
+            {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          </button>
+        </div>
       </div>
 
+      {/* Explanation panel */}
+      <InfoPanel open={helpOpen}>
+        {PROFILE_EXPLANATIONS.achievements}
+      </InfoPanel>
+
       {/* Category chips */}
-      <div className="flex gap-1.5 mb-3 overflow-x-auto snap-x snap-mandatory pb-0.5">
+      <div className="flex gap-1.5 mb-3 overflow-x-auto snap-x snap-mandatory pb-0.5 mt-2.5">
         <CategoryChip id="all" label="All" total={total} unlocked={totalUnlocked}
           active={filter === 'all'} onClick={() => setFilter('all')} />
         {CATEGORIES.map(c => {

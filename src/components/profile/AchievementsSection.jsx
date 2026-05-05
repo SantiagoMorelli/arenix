@@ -2,23 +2,21 @@
  * Achievements grid with category filter chips, progress rings on locked
  * badges, and a pop animation on the recently-unlocked badge.
  *
- * Default filter: 'milestones' (avoids overwhelming the user with all 18
- * badges at once on first load).
- *
- * Help toggle: same pattern as GameStats — a ? button next to the section
- * header expands an InfoPanel explaining how achievements work.
+ * Default filter: 'milestones'
+ * Tap any badge → AchievementDetailSheet slides up with full info.
+ * Audio icon removed.
  */
 import { useState } from 'react'
 import {
   Award, Crown, Flame, Globe, Hourglass, PlayCircle, Repeat, Rocket,
   Shield, ShieldCheck, Sparkles, Swords, Target, TrendingUp, Trophy,
-  Users, Volume2, VolumeX, Zap,
+  Users, Zap,
 } from 'lucide-react'
 import { SectionLabel } from '../ui-new'
 import { HelpToggle, InfoPanel } from '../stats/StatInfo'
 import { CATEGORIES, summarizeByCategory } from '../../lib/achievements'
-import { isSoundOn, setSoundOn } from '../../lib/chime'
 import { PROFILE_EXPLANATIONS } from './profileExplanations'
+import AchievementDetailSheet from './AchievementDetailSheet'
 
 const ICONS = {
   Award, Crown, Flame, Globe, Hourglass, PlayCircle, Repeat, Rocket,
@@ -65,16 +63,17 @@ function ProgressRing({ value, color }) {
   )
 }
 
-function Badge({ achievement, isPopping }) {
+function Badge({ achievement, isPopping, onClick }) {
   const Icon = ICONS[achievement.icon] || Award
   const colorClass = COLOR_CLASSES[achievement.color] || COLOR_CLASSES.accent
   const locked = !achievement.unlocked
 
   return (
-    <div
+    <button
+      onClick={onClick}
       className={`
-        relative bg-surface border rounded-[12px] py-3 px-1.5 text-center
-        transition-all
+        relative bg-surface border rounded-[12px] py-3 px-1.5 text-center w-full
+        cursor-pointer transition-all active:scale-95
         ${locked ? 'border-line opacity-50 grayscale' : `border ${colorClass.ring}`}
         ${isPopping ? 'animate-unlock-pop' : ''}
       `}
@@ -101,15 +100,14 @@ function Badge({ achievement, isPopping }) {
         ))}
       </div>
       <div className="text-[10px] font-semibold text-text leading-tight px-0.5">{achievement.name}</div>
-    </div>
+    </button>
   )
 }
 
 export default function AchievementsSection({ achievements, recentlyUnlockedId }) {
-  // Default to 'milestones' so landing on profile doesn't show all 18 badges.
   const [filter, setFilter] = useState('milestones')
-  const [soundOn, setLocalSoundOn] = useState(isSoundOn())
   const [helpOpen, setHelpOpen] = useState(false)
+  const [selected, setSelected] = useState(null)
 
   const summary = summarizeByCategory(achievements || [])
   const filtered = (achievements || []).filter(
@@ -119,28 +117,15 @@ export default function AchievementsSection({ achievements, recentlyUnlockedId }
   const totalUnlocked = (achievements || []).filter(a => a.unlocked).length
   const total = (achievements || []).length
 
-  function toggleSound() {
-    const next = !soundOn
-    setLocalSoundOn(next)
-    setSoundOn(next)
-  }
-
   return (
     <div className="mb-4">
-      {/* Header row: label + ? toggle + sound toggle */}
+      {/* Header row: label + ? toggle */}
       <div className="flex items-center justify-between mb-0">
         <SectionLabel color="accent">
           Achievements <span className="text-dim font-normal">· {totalUnlocked}/{total}</span>
         </SectionLabel>
-        <div className="flex items-center gap-0.5 -mt-1.5">
+        <div className="flex items-center -mt-1.5">
           <HelpToggle on={helpOpen} onChange={setHelpOpen} />
-          <button
-            onClick={toggleSound}
-            aria-label={soundOn ? 'Mute unlock sound' : 'Unmute unlock sound'}
-            className="text-dim cursor-pointer bg-transparent border-0 p-1 w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:text-text"
-          >
-            {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
-          </button>
         </div>
       </div>
 
@@ -170,9 +155,17 @@ export default function AchievementsSection({ achievements, recentlyUnlockedId }
             key={a.id}
             achievement={a}
             isPopping={recentlyUnlockedId === a.id}
+            onClick={() => setSelected(a)}
           />
         ))}
       </div>
+
+      {/* Detail sheet */}
+      <AchievementDetailSheet
+        achievement={selected}
+        open={!!selected}
+        onClose={() => setSelected(null)}
+      />
     </div>
   )
 }

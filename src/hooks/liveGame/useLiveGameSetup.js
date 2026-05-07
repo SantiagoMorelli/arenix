@@ -38,8 +38,8 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
   const [t2ServeOrder, setT2ServeOrder] = useState([]);
   const [t1FirstServer, setT1FirstServer] = useState(0);
   const [t2FirstServer, setT2FirstServer] = useState(0);
-  const [t1InitialSide, setT1InitialSide] = useState("left");
-  const [firstServingTeam, setFirstServingTeam] = useState(1);
+  const [t1InitialSide, setT1InitialSide] = useState(null);
+  const [firstServingTeam, setFirstServingTeam] = useState(null);
 
   // ── Preload match from tournament fixture ──────────────────────────────────
   useEffect(() => {
@@ -52,11 +52,15 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
     const o1 = (() => {
       const tm = teams.find(t => t.id === match.team1);
       if (!tm) return [];
+      // Prefer saved default serve order; fall back to roster order
+      if (tm.serveOrder && tm.serveOrder.length) return tm.serveOrder;
       return tm.players && tm.players.length ? tm.players : [tm.player1, tm.player2].filter(Boolean);
     })();
     const o2 = (() => {
       const tm = teams.find(t => t.id === match.team2);
       if (!tm) return [];
+      // Prefer saved default serve order; fall back to roster order
+      if (tm.serveOrder && tm.serveOrder.length) return tm.serveOrder;
       return tm.players && tm.players.length ? tm.players : [tm.player1, tm.player2].filter(Boolean);
     })();
     setT1ServeOrder(o1);
@@ -103,8 +107,8 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
   const resetSetup = (informalMode) => {
     setTeam1Id(""); setTeam2Id(""); setGameStarted(false);
     setT1ServeOrder([]); setT2ServeOrder([]);
-    setT1FirstServer(0); setT2FirstServer(0); setT1InitialSide("left");
-    setFirstServingTeam(1);
+    setT1FirstServer(0); setT2FirstServer(0); setT1InitialSide(null);
+    setFirstServingTeam(null);
     if (informalMode) {
       setInformalStep("config");
       setInformalTeam1({ name: "", players: [] });

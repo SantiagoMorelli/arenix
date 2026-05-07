@@ -107,18 +107,11 @@ export async function createTournament(leagueId, payload) {
  * @param {object[]} sets - sets array
  */
 export async function saveMatchResult(matchId, score1, score2, winnerId, log = null, sets = null) {
-  // 1. Get the match to determine the loser team
-  const { data: matchData, error: matchError } = await supabase
-    .from('matches')
-    .select('team1_id, team2_id')
-    .eq('id', matchId)
-    .single()
-    
-  if (matchError) throw matchError
-
-  const loserId = matchData.team1_id === winnerId ? matchData.team2_id : matchData.team1_id
-
-  // 2. Save the match result
+  // Single round-trip: persist the match result.
+  // Team and player win/loss/points counters are no longer maintained here —
+  // they are computed on the fly from match logs wherever they are displayed
+  // (LeagueDetail leaderboard, Profile leagues tab). Tournament-winner bonus
+  // points (+2/+1) are still written by completeTournament().
   const { error } = await supabase
     .from('matches')
     .update({
@@ -126,81 +119,46 @@ export async function saveMatchResult(matchId, score1, score2, winnerId, log = n
       score2,
       winner_id: winnerId,
       played:    true,
-      log:       log   || null,
-      sets:      sets  || null,
+      log:       log  || null,
+      sets:      sets || null,
     })
     .eq('id', matchId)
 
   if (error) throw error
-  
-  // 3. Update team stats (1 pt and 1 win for winner, 1 loss for loser)
-  if (winnerId) {
-    const { error: winErr } = await supabase.rpc('increment_team_stats', {
-      p_team_id: winnerId,
-      p_wins: 1,
-      p_losses: 0,
-      p_points: 1
-    })
-    
-    // If RPC doesn't exist, fallback to direct update
-    if (winErr) {
-      const { data: wTeam } = await supabase.from('teams').select('wins, points').eq('id', winnerId).single()
-      if (wTeam) {
-        await supabase.from('teams').update({
-          wins: wTeam.wins + 1,
-          points: wTeam.points + 1
-        }).eq('id', winnerId)
-      }
-    }
-  }
-  
-  if (loserId) {
-    const { error: lossErr } = await supabase.rpc('increment_team_stats', {
-      p_team_id: loserId,
-      p_wins: 0,
-      p_losses: 1,
-      p_points: 0
-    })
-    
-    if (lossErr) {
-      const { data: lTeam } = await supabase.from('teams').select('losses').eq('id', loserId).single()
-      if (lTeam) {
-        await supabase.from('teams').update({
-          losses: lTeam.losses + 1
-        }).eq('id', loserId)
-      }
-    }
-  }
+}
 
-  // 4. Update player stats
-  if (winnerId) {
-    const { data: wPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', winnerId)
-    if (wPlayers) {
-      for (const wp of wPlayers) {
-        const { data: pData } = await supabase.from('players').select('wins, points').eq('id', wp.player_id).single()
-        if (pData) {
-          await supabase.from('players').update({
-            wins: pData.wins + 1,
-            points: pData.points + 1
-          }).eq('id', wp.player_id)
-        }
-      }
-    }
-  }
-  
-  if (loserId) {
-    const { data: lPlayers } = await supabase.from('team_players').select('player_id').eq('team_id', loserId)
-    if (lPlayers) {
-      for (const lp of lPlayers) {
-        const { data: pData } = await supabase.from('players').select('losses').eq('id', lp.player_id).single()
-        if (pData) {
-          await supabase.from('players').update({
-            losses: pData.losses + 1
-          }).eq('id', lp.player_id)
-        }
-      }
-    }
-  }
+/**
+ * Save the current point log to a match row without marking it as played.
+ * Used when the exporter taps "Done" on the QR export modal so the partial
+ * log is safely persisted in Supabase before the phone is handed over.
+ *
+ * @param {string} matchId - Supabase match UUID
+ * @param {object[]} log   - point log array (first half of the match)
+ */
+export async function savePartialMatchLog(matchId, log) {
+  const { error } = await supabase
+    .from('matches')
+    .update({ log: log || null })
+    .eq('id', matchId)
+  if (error) throw error
+}
+
+/**
+ * Fetch only the log column for a match.
+ * Used by the importer device to retrieve the first-half log recorded by
+ * the exporter before merging it with the second-half log on save.
+ *
+ * @param {string} matchId - Supabase match UUID
+ * @returns {object[]|null} the saved log array, or null if none
+ */
+export async function fetchMatchLog(matchId) {
+  const { data, error } = await supabase
+    .from('matches')
+    .select('log')
+    .eq('id', matchId)
+    .single()
+  if (error) throw error
+  return data?.log ?? null
 }
 
 /**
@@ -363,6 +321,19 @@ export async function renameTeam(teamId, newName) {
   const { error } = await supabase
     .from('teams')
     .update({ name: newName })
+    .eq('id', teamId)
+  if (error) throw error
+}
+
+/**
+ * Persist the default serve order for a tournament team.
+ * Called silently when a match starts so the same order is pre-loaded next time.
+ */
+export async function saveTeamServeOrder(teamId, serveOrder) {
+  if (!teamId || !Array.isArray(serveOrder) || serveOrder.length === 0) return
+  const { error } = await supabase
+    .from('teams')
+    .update({ serve_order: serveOrder })
     .eq('id', teamId)
   if (error) throw error
 }

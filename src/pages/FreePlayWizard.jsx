@@ -250,10 +250,10 @@ export default function FreePlayWizard() {
       return
     }
     if (hasProgress) setShowDiscard(true)
-    else navigate('/free-play')
+    else navigate('/')
   }
 
-  const handleDiscard = () => navigate('/free-play')
+  const handleDiscard = () => navigate('/')
 
   // ── Final submit ─────────────────────────────────────────────────────────
   const handleFinish = async () => {

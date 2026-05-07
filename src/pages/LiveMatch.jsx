@@ -3,8 +3,8 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
-import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament, releaseMatchScorer } from '../services/tournamentService'
-import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
+import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament, releaseMatchScorer, saveTeamServeOrder, savePartialMatchLog, fetchMatchLog } from '../services/tournamentService'
+import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import LiveScoreboard from '../components/LiveScoreboard'
 const QRImportModal = lazy(() => import('../components/QRImportModal'))
 import { useToast } from '../components/ToastContext'
@@ -47,11 +47,30 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
   })
 
   const handleSetSide = (sideStr) => {
-    live.setT1InitialSide(sideStr)
-    live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
+    // The serving team's side is what the user picks.
+    // t1InitialSide always tracks Team 1's side for the scoring engine.
+    if (live.firstServingTeam === 2) {
+      const t1Side = sideStr === 'left' ? 'right' : 'left'
+      live.setT1InitialSide(t1Side)
+      live.setSide({ t1: t1Side, t2: sideStr })
+    } else {
+      live.setT1InitialSide(sideStr)
+      live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
+    }
   }
 
+  // Derive which side the serving team is on (for button highlight)
+  const servingTeamSide = live.firstServingTeam === 2
+    ? (live.t1InitialSide === 'left' ? 'right' : live.t1InitialSide === 'right' ? 'left' : null)
+    : live.t1InitialSide
+
+  // Active color for side buttons — follows the serving team's identity color
+  const sideActiveClass = live.firstServingTeam === 2
+    ? 'border-free bg-free/10 text-free'
+    : 'border-accent bg-accent/10 text-accent'
+
   const canStart = live.t1ServeOrder?.length > 0 && live.t2ServeOrder?.length > 0
+    && live.firstServingTeam != null && live.t1InitialSide != null
 
   return (
     <div className="screen bg-bg text-text p-4">
@@ -114,10 +133,10 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
 
             {/* Team 2 */}
             <div className="flex-1">
-              <div className="text-[12px] font-bold text-text mb-2 text-center truncate">{t2Name}</div>
+              <div className="text-[12px] font-bold text-free mb-2 text-center truncate">{t2Name}</div>
               <div className="flex flex-col gap-2">
                 {live.t2ServeOrder.map((pid, idx) => (
-                  <div key={pid} className={`flex items-center gap-2 p-2 rounded-lg border ${idx === 0 ? 'bg-text/10 border-line text-text' : 'bg-bg border-line text-text'}`}>
+                  <div key={pid} className={`flex items-center gap-2 p-2 rounded-lg border ${idx === 0 ? 'bg-free/10 border-free/40 text-free' : 'bg-bg border-line text-text'}`}>
                     <span className="text-[10px] font-bold w-4 h-4 rounded-full bg-current text-white flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
@@ -139,45 +158,53 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={() => live.setFirstServingTeam(1)}
+              onClick={() => { live.setFirstServingTeam(1); live.setT1InitialSide(null) }}
               className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold truncate px-2 transition-all ${live.firstServingTeam === 1 ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-bg text-dim'}`}
             >
               🏐 {t1Name}
             </button>
             <button 
-              onClick={() => live.setFirstServingTeam(2)}
-              className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold truncate px-2 transition-all ${live.firstServingTeam === 2 ? 'border-text/40 bg-text/5 text-text' : 'border-line bg-bg text-dim'}`}
+              onClick={() => { live.setFirstServingTeam(2); live.setT1InitialSide(null) }}
+              className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold truncate px-2 transition-all ${live.firstServingTeam === 2 ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-dim'}`}
             >
               🏐 {t2Name}
             </button>
           </div>
         </div>
 
-        {/* Sides */}
-        <div className="bg-surface rounded-xl border border-line p-4">
-          <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-3 text-center">
-            {t1Name} starts on the...
+        {/* Sides — only shown after a serving team is chosen */}
+        {live.firstServingTeam != null && (
+          <div className="bg-surface rounded-xl border border-line p-4">
+            <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-3 text-center">
+              {live.firstServingTeam === 1 ? t1Name : t2Name} starts on the…
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleSetSide('left')}
+                className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all ${servingTeamSide === 'left' ? sideActiveClass : 'border-line bg-bg text-dim'}`}
+              >
+                Left Side
+              </button>
+              <button 
+                onClick={() => handleSetSide('right')}
+                className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all ${servingTeamSide === 'right' ? sideActiveClass : 'border-line bg-bg text-dim'}`}
+              >
+                Right Side
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => handleSetSide('left')}
-              className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all ${live.t1InitialSide === 'left' ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-bg text-dim'}`}
-            >
-              Left Side
-            </button>
-            <button 
-              onClick={() => handleSetSide('right')}
-              className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all ${live.t1InitialSide === 'right' ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-bg text-dim'}`}
-            >
-              Right Side
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 max-w-[400px] w-full mx-auto shrink-0">
         <button
-          onClick={() => { live.setPointsToWin(21); live.startGame() }}
+          onClick={() => {
+            live.setPointsToWin(21)
+            live.startGame()
+            // Silently persist serve orders as team defaults for next time
+            saveTeamServeOrder(live.team1Id, live.t1ServeOrder).catch(() => {})
+            saveTeamServeOrder(live.team2Id, live.t2ServeOrder).catch(() => {})
+          }}
           disabled={!canStart}
           className="w-full py-4 rounded-xl bg-accent text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -237,6 +264,13 @@ export default function LiveMatch() {
 
   const [showQRImport, setShowQRImport] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  // Stores a Promise<log[]> that starts fetching the exporter's partial log
+  // in the background the moment the QR is scanned. By the time the importer
+  // finishes the match and taps Save it is almost always already resolved,
+  // so the save flow incurs zero extra latency. In the rare edge case where
+  // Save is tapped before the fetch completes we simply await the same
+  // in-flight Promise — no second network request is made.
+  const importedLogPromise = useRef(null)
 
   // ── Abort detection: End Match pressed with no points scored ──────────────
   // When pendingEnd transitions true → false while the game is still running
@@ -285,15 +319,37 @@ export default function LiveMatch() {
       t1InitialSide: s?.t1InitialSide ?? live.t1InitialSide,
       t1ServeOrder: live.t1ServeOrder,
       t2ServeOrder: live.t2ServeOrder,
+      // matchId lets the importer device fetch the exporter's partial log
+      // from Supabase after the match ends and merge it into the full log.
+      matchId: mid,
       log: [],
       history: [],
     }
+  }
+
+  // Called when the exporter taps "Done" on the QR modal.
+  // Saves the current point log to Supabase (without marking the match as
+  // played) so it can be retrieved and merged by the importer on save.
+  const handleQRExportDone = (onClose) => {
+    savePartialMatchLog(mid, live.log).catch((err) => {
+      console.error('Failed to save partial match log:', err)
+      showError(err, 'Could not save point log. Stats may be incomplete.')
+    })
+    onClose()
   }
 
   const handleQRImport = (parsedState) => {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(parsedState))
       live.restoreGame()
+      // Kick off the exporter log fetch immediately in the background.
+      // The match will play for at least a few minutes, so by Save time
+      // this Promise will almost certainly already be resolved.
+      if (parsedState.matchId) {
+        importedLogPromise.current = fetchMatchLog(parsedState.matchId)
+          .then(log => (Array.isArray(log) ? log : []))
+          .catch(() => [])
+      }
     } catch {}
     setShowQRImport(false)
   }
@@ -316,53 +372,47 @@ export default function LiveMatch() {
     const finalScore1 = isOneSet ? (live.sets[0]?.s1 ?? live.score1) : s1_sets
     const finalScore2 = isOneSet ? (live.sets[0]?.s2 ?? live.score2) : s2_sets
 
-    try {
-      await supabaseSaveMatchResult(matchId, finalScore1, finalScore2, winnerTeamId, log, sets)
-
-      // Notify players of match result
-      const leaguePlayers = league?.players || []
-      const team1 = tournament.teams?.find(t => t.id === live.team1Id)
-      const team2 = tournament.teams?.find(t => t.id === live.team2Id)
-      const t1Name = team1?.name || 'Team 1'
-      const t2Name = team2?.name || 'Team 2'
-      const allPlayerIds = [...(team1?.players || []), ...(team2?.players || [])]
-      const uniqueUserIds = [...new Set(
-        allPlayerIds.map(pid => leaguePlayers.find(p => p.id === pid)?.userId).filter(Boolean)
-      )]
-      await Promise.all(
-        uniqueUserIds.map(userId => {
-          const myPlayer = leaguePlayers.find(p => p.userId === userId)
-          const myTeam = (team1?.players || []).includes(myPlayer?.id) ? team1 : team2
-          const won = myTeam?.id === winnerTeamId
-          return createNotification(
-            userId,
-            'match_result',
-            won ? 'You won! 🎉' : 'Match result 📋',
-            `${t1Name} ${finalScore1} – ${finalScore2} ${t2Name}`,
-            { matchId, tournamentId: tid, leagueId: id },
-          )
-        })
-      )
-
-      if (tournament?.knockout) {
-        await advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
-
-        // Check if this was the final match
-        const isFinal = tournament.knockout.rounds.some(
-          r => r.id === 'final' && r.matches.some(m => m.id === matchId)
-        )
-        if (isFinal) {
-          const match = tournament.knockout.rounds.find(r => r.id === 'final').matches.find(m => m.id === matchId)
-          const runnerUpId = match.team1 === winnerTeamId ? match.team2 : match.team1
-          await completeTournament(tid, winnerTeamId, runnerUpId)
-          await createNotificationsForLeagueMembers(
-            id,
-            'tournament_finished',
-            '🏆 Tournament finished!',
-            `${tournament.name} has ended`,
-            { leagueId: id, tournamentId: tid },
-          )
+    // If this device took over via QR import, await the exporter's partial log
+    // (already fetched in the background at scan time — normally resolves in
+    // milliseconds here) and prepend it to produce the full match log.
+    let mergedLog = log
+    if (importedLogPromise.current) {
+      try {
+        const exporterLog = await importedLogPromise.current
+        if (exporterLog.length > 0) {
+          mergedLog = [...exporterLog, ...(log || [])]
         }
+      } catch {
+        // Non-fatal: save with the importer's log only.
+      }
+    }
+
+    try {
+      await supabaseSaveMatchResult(matchId, finalScore1, finalScore2, winnerTeamId, mergedLog, sets)
+
+      // Bracket advancement + tournament-finished notification are fire-and-forget:
+      // the match result is already committed to Supabase above, so we navigate
+      // away immediately without waiting for these background operations.
+      if (tournament?.knockout) {
+        advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
+          .then(() => {
+            const isFinal = tournament.knockout.rounds.some(
+              r => r.id === 'final' && r.matches.some(m => m.id === matchId)
+            )
+            if (isFinal) {
+              const match = tournament.knockout.rounds.find(r => r.id === 'final').matches.find(m => m.id === matchId)
+              const runnerUpId = match.team1 === winnerTeamId ? match.team2 : match.team1
+              return completeTournament(tid, winnerTeamId, runnerUpId)
+                .then(() => createNotificationsForLeagueMembers(
+                  id,
+                  'tournament_finished',
+                  '🏆 Tournament finished!',
+                  `${tournament.name} has ended`,
+                  { leagueId: id, tournamentId: tid },
+                ))
+            }
+          })
+          .catch(err => console.error('Background bracket/tournament update failed:', err))
       }
     } catch (err) {
       console.error('Failed to save match result:', err)
@@ -461,6 +511,7 @@ export default function LiveMatch() {
       enableQR
       enableBattery
       getQRPayload={getQRPayload}
+      onQRExportDone={handleQRExportDone}
     />
   )
 }

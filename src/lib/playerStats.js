@@ -27,7 +27,67 @@
  *   - When there is no data, percentages are 0 and counts are 0 (never NaN).
  */
 
+/**
+ * Compute a player's win/loss record across all played matches in a league.
+ *
+ * Replaces the stored players.wins / players.losses DB counters, which are
+ * no longer updated per-match. The ranking score combines computed match wins
+ * with any tournament-winner bonus points still stored in players.points
+ * (written only by completeTournament — +2 for winner, +1 for runner-up).
+ *
+ * @param {string} playerId  - The player's ID within this league (players.id)
+ * @param {object} league    - Full league object from getLeagueById / useLeague
+ * @returns {{ wins: number, losses: number, score: number }}
+ *   score = wins + stored bonus points (tournament-winner ELO)
+ */
+export function computePlayerLeagueRecord(playerId, league) {
+  if (!playerId || !league) return { wins: 0, losses: 0, score: 0 }
+
+  let wins = 0
+  let losses = 0
+
+  for (const tournament of league.tournaments || []) {
+    const teams = tournament.teams || []
+
+    // Find which team in this tournament the player belongs to
+    const playerTeam = teams.find(t => (t.players || []).includes(playerId))
+    if (!playerTeam) continue
+
+    // Collect all matches across groups, knockout, and free-play slots
+    const allMatches = [
+      ...(tournament.groups  || []).flatMap(g => g.matches || []),
+      ...(tournament.knockout?.rounds || []).flatMap(r => r.matches || []),
+      ...(tournament.matches || []),
+    ]
+
+    for (const match of allMatches) {
+      if (!match.played) continue
+      // Only matches this team actually played
+      if (match.team1 !== playerTeam.id && match.team2 !== playerTeam.id) continue
+      if (match.winner === playerTeam.id) wins++
+      else losses++
+    }
+  }
+
+  // Find this player's stored bonus points (tournament-winner ELO: +2/+1)
+  const stored = (league.players || []).find(p => p.id === playerId)
+  const bonus = stored?.points || 0
+
+  return { wins, losses, score: wins + bonus }
+}
+
 const PCT = (num, den) => (den > 0 ? num / den : 0)
+
+/**
+ * Maps a raw errorType value (any era) to the canonical action-based id.
+ * Legacy trajectory-based values "net" / "out" → "other"
+ * null / unknown                               → "untyped"
+ */
+function normalizeErrorType(raw) {
+  if (raw === 'spike' || raw === 'tip' || raw === 'serve' || raw === 'other') return raw;
+  if (raw === 'net' || raw === 'out') return 'other';
+  return 'untyped';
+}
 
 /* ─── Serving ─────────────────────────────────────────────────────────────── */
 
@@ -206,7 +266,7 @@ export function computePressureStats(annotated) {
 
 export function computeStrengths(annotated, leagueAverages) {
   const byType = { ace: 0, spike: 0, block: 0, tip: 0 }
-  const errorsByType = { net: 0, out: 0, serve: 0, other: 0, untyped: 0 }
+  const errorsByType = { spike: 0, tip: 0, serve: 0, other: 0, untyped: 0 }
   let totalScoring = 0
   let totalErrors = 0
 
@@ -220,8 +280,8 @@ export function computeStrengths(annotated, leagueAverages) {
       }
       if (e.errorPlayerId === pid) {
         totalErrors++
-        const sub = e.errorType
-        if (sub && errorsByType[sub] !== undefined) errorsByType[sub]++
+        const sub = normalizeErrorType(e.errorType)
+        if (errorsByType[sub] !== undefined) errorsByType[sub]++
         else errorsByType.untyped++
       }
     }

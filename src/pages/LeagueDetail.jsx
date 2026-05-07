@@ -9,6 +9,7 @@ import { buildInviteLink, buildViewLink, regenerateInviteCode, addMemberRole, re
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 import LeaguePlayersTab from '../components/LeaguePlayersTab'
 import { createNotification } from '../services/notificationService'
+import { computePlayerLeagueRecord } from '../lib/playerStats'
 import { useToast } from '../components/ToastContext'
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -641,7 +642,12 @@ export default function LeagueDetail() {
     )
   }
 
-  const rankedPlayers = [...(league.players || [])].sort((a, b) => (b.points || 0) - (a.points || 0))
+  const rankedPlayers = [...(league.players || [])]
+    .map(p => {
+      const { wins, losses, score } = computePlayerLeagueRecord(p.id, league)
+      return { ...p, wins, losses, _score: score }
+    })
+    .sort((a, b) => b._score - a._score)
   const tournaments   = [...(league.tournaments || [])].reverse()
   const myPlayer      = rankedPlayers.find(p => p.userId === profile?.id)
   const myRank        = myPlayer ? rankedPlayers.indexOf(myPlayer) + 1 : null
@@ -706,7 +712,7 @@ export default function LeagueDetail() {
                       <div className="text-[11px] font-bold text-accent tracking-[1.2px] uppercase mb-1">Your Position</div>
                       <div className="flex items-baseline gap-2">
                         <span className="font-display text-[40px] leading-none text-accent">#{myRank}</span>
-                        <span className="text-[12px] text-dim">of {rankedPlayers.length} · {myPlayer.points ?? 0} ELO</span>
+                        <span className="text-[12px] text-dim">of {rankedPlayers.length} · {myPlayer._score ?? 0} pts</span>
                       </div>
                     </div>
                     <div className="w-20 h-[60px] flex-shrink-0">
@@ -758,7 +764,7 @@ export default function LeagueDetail() {
                           </div>
                           {wl && <div className="text-[10px] text-dim mt-0.5">{wl}</div>}
                         </div>
-                        <span className="font-display text-[18px] text-text leading-none ml-2">{player.points ?? 0}</span>
+                        <span className="font-display text-[18px] text-text leading-none ml-2">{player._score ?? 0}</span>
                       </div>
                     )
                   })}

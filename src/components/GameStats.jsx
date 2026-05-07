@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
-  Trophy, Check, Volleyball, Undo2,
+  Trophy, Check, Volleyball, Undo2, X, Target, Zap, Shield, Hand, HelpCircle,
 } from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
 import { AppCard, AppButton, PillTabs } from "./ui-new";
 import {
   calcLeadStats, calcDynamics, calcMVP,
 } from "../lib/matchStats";
-import { POINT_TYPES } from "./stats/pointTypes";
+import { POINT_TYPES, ERROR_SUBTYPE_BY_ID, normalizeErrorType } from "./stats/pointTypes";
 import MatchFlow from "./stats/MatchFlow";
 import MatchHighlights from "./stats/MatchHighlights";
 import TopPerformers from "./stats/TopPerformers";
@@ -429,26 +429,42 @@ const GameStats = ({
                 {entry.msg}
               </div>
             );
-            const isTeam1   = entry.team === 1;
-            const teamColor = isTeam1 ? "text-accent" : "text-free";
-            const teamBg    = isTeam1 ? "bg-accent/15" : "bg-free/15";
-            const ptType    = POINT_TYPES.find(pt => pt.id === entry.pointType);
-            const PtIcon    = ptType?.icon;
+            const isTeam1    = entry.team === 1;
+            const teamColor  = isTeam1 ? "text-accent" : "text-free";
+            const teamBg     = isTeam1 ? "bg-accent/15" : "bg-free/15";
+            const isError    = entry.pointType === "error";
+            const ptType     = POINT_TYPES.find(pt => pt.id === entry.pointType);
+            const PtIcon     = ptType?.icon;
+            const srvIsTeam1 = entry.serverTeam === 1;
+            const errSubtype = isError ? ERROR_SUBTYPE_BY_ID[normalizeErrorType(entry.errorType)] : null;
+            const ErrIcon    = errSubtype?.icon;
             return (
               <div key={entry.id} className="flex items-center px-3.5 py-2 gap-2 border-b border-line last:border-b-0">
-                <span className="text-[11px] font-bold text-accent w-9 flex-shrink-0">
-                  {entry.t1}–{entry.t2}
+                <span className="text-[11px] font-bold w-9 flex-shrink-0 text-right">
+                  <span className={isTeam1 ? "text-accent" : "text-dim"}>{entry.t1}</span>
+                  <span className="text-dim">–</span>
+                  <span className={!isTeam1 ? "text-free" : "text-dim"}>{entry.t2}</span>
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] text-text truncate flex items-center gap-1">
-                    {PtIcon ? <PtIcon size={11} className="flex-shrink-0" /> : <Volleyball size={11} className="flex-shrink-0" />}
-                    <span className="truncate">
-                      {ptType?.label || entry.pointTypeLabel || "Punto"}
-                      {entry.scoringPlayerId ? ` · ${playerName(entry.scoringPlayerId)}` : ""}
-                    </span>
+                    {isError ? (
+                      <>
+                        <X size={11} className="flex-shrink-0 text-error" />
+                        {ErrIcon && <ErrIcon size={11} className="flex-shrink-0 text-error" />}
+                        {entry.errorPlayerId && <span className="text-dim truncate">{playerName(entry.errorPlayerId)}</span>}
+                      </>
+                    ) : (
+                      <>
+                        {PtIcon
+                          ? <PtIcon size={11} className={`flex-shrink-0 ${isTeam1 ? "text-accent" : "text-free"}`} />
+                          : <Volleyball size={11} className={`flex-shrink-0 ${isTeam1 ? "text-accent" : "text-free"}`} />
+                        }
+                        {entry.scoringPlayerId && <span className="text-dim truncate">{playerName(entry.scoringPlayerId)}</span>}
+                      </>
+                    )}
                   </div>
                   <div className="text-[9px] text-dim flex items-center gap-1">
-                    <Volleyball size={9} className="flex-shrink-0" />
+                    <Volleyball size={9} className={`flex-shrink-0 ${srvIsTeam1 ? "text-accent" : "text-free"}`} />
                     {playerName(entry.serverPlayerId)}
                   </div>
                 </div>

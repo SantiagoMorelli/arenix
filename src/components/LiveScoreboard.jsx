@@ -1,9 +1,14 @@
 import { useState, lazy, Suspense } from 'react'
+import { Target, Zap, Shield, Hand, X, Volleyball, HelpCircle, User } from 'lucide-react'
 import GameStats from './GameStats'
 import { ERROR_SUBTYPES } from '../hooks/liveGame/pointTypes'
 const QRExportModal = lazy(() => import('./QRExportModal'))
 import { useBattery } from '../hooks/useBattery'
 import { useWakeLock } from '../hooks/useWakeLock'
+
+// Lucide icon lookup for point types and error subtypes (action-based)
+const POINT_TYPE_ICON = { ace: Target, spike: Zap, block: Shield, tip: Hand, error: X }
+const ERROR_SUBTYPE_ICON = { spike: Zap, tip: Hand, serve: Volleyball, other: HelpCircle }
 
 /**
  * LiveScoreboard — in-game scoreboard, overlays, and match log.
@@ -23,6 +28,7 @@ import { useWakeLock } from '../hooks/useWakeLock'
  *   isSaving             — bool
  *   enableQR             — show QR export button + overflow menu
  *   getQRPayload         — () => payload for QRExportModal
+ *   onQRExportDone       — (onClose) => void  called when user taps Done on QR export modal
  *   enableBattery        — show low-battery banner (tournament only)
  */
 export default function LiveScoreboard({
@@ -37,6 +43,7 @@ export default function LiveScoreboard({
   isSaving = false,
   enableQR = false,
   getQRPayload = null,
+  onQRExportDone = null,
   enableBattery = false,
 }) {
   // ── Palette ──────────────────────────────────────────────────────────────
@@ -63,6 +70,23 @@ export default function LiveScoreboard({
         border40:    'border-accent/40',
         shadow:      'shadow-[0_0_10px_rgba(var(--c-accent),0.8)]',
       }
+
+  // ── Team identity palettes — fixed regardless of accent/mode ─────────────
+  // Team 1 is always orange, Team 2 is always teal.
+  const T1 = {
+    text:   'text-accent',
+    bg:     'bg-accent',
+    bg10:   'bg-accent/10',
+    border: 'border-accent',
+    shadow: 'shadow-[0_0_10px_rgba(var(--c-accent),0.8)]',
+  }
+  const T2 = {
+    text:   'text-free',
+    bg:     'bg-free',
+    bg10:   'bg-free/10',
+    border: 'border-free',
+    shadow: 'shadow-[0_0_10px_rgba(var(--c-free),0.8)]',
+  }
 
   // ── Battery (only when enabled) ──────────────────────────────────────────
   const battery = useBattery()
@@ -108,29 +132,33 @@ export default function LiveScoreboard({
   // ── Point type dialog ────────────────────────────────────────────────────
   if (live.pendingPoint) {
     const ptTeamName = live.pendingPoint.teamNum === 1 ? t1Name : t2Name
+    const ptTeamC = live.pendingPoint.teamNum === 1 ? T1 : T2
     return (
       <div className="absolute inset-0 z-50 bg-bg flex flex-col pt-12 pb-6 px-4">
         <div className="text-center mb-8">
-          <div className={`text-[28px] font-black ${C.text} mb-2`}>Point for {ptTeamName}</div>
+          <div className={`text-[28px] font-black ${ptTeamC.text} mb-2`}>Point for {ptTeamName}</div>
           <div className="text-[13px] text-dim font-medium uppercase tracking-widest">Select action</div>
         </div>
         <div className="flex flex-col gap-3 flex-1">
-          {live.POINT_TYPES.filter(pt => pt.id !== 'ace' || live.pendingPoint?.teamNum === live.serverTeam).map(pt => (
-            <button
-              key={pt.id}
-              onClick={() => live.confirmPointType(pt.id)}
-              className="w-full bg-surface border border-line/50 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-95 transition-transform"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-[28px]">{pt.icon}</span>
-                <div className="text-left">
-                  <div className="text-[16px] font-bold text-text mb-1">{pt.label}</div>
-                  <div className="text-[12px] text-dim">{pt.desc}</div>
+          {live.POINT_TYPES.filter(pt => pt.id !== 'ace' || live.pendingPoint?.teamNum === live.serverTeam).map(pt => {
+            const PtIcon = POINT_TYPE_ICON[pt.id] || Zap
+            return (
+              <button
+                key={pt.id}
+                onClick={() => live.confirmPointType(pt.id)}
+                className="w-full bg-surface border border-line/50 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-95 transition-transform"
+              >
+                <div className="flex items-center gap-4">
+                  <PtIcon size={26} className={`shrink-0 ${ptTeamC.text}`} />
+                  <div className="text-left">
+                    <div className="text-[16px] font-bold text-text mb-1">{pt.label}</div>
+                    <div className="text-[12px] text-dim">{pt.desc}</div>
+                  </div>
                 </div>
-              </div>
-              <span className={`text-[18px] ${C.text} font-bold`}>→</span>
-            </button>
-          ))}
+                <span className={`text-[18px] ${ptTeamC.text} font-bold`}>→</span>
+              </button>
+            )
+          })}
         </div>
         <button onClick={() => live.setPendingPoint(null)} className="w-full py-4 mt-4 rounded-xl text-dim font-bold tracking-widest uppercase border-0 bg-transparent active:bg-surface transition-colors">
           Cancel
@@ -141,29 +169,37 @@ export default function LiveScoreboard({
 
   // ── Error subtype dialog ─────────────────────────────────────────────────
   if (live.pendingErrorSubtype) {
+    // The team that made the error is the rival of the scoring team.
+    const erroringTeam = live.pendingErrorSubtype.teamNum === 1 ? 2 : 1
+    // Only show "Serve" if the erroring team was actually serving this point.
+    const rivalWasServing = live.currentServer.team === erroringTeam
+    const visibleSubtypes = ERROR_SUBTYPES.filter(es => es.id !== 'serve' || rivalWasServing)
     return (
       <div className="absolute inset-0 z-50 bg-bg flex flex-col pt-12 pb-6 px-4">
         <div className="text-center mb-8">
           <div className="text-[24px] font-black text-error mb-2">Rival error</div>
-          <div className="text-[13px] text-dim font-medium uppercase tracking-widest">What kind of error?</div>
+          <div className="text-[13px] text-dim font-medium uppercase tracking-widest">What action caused the error?</div>
         </div>
         <div className="flex flex-col gap-3 flex-1">
-          {ERROR_SUBTYPES.map(es => (
-            <button
-              key={es.id}
-              onClick={() => live.confirmErrorSubtype(es.id)}
-              className="w-full bg-surface border border-line/50 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-95 transition-transform"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-[26px]">{es.icon}</span>
-                <div className="text-left">
-                  <div className="text-[16px] font-bold text-text mb-1">{es.label}</div>
-                  <div className="text-[12px] text-dim">{es.desc}</div>
+          {visibleSubtypes.map(es => {
+            const EsIcon = ERROR_SUBTYPE_ICON[es.id] || HelpCircle
+            return (
+              <button
+                key={es.id}
+                onClick={() => live.confirmErrorSubtype(es.id)}
+                className="w-full bg-surface border border-line/50 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-95 transition-transform"
+              >
+                <div className="flex items-center gap-4">
+                  <EsIcon size={24} className="shrink-0 text-error" />
+                  <div className="text-left">
+                    <div className="text-[16px] font-bold text-text mb-1">{es.label}</div>
+                    <div className="text-[12px] text-dim">{es.desc}</div>
+                  </div>
                 </div>
-              </div>
-              <span className="text-[18px] text-error font-bold">→</span>
-            </button>
-          ))}
+                <span className="text-[18px] text-error font-bold">→</span>
+              </button>
+            )
+          })}
         </div>
         <button onClick={live.cancelErrorSubtype} className="w-full py-4 mt-4 rounded-xl text-dim font-bold tracking-widest uppercase border-0 bg-transparent active:bg-surface transition-colors">
           Cancel
@@ -176,14 +212,15 @@ export default function LiveScoreboard({
   if (live.pendingPlayerSelect) {
     const isError = live.pendingPlayerSelect.ptId === 'error'
     const teamNum = isError ? (live.pendingPlayerSelect.teamNum === 1 ? 2 : 1) : live.pendingPlayerSelect.teamNum
+    const scoringTeamC = live.pendingPlayerSelect.teamNum === 1 ? T1 : T2
     const roster = live.serveRotation.filter(r => r.team === teamNum)
     return (
       <div className="absolute inset-0 z-50 bg-bg flex flex-col pt-12 pb-6 px-4">
         <div className="text-center mb-10">
-          <div className={`text-[24px] font-black mb-2 ${isError ? 'text-error' : C.text}`}>
+          <div className={`text-[24px] font-black mb-2 ${isError ? 'text-error' : scoringTeamC.text}`}>
             {isError ? 'Who made the error?' : 'Who scored the point?'}
           </div>
-          <div className="text-[13px] text-dim">Tap a player or select "Team" if unknown</div>
+          <div className="text-[13px] text-dim">Tap a player to assign the point</div>
         </div>
         <div className="flex flex-col gap-4 flex-1 justify-center">
           {roster.map(r => (
@@ -191,19 +228,16 @@ export default function LiveScoreboard({
               key={r.playerId}
               onClick={() => live.confirmPlayer(r.playerId)}
               className={`w-full p-5 rounded-2xl border-2 flex items-center justify-center gap-3 text-[18px] font-bold shadow-md active:scale-95 transition-transform ${
-                isError ? 'border-error/30 bg-error/10 text-error' : `${C.border30} ${C.bg10} ${C.text}`
+                isError ? 'border-error/30 bg-error/10 text-error' : `${scoringTeamC.border}/30 ${scoringTeamC.bg10} ${scoringTeamC.text}`
               }`}
             >
-              👤 {live.playerName(r.playerId)}
+              <User size={18} className="shrink-0" /> {live.playerName(r.playerId)}
             </button>
           ))}
-          <button
-            onClick={() => live.confirmPlayer(null)}
-            className="w-full p-5 rounded-2xl border border-line bg-surface text-text flex items-center justify-center gap-3 text-[16px] font-bold active:scale-95 transition-transform mt-4"
-          >
-            👥 Skip Player (Team Point)
-          </button>
         </div>
+        <button onClick={live.cancelPlayerSelect} className="w-full py-4 mt-4 rounded-xl text-dim font-bold tracking-widest uppercase border-0 bg-transparent active:bg-surface transition-colors">
+          Cancel
+        </button>
       </div>
     )
   }
@@ -272,18 +306,19 @@ export default function LiveScoreboard({
 
   const renderServerInfo = (teamNum) => {
     const isServing = currentSrv.team === teamNum
+    const teamC = teamNum === 1 ? T1 : T2
     const slotsForTeam = rot.filter(r => r.team === teamNum)
 
     if (isServing) {
       if (!currentSrv.playerId) return null
       return (
         <div className="absolute bottom-6 flex flex-col items-center gap-1">
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${C.text} ${C.bg10} px-2 py-0.5 rounded-full border ${C.border}/20`}>
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${teamC.text} ${teamC.bg10} px-2 py-0.5 rounded-full border ${teamC.border}/20`}>
             Serving
           </span>
-          <span className="text-[13px] font-black text-text bg-bg/80 backdrop-blur px-4 py-1.5 rounded-full shadow-sm border border-line">
-            🏐 {live.playerName(currentSrv.playerId)}
-          </span>
+          <span className="text-[13px] font-black text-text bg-bg/80 backdrop-blur px-4 py-1.5 rounded-full shadow-sm border border-line flex items-center gap-1.5">
+              <Volleyball size={13} className="shrink-0" /> {live.playerName(currentSrv.playerId)}
+            </span>
         </div>
       )
     } else {
@@ -411,7 +446,7 @@ export default function LiveScoreboard({
             className="flex-1 flex flex-col items-center justify-center bg-surface border-2 border-line rounded-[32px] relative shadow-sm active:bg-alt active:scale-[0.98] transition-all overflow-hidden"
           >
             {currentSrv.team === (live.side.t1 === 'left' ? 1 : 2) && (
-              <div className={`absolute top-4 w-4 h-4 ${C.bg} rounded-full ${C.shadow} animate-pulse`} />
+              <div className={`absolute top-4 w-4 h-4 ${(currentSrv.team === 1 ? T1 : T2).bg} rounded-full ${(currentSrv.team === 1 ? T1 : T2).shadow} animate-pulse`} />
             )}
 
             <div className="text-[16px] font-bold text-text uppercase tracking-widest text-center px-4 max-w-full truncate">
@@ -448,7 +483,7 @@ export default function LiveScoreboard({
             className="flex-1 flex flex-col items-center justify-center bg-surface border-2 border-line rounded-[32px] relative shadow-sm active:bg-alt active:scale-[0.98] transition-all overflow-hidden"
           >
             {currentSrv.team === (live.side.t2 === 'right' ? 2 : 1) && (
-              <div className={`absolute top-4 w-4 h-4 ${C.bg} rounded-full ${C.shadow} animate-pulse`} />
+              <div className={`absolute top-4 w-4 h-4 ${(currentSrv.team === 1 ? T1 : T2).bg} rounded-full ${(currentSrv.team === 1 ? T1 : T2).shadow} animate-pulse`} />
             )}
 
             <div className="text-[16px] font-bold text-text uppercase tracking-widest text-center px-4 max-w-full truncate">
@@ -480,30 +515,44 @@ export default function LiveScoreboard({
           ) : (
             [...live.log].reverse().map((entry) => {
               if (!entry.team) return (
-                <div key={entry.id} className={`py-2 px-3.5 text-[12px] font-bold ${C.text} text-center border-b border-line`}>
+                <div key={entry.id} className={`py-2 px-3.5 text-[12px] font-bold text-dim text-center border-b border-line`}>
                   {entry.msg}
                 </div>
               )
               const isTeam1 = entry.team === 1
-              const teamColor = isTeam1 ? C.text : 'text-text'
-              const teamBg = isTeam1 ? C.bg15 : 'bg-text/10'
+              const teamColor = isTeam1 ? 'text-accent' : 'text-free'
+              const teamBg    = isTeam1 ? 'bg-accent/15' : 'bg-free/15'
 
+              const srvIsTeam1 = entry.serverTeam === 1
               return (
                 <div key={entry.id} className="flex items-center px-3.5 py-2 gap-2 border-b border-line last:border-b-0">
-                  <span className={`text-[11px] font-bold ${C.text} w-9 shrink-0 text-right`}>
-                    {entry.t1}–{entry.t2}
+                  <span className="text-[11px] font-bold w-9 shrink-0 text-right">
+                    <span className={isTeam1 ? 'text-accent' : 'text-dim'}>{entry.t1}</span>
+                    <span className="text-dim">–</span>
+                    <span className={!isTeam1 ? 'text-free' : 'text-dim'}>{entry.t2}</span>
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] text-text truncate">
-                      {entry.pointTypeIcon || '🏐'} {entry.pointTypeLabel || 'Point'}
-                      {entry.scoringPlayerId ? ` · ${live.playerName(entry.scoringPlayerId)}` : ''}
+                    <div className="text-[11px] text-text truncate flex items-center gap-1">
+                      {entry.pointType === 'error' ? (
+                        <>
+                          <X size={11} className="shrink-0 inline text-error" />
+                          {entry.errorType && (() => { const EI = ERROR_SUBTYPE_ICON[entry.errorType]; return EI ? <EI size={11} className="shrink-0 inline text-error" /> : null })()}
+                          {entry.errorPlayerId ? <span className="text-dim">{live.playerName(entry.errorPlayerId)}</span> : null}
+                        </>
+                      ) : (
+                        <>
+                          {(() => { const LI = POINT_TYPE_ICON[entry.pointType] || Volleyball; return <LI size={11} className={`shrink-0 inline ${isTeam1 ? 'text-accent' : 'text-free'}`} /> })()}
+                          {entry.scoringPlayerId ? <span className="text-dim">{live.playerName(entry.scoringPlayerId)}</span> : null}
+                        </>
+                      )}
                     </div>
-                    <div className="text-[9px] text-dim truncate">
-                      Served: {live.playerName(entry.serverPlayerId)}
+                    <div className="text-[9px] text-dim truncate flex items-center gap-1">
+                      <Volleyball size={9} className={`shrink-0 ${srvIsTeam1 ? 'text-accent' : 'text-free'}`} />
+                      {live.playerName(entry.serverPlayerId)}
                     </div>
                   </div>
-                  <span className={`text-[9px] font-semibold ${teamColor} ${teamBg} px-1.5 py-0.5 rounded-[4px] shrink-0 max-w-[60px] truncate`}>
-                    {(isTeam1 ? t1Name : t2Name).split(' ')[0]}
+                  <span className={`text-[9px] font-semibold ${teamColor} ${teamBg} px-1.5 py-0.5 rounded-[4px] shrink-0 max-w-[80px] truncate`}>
+                    {isTeam1 ? t1Name : t2Name}
                   </span>
                 </div>
               )
@@ -515,7 +564,11 @@ export default function LiveScoreboard({
       {/* QR Export overlay */}
       {enableQR && showQRExport && getQRPayload && (
         <Suspense fallback={null}>
-          <QRExportModal payload={getQRPayload()} onClose={() => setShowQRExport(false)} />
+          <QRExportModal
+            payload={getQRPayload()}
+            onClose={() => setShowQRExport(false)}
+            onDone={onQRExportDone ? (onClose) => { onQRExportDone(onClose); setShowQRExport(false) } : null}
+          />
         </Suspense>
       )}
 

@@ -972,7 +972,7 @@ export default function Landing() {
         </div>
 
         {/* ── Free Play section (logged-in only) ── */}
-        {isLoggedIn && freePlays.length > 0 && (
+        {isLoggedIn && (
           <FreePlaySection sessions={freePlays} navigate={navigate} />
         )}
 

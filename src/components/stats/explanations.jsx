@@ -98,13 +98,18 @@ export const EXPLANATIONS = {
       <Item title="ERR">
         <span className="text-error font-bold not-italic">Errors</span>{" "}
         committed by this player — points the opponent gets because of a
-        mistake (out, into the net, foot fault on serve). Shown in red because
-        errors directly gift points to the opponent.
+        mistake. Errors are tagged by action: a spike error means an attack
+        that went into the net or out, a serve error is a missed serve, a tip
+        error is a failed dink, and other covers second-touch or reception
+        mistakes. Shown in red because errors directly gift points to the
+        opponent.
       </Item>
       <p>
         Real self-analysis is now possible: 7 PTS / 1 ERR is a clean,
         high-value game. 7 PTS / 6 ERR is risky play that nearly cancels out
-        the contribution.
+        the contribution. And with action-tagged errors you can see exactly
+        where the mistakes are coming from — e.g. 5 spike errors vs. 1 serve
+        error tells you the attack needs work, not the serve.
       </p>
     </div>
   ),
@@ -205,10 +210,13 @@ export const EXPLANATIONS = {
   history: (
     <>
       A reverse-chronological log of every point in the match. Each row shows
-      the score at that moment, the point type and who scored it, the
-      server's name, and a team badge. The raw replay — if you want to
-      understand a specific moment ("what happened when we were down 10-15?"),
-      scroll to that score and read what happened point by point.
+      the score at that moment — the left number in orange (team 1) and the
+      right in teal (team 2). For regular points, the action icon is colored
+      in the scoring team's color followed by the player who scored. For
+      errors, a red X appears alongside the error-type icon and the name of
+      the player who made the mistake. The volleyball icon below shows who
+      was serving, colored by their team. Scroll to any score to understand
+      exactly what happened at that moment.
     </>
   ),
 };

@@ -59,7 +59,9 @@ export default function QRImportModal({ onImport, onClose }) {
 
       <div className="flex-1 flex flex-col items-center justify-start pt-8 px-4">
         <p className="text-[12px] text-dim text-center mb-5 max-w-[280px] leading-relaxed">
-          Point the camera at the QR code shown on the scorer's phone to resume the game.
+          Point the camera at the QR code shown on the scorer's phone to resume
+          the game. The point log from the other device will be automatically
+          merged when you save the final result.
         </p>
         <div id="qr-import-reader" className="w-full max-w-[300px] rounded-xl overflow-hidden" />
         {error && (

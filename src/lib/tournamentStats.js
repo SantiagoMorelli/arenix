@@ -9,12 +9,24 @@
  *   pointType:        'ace' | 'spike' | 'block' | 'tip' | 'error'
  *   scoringPlayerId:  set when not an error
  *   errorPlayerId:    set when pointType === 'error'
- *   errorType:        'net' | 'out' | 'serve' | 'other' | null  (null = pre-feature)
+ *   errorType:        'spike' | 'tip' | 'serve' | 'other' | null  (null = pre-feature)
+ *                     Legacy values 'net' / 'out' are mapped to 'other' at read-time.
  *   serverPlayerId:   present on every scoring point
  *   serverTeam:       1 | 2  — team that served the point
  *   team:             1 | 2  — team that won the point
  *   setNum, t1, t2, timestamp, streak
  */
+
+/**
+ * Maps a raw errorType value (any era) to the canonical action-based id.
+ * "net" and "out" (old trajectory-based values) → "other"
+ * null / unknown                                → "untyped"
+ */
+function normalizeErrorType(raw) {
+  if (raw === 'spike' || raw === 'tip' || raw === 'serve' || raw === 'other') return raw;
+  if (raw === 'net' || raw === 'out') return 'other';
+  return 'untyped';
+}
 
 const EMPTY_PLAYER = () => ({
   points: 0,
@@ -175,7 +187,7 @@ export function computePlayerTournamentBreakdown(pid, allMatches) {
     points: 0,
     byType: { ace: 0, spike: 0, block: 0, tip: 0 },
     errors: 0,
-    errorsByType: { net: 0, out: 0, serve: 0, other: 0, untyped: 0 },
+    errorsByType: { spike: 0, tip: 0, serve: 0, other: 0, untyped: 0 },
     serves: 0,
     serveWins: 0,
     serveAces: 0,
@@ -200,12 +212,8 @@ export function computePlayerTournamentBreakdown(pid, allMatches) {
       }
       if (entry.errorPlayerId === pid) {
         result.errors++
-        const sub = entry.errorType
-        if (sub === 'net' || sub === 'out' || sub === 'serve' || sub === 'other') {
-          result.errorsByType[sub]++
-        } else {
-          result.errorsByType.untyped++
-        }
+        const sub = normalizeErrorType(entry.errorType)
+        result.errorsByType[sub]++
         touchedThisMatch = true
         if (entry.setNum) result.setKeys.add(`${m.id}:${entry.setNum}`)
       }

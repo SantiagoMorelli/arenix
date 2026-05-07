@@ -293,12 +293,13 @@ async function normalizeTournament(row) {
 
   // Build teams (with player id arrays matching the legacy shape)
   const teams = (teamsRes.data || []).map(t => ({
-    id:      t.id,
-    name:    t.name,
-    wins:    t.wins,
-    losses:  t.losses,
-    points:  t.points,
-    players: (t.team_players || []).map(tp => tp.player_id),
+    id:         t.id,
+    name:       t.name,
+    wins:       t.wins,
+    losses:     t.losses,
+    points:     t.points,
+    players:    (t.team_players || []).map(tp => tp.player_id),
+    serveOrder: Array.isArray(t.serve_order) ? t.serve_order : [],
   }))
 
   const allMatches = matchesRes.data || []

@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useFreePlay } from '../hooks/useFreePlay'
 import { useLiveGame, FP_SAVE_KEY } from '../hooks/useLiveGame'
 import LiveScoreboard from '../components/LiveScoreboard'
-import { saveFreePlayGame } from '../services/freePlayService'
+import { saveFreePlayGame, saveFreePlayTeamServeOrder } from '../services/freePlayService'
 import { useToast } from '../components/ToastContext'
 
 const t = (key) => {
@@ -42,11 +42,32 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
   const handleSwap2 = () => live.setT2ServeOrder(o => [...o.slice(1), o[0]])
 
   const handleSetSide = (sideStr) => {
-    live.setT1InitialSide(sideStr)
-    live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
+    // The serving team's side is what the user picks.
+    // t1InitialSide always tracks Team 1's side for the scoring engine.
+    if (live.firstServingTeam === 2) {
+      // Serving team is Team 2 — sideStr is Team 2's side, Team 1 gets the opposite.
+      const t1Side = sideStr === 'left' ? 'right' : 'left'
+      live.setT1InitialSide(t1Side)
+      live.setSide({ t1: t1Side, t2: sideStr })
+    } else {
+      // Serving team is Team 1 (or default) — sideStr is Team 1's side directly.
+      live.setT1InitialSide(sideStr)
+      live.setSide({ t1: sideStr, t2: sideStr === 'left' ? 'right' : 'left' })
+    }
   }
 
+  // Derive which side the serving team is on (for button highlight)
+  const servingTeamSide = live.firstServingTeam === 2
+    ? (live.t1InitialSide === 'left' ? 'right' : live.t1InitialSide === 'right' ? 'left' : null)
+    : live.t1InitialSide
+
+  // Active color for side buttons — follows the serving team's identity color
+  const sideActiveClass = live.firstServingTeam === 2
+    ? 'border-free bg-free/10 text-free'
+    : 'border-accent bg-accent/10 text-accent'
+
   const canStart = live.t1ServeOrder?.length > 0 && live.t2ServeOrder?.length > 0
+    && live.firstServingTeam != null && live.t1InitialSide != null
 
   return (
     <div className="screen bg-bg text-text p-4">
@@ -58,7 +79,7 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
         >
           <BackIcon />
         </button>
-        <h1 className="text-[20px] font-black text-free uppercase tracking-widest m-0">
+        <h1 className="text-[20px] font-black text-accent uppercase tracking-widest m-0">
           Match Setup
         </h1>
         <div className="w-10" />
@@ -69,11 +90,11 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
         {/* Teams preview */}
         <div className="bg-surface rounded-xl border border-line p-4 flex items-center justify-center gap-4">
           <div className="flex-1 text-center">
-            <div className="text-[13px] font-black text-free uppercase tracking-widest truncate">{t1Name}</div>
+            <div className="text-[13px] font-black text-accent uppercase tracking-widest truncate">{t1Name}</div>
           </div>
           <div className="text-[11px] font-black text-dim">VS</div>
           <div className="flex-1 text-center">
-            <div className="text-[13px] font-black text-text uppercase tracking-widest truncate">{t2Name}</div>
+            <div className="text-[13px] font-black text-free uppercase tracking-widest truncate">{t2Name}</div>
           </div>
         </div>
 
@@ -85,13 +106,13 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
           <div className="flex gap-4">
             {/* Team 1 */}
             <div className="flex-1">
-              <div className="text-[12px] font-bold text-free mb-2 text-center truncate">{t1Name}</div>
+              <div className="text-[12px] font-bold text-accent mb-2 text-center truncate">{t1Name}</div>
               <div className="flex flex-col gap-2">
                 {live.t1ServeOrder.map((pid, idx) => (
                   <div
                     key={pid}
                     className={`flex items-center gap-2 p-2 rounded-lg border
-                      ${idx === 0 ? 'bg-free/10 border-free/40 text-free' : 'bg-bg border-line text-text'}`}
+                      ${idx === 0 ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-bg border-line text-text'}`}
                   >
                     <span className="text-[10px] font-bold w-4 h-4 rounded-full bg-current text-white flex items-center justify-center shrink-0">
                       {idx + 1}
@@ -112,13 +133,13 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
 
             {/* Team 2 */}
             <div className="flex-1">
-              <div className="text-[12px] font-bold text-text mb-2 text-center truncate">{t2Name}</div>
+              <div className="text-[12px] font-bold text-free mb-2 text-center truncate">{t2Name}</div>
               <div className="flex flex-col gap-2">
                 {live.t2ServeOrder.map((pid, idx) => (
                   <div
                     key={pid}
                     className={`flex items-center gap-2 p-2 rounded-lg border
-                      ${idx === 0 ? 'bg-text/10 border-line text-text' : 'bg-bg border-line text-text'}`}
+                      ${idx === 0 ? 'bg-free/10 border-free/40 text-free' : 'bg-bg border-line text-text'}`}
                   >
                     <span className="text-[10px] font-bold w-4 h-4 rounded-full bg-current text-white flex items-center justify-center shrink-0">
                       {idx + 1}
@@ -146,50 +167,58 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => live.setFirstServingTeam(1)}
+              onClick={() => { live.setFirstServingTeam(1); live.setT1InitialSide(null) }}
               className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold truncate px-2 transition-all cursor-pointer
-                ${live.firstServingTeam === 1 ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-dim'}`}
+                ${live.firstServingTeam === 1 ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-bg text-dim'}`}
             >
               🏐 {t1Name}
             </button>
             <button
-              onClick={() => live.setFirstServingTeam(2)}
+              onClick={() => { live.setFirstServingTeam(2); live.setT1InitialSide(null) }}
               className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold truncate px-2 transition-all cursor-pointer
-                ${live.firstServingTeam === 2 ? 'border-text/40 bg-text/5 text-text' : 'border-line bg-bg text-dim'}`}
+                ${live.firstServingTeam === 2 ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-dim'}`}
             >
               🏐 {t2Name}
             </button>
           </div>
         </div>
 
-        {/* Starting side */}
-        <div className="bg-surface rounded-xl border border-line p-4">
-          <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-3 text-center">
-            {t1Name} starts on the…
+        {/* Starting side — only shown after a serving team is chosen */}
+        {live.firstServingTeam != null && (
+          <div className="bg-surface rounded-xl border border-line p-4">
+            <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-3 text-center">
+              {live.firstServingTeam === 1 ? t1Name : t2Name} starts on the…
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleSetSide('left')}
+                className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all cursor-pointer
+                  ${servingTeamSide === 'left' ? sideActiveClass : 'border-line bg-bg text-dim'}`}
+              >
+                ← Left Side
+              </button>
+              <button
+                onClick={() => handleSetSide('right')}
+                className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all cursor-pointer
+                  ${servingTeamSide === 'right' ? sideActiveClass : 'border-line bg-bg text-dim'}`}
+              >
+                Right Side →
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleSetSide('left')}
-              className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all cursor-pointer
-                ${live.t1InitialSide === 'left' ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-dim'}`}
-            >
-              ← Left Side
-            </button>
-            <button
-              onClick={() => handleSetSide('right')}
-              className={`flex-1 py-3 rounded-xl border-2 text-[13px] font-bold transition-all cursor-pointer
-                ${live.t1InitialSide === 'right' ? 'border-free bg-free/10 text-free' : 'border-line bg-bg text-dim'}`}
-            >
-              Right Side →
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Start button */}
       <div className="max-w-[400px] w-full mx-auto shrink-0">
         <button
-          onClick={() => { live.setPointsToWin(21); live.startGame() }}
+          onClick={() => {
+            live.setPointsToWin(21)
+            live.startGame()
+            // Silently persist serve orders as team defaults for next time
+            saveFreePlayTeamServeOrder(team1Id, live.t1ServeOrder).catch(() => {})
+            saveFreePlayTeamServeOrder(team2Id, live.t2ServeOrder).catch(() => {})
+          }}
           disabled={!canStart}
           className="w-full py-4 rounded-xl bg-free text-white font-black text-[16px] uppercase tracking-widest active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer"
         >
@@ -247,8 +276,9 @@ export default function FreePlayLiveMatch() {
     serveOrderSet.current = true
     const t1 = session.teams.find(t => t.id === stateTeam1Id)
     const t2 = session.teams.find(t => t.id === stateTeam2Id)
-    if (t1?.playerIds?.length) live.setT1ServeOrder(t1.playerIds)
-    if (t2?.playerIds?.length) live.setT2ServeOrder(t2.playerIds)
+    // Prefer saved default serve order; fall back to roster insertion order
+    if (t1) live.setT1ServeOrder(t1.serveOrder?.length ? t1.serveOrder : (t1.playerIds || []))
+    if (t2) live.setT2ServeOrder(t2.serveOrder?.length ? t2.serveOrder : (t2.playerIds || []))
   }, [session])
 
   // ── Abort detection: End Match pressed with no points scored ──────────────

@@ -225,10 +225,19 @@ export function useLiveGameScoring({
     if (!pendingErrorSubtype) return;
     const { teamNum } = pendingErrorSubtype;
     setPendingErrorSubtype(null);
+
+    // Serve error: the erroring player is always the current server (the one
+    // who just missed the serve). Auto-assign and skip the player-select dialog.
+    if (subtypeId === "serve" && currentServer.playerId) {
+      resolvePoint(teamNum, "error", currentServer.playerId, "serve");
+      return;
+    }
+
     setPendingPlayerSelect({ teamNum, ptId: "error", errorType: subtypeId });
   };
 
-  const cancelErrorSubtype = () => setPendingErrorSubtype(null);
+  const cancelErrorSubtype  = () => setPendingErrorSubtype(null);
+  const cancelPlayerSelect  = () => setPendingPlayerSelect(null);
 
   const confirmPlayer = (playerId) => {
     if (!pendingPlayerSelect) return;
@@ -300,7 +309,7 @@ export function useLiveGameScoring({
     pendingEnd,
     // Actions
     addPoint, confirmPointType, confirmErrorSubtype, cancelErrorSubtype,
-    confirmPlayer, confirmSideChange,
+    confirmPlayer, cancelPlayerSelect, confirmSideChange,
     requestEnd, confirmEnd, cancelEnd,
     // Internal helpers exposed for composer
     setServeIndex,

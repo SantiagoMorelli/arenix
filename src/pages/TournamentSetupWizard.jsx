@@ -139,7 +139,6 @@ function shortName(name) {
   return `${parts[0]} ${parts[parts.length - 1][0]}.`
 }
 
-const NATO = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet']
 
 function genderLabel(sex) {
   if (sex === 'M') return 'Male'
@@ -253,7 +252,7 @@ export default function TournamentSetupWizard() {
   const propose = () => {
     const groups = buildTeamGroups(invitedPlayers, params, teamSize)
     setProposedTeams(groups.map((pIds, i) => ({
-      id: uid(), name: `Team ${NATO[i] || i + 1}`, players: pIds, wins: 0, losses: 0, points: 0,
+      id: uid(), name: `Team ${i + 1}`, players: pIds, wins: 0, losses: 0, points: 0,
     })))
     setTeams([])
     setConfirmedAuto(false)

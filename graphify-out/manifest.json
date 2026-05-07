@@ -1,0 +1,782 @@
+{
+  "/Users/santi/Documents/Arenix/arenix/tailwind.config.js": {
+    "mtime": 1776665331.4401598,
+    "hash": "da02e23967dd6b1ecddc4950fb805cfd"
+  },
+  "/Users/santi/Documents/Arenix/arenix/vite.config.js": {
+    "mtime": 1777973418.0780897,
+    "hash": "7b6e12bccedf12e8aad5c0d1a05cfd83"
+  },
+  "/Users/santi/Documents/Arenix/arenix/test-rls.js": {
+    "mtime": 1776774184.2428713,
+    "hash": "c30fd7dc53c25ccc7c2d91ac6c1c2854"
+  },
+  "/Users/santi/Documents/Arenix/arenix/eslint.config.js": {
+    "mtime": 1776665331.431312,
+    "hash": "49c8473bcfcec3aef596a5fb04a6df06"
+  },
+  "/Users/santi/Documents/Arenix/arenix/test-setup.js": {
+    "mtime": 1776675792.5138876,
+    "hash": "08529a0b9f8fcd277998b63535db037b"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_free_play_visibility.sql": {
+    "mtime": 1777532934.2011726,
+    "hash": "a3c5d0fa419bd66421d93615874186f8"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_tournament_tie_breaker.sql": {
+    "mtime": 1777610616.5972552,
+    "hash": "dd9e1867aaf83e6510e129bbb1b710ed"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_notifications.sql": {
+    "mtime": 1777516512.751594,
+    "hash": "3c6d44c5ac58eda68cf090a8ae4bd8b4"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/schema.sql": {
+    "mtime": 1777610626.240124,
+    "hash": "d7113d19ecd286b5396058bc44eb9438"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_team_rename_policy.sql": {
+    "mtime": 1776843006.9374683,
+    "hash": "4361eb8847aae92fac8e4476b11150c1"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_player_sex.sql": {
+    "mtime": 1777516512.7516725,
+    "hash": "d5b68bacff9ca83eccf270af8b1ed63e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/delete_account_rpc.sql": {
+    "mtime": 1777516512.7518222,
+    "hash": "01de14f94a2c35d39d9f0912355aec69"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_free_play_teams_created_at.sql": {
+    "mtime": 1777517129.5693235,
+    "hash": "0dc50f53b8be77ccdfcd9a0124bd623f"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_league_location_visibility.sql": {
+    "mtime": 1777516512.7514293,
+    "hash": "d76d781ce9795699cb7e79311a413d86"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_scorer_to_matches.sql": {
+    "mtime": 1777516512.7517452,
+    "hash": "b0e96478d6da4b915eb46b5d2c471bfa"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_free_play_permissions.sql": {
+    "mtime": 1777527220.2663472,
+    "hash": "0a6b7c54c739f8bcbf65d4b40a20f924"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_member_role.sql": {
+    "mtime": 1777682151.5342424,
+    "hash": "4f3d14751316d65771803ef7887c9948"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/delete_all_free_plays.sql": {
+    "mtime": 1777528470.008317,
+    "hash": "76338a59dba575c2d229c0d87d874d0e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_free_play_feature.sql": {
+    "mtime": 1777516512.7513487,
+    "hash": "b0678b494e00cbc676414bd248760c59"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_profile_fields.sql": {
+    "mtime": 1776843006.937363,
+    "hash": "1c6b1ad6f334ccd42bb9d6b214e57b7d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/auth_public_read_access.sql": {
+    "mtime": 1777682151.5343993,
+    "hash": "40f737ce130df51273ee01c9c58025a5"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_can_create_league.sql": {
+    "mtime": 1776776152.755779,
+    "hash": "5d487f14d4f8b3e2df175933fa1fcfc9"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/add_notification_prefs.sql": {
+    "mtime": 1777516512.7515128,
+    "hash": "d10fcbb920452c2f77261557c467fbd5"
+  },
+  "/Users/santi/Documents/Arenix/arenix/supabase/guest_read_access.sql": {
+    "mtime": 1777530039.6988442,
+    "hash": "d9301fe803653804d59dcd0e875e569c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/other.jsx": {
+    "mtime": 1777516512.718223,
+    "hash": "f0d2079ac087ac98d7a54f78a53ef4ac"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/landing.jsx": {
+    "mtime": 1777682151.51594,
+    "hash": "ab6b3025368940cd547628f899c28fd8"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/icons.jsx": {
+    "mtime": 1777516512.717378,
+    "hash": "657bfdb98b2c115832951fb980045de0"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/match.jsx": {
+    "mtime": 1777516512.7180712,
+    "hash": "5b2a35850e146956de2a815523826243"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/league.jsx": {
+    "mtime": 1777516512.7175071,
+    "hash": "8e55a119f003ea7c9ca34380d9b7b703"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/data.jsx": {
+    "mtime": 1777516512.7170455,
+    "hash": "8d41d25b95cf164e412e13e3ab297779"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/tournament.jsx": {
+    "mtime": 1777516512.718467,
+    "hash": "ffae0679e3a36872b021af43e360660a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/shared.jsx": {
+    "mtime": 1777516512.71834,
+    "hash": "a664a697891fe5995d148b55f9868145"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/app.jsx": {
+    "mtime": 1777516512.716842,
+    "hash": "c8ad261db29da067d03d2ca3f3ba93dd"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/src/home.jsx": {
+    "mtime": 1777516512.7171748,
+    "hash": "ae8f8d89361f1d503e26c56bd640a29c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/AppRouter.jsx": {
+    "mtime": 1777600019.8068912,
+    "hash": "481006f1372ebd8fcb637de3370dc27c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/main.jsx": {
+    "mtime": 1777592316.4771621,
+    "hash": "4bb852d83f3a7250b7311fd0b29a432e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/contexts/AuthContext.jsx": {
+    "mtime": 1777530158.0327053,
+    "hash": "037a8645493c23abfb9086d368a2f649"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/EditMatchModal.jsx": {
+    "mtime": 1777595405.513506,
+    "hash": "b0291442e7d96e7b7f4ce2f42b785355"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/ScoreBoard.jsx": {
+    "mtime": 1777594098.5236444,
+    "hash": "b6513e064ef789333d0caeca08dc5680"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/PointButtons.jsx": {
+    "mtime": 1776665331.4363062,
+    "hash": "fc1352785885561eea94cee737725c9c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/QRImportModal.jsx": {
+    "mtime": 1777595433.5030506,
+    "hash": "6ca7eb91f760b3e65fa67e669142b87d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/AddPlayerSheet.jsx": {
+    "mtime": 1777878562.014979,
+    "hash": "e24e753aa9a3001d561a6bc89d9e7e36"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/ToastContext.jsx": {
+    "mtime": 1777592373.923589,
+    "hash": "07339a43e795727ba14d93f90b5cd9fa"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/TournamentStatsScreen.jsx": {
+    "mtime": 1777973418.0629103,
+    "hash": "05633e1ce2b7d5825de634d70876a537"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/PointLog.jsx": {
+    "mtime": 1777594112.6826138,
+    "hash": "2de3e763d4b222acad803bb854a07b53"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/NotificationToast.jsx": {
+    "mtime": 1777516512.724945,
+    "hash": "648f464519b4a14bdc0ccf938dc28e1d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/LiveScoreSection.jsx": {
+    "mtime": 1777973418.0623083,
+    "hash": "e19a3a667351ec0f9ca7ee6b7bce6e9b"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/GameStats.jsx": {
+    "mtime": 1777973418.0615275,
+    "hash": "8a0c6bfa6ef7d4f119a6dd8c92883679"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/ProtectedRoute.jsx": {
+    "mtime": 1776690523.1333687,
+    "hash": "fe879ad71b9a992fb8052bc353a172ab"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/FreePlayStatsScreen.jsx": {
+    "mtime": 1777878562.0159018,
+    "hash": "1ff9d907c0d6ffaedfb0edf1ca18ae4d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/LiveScoreboard.jsx": {
+    "mtime": 1777973418.0626197,
+    "hash": "f768ac496c4c1077ce41d19ed212cb70"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/GameSetupScreen.jsx": {
+    "mtime": 1777594079.060238,
+    "hash": "eac6867562a92859bc565ecc866d2ea2"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/ui-new.jsx": {
+    "mtime": 1777973418.072246,
+    "hash": "e23a70428f9549a0ee55f073410a0294"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/LeaguePlayersTab.jsx": {
+    "mtime": 1777878562.0176086,
+    "hash": "81ac0ded627e7ce9308b6d7391a14ba3"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/NotificationPanel.jsx": {
+    "mtime": 1777595459.7644887,
+    "hash": "e2cdf63f7ee4afcb0bbaa709f04cc6c0"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/QRExportModal.jsx": {
+    "mtime": 1777595417.3401787,
+    "hash": "c8b96e5f61c7afbdacb56fd191441b38"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/standings/TieBreakerControls.jsx": {
+    "mtime": 1777604320.6812997,
+    "hash": "f65b77417ce94a1373ff6d839606783b"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/StandingsTab.jsx": {
+    "mtime": 1777685233.4745529,
+    "hash": "b71289ee548476d96ec20136121574dc"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/StandingsTable.jsx": {
+    "mtime": 1777682151.526519,
+    "hash": "4f720e522107af4a00591807a888090c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/StatusBadge.jsx": {
+    "mtime": 1777596775.9271638,
+    "hash": "c046e8d3b3f74a53635e36a12420ad5a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/KnockoutResults.jsx": {
+    "mtime": 1777596798.7665877,
+    "hash": "ca0e07e28ba34338968a989b7316e052"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/MatchStatsOverlay.jsx": {
+    "mtime": 1777596914.5833557,
+    "hash": "eee26427951f0481bfbe9c877ebcd353"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/MatchesTab.jsx": {
+    "mtime": 1777612093.8870857,
+    "hash": "6512ef943fd4da82ceb8043ed463887e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/StartMatchModal.jsx": {
+    "mtime": 1777596937.7849345,
+    "hash": "4e083a821366d4eabc20ff20139d2dc6"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/ScorerConflictModal.jsx": {
+    "mtime": 1777596944.778306,
+    "hash": "86d91a203a9ceef47614753e3a90b9af"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/tournament/TournamentHeader.jsx": {
+    "mtime": 1777596970.5188916,
+    "hash": "d91756d36a1fea09d9c495cc60e3e405"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/TeamsTab.jsx": {
+    "mtime": 1777597163.1569548,
+    "hash": "275d3bca896f58d2cc05d9f395a368fb"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/RankingTab.jsx": {
+    "mtime": 1777684533.733023,
+    "hash": "25f832bb794c2c5d6d19e628aed01cad"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/ResumeMatchModal.jsx": {
+    "mtime": 1777597282.5478537,
+    "hash": "58e81fc47a09a83e57ce9d67c5deada0"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/MatchStatsOverlay.jsx": {
+    "mtime": 1777597255.12299,
+    "hash": "8057786a0190832328a056eb00116122"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/MatchesTab.jsx": {
+    "mtime": 1777597195.5983617,
+    "hash": "dbecc68812d191994d0d6f21f93b5d7c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/PlayersTab.jsx": {
+    "mtime": 1777597157.2745533,
+    "hash": "6184fc366a8f5120d09a43e2a6c14587"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/EditSessionModal.jsx": {
+    "mtime": 1777597134.676723,
+    "hash": "ec5ece88d1a44757c13cb84d59efdf8c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/AddPlayerModal.jsx": {
+    "mtime": 1777597093.8319814,
+    "hash": "aaa7485e8956492a25f68b6ef574efa4"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/TeamModal.jsx": {
+    "mtime": 1777597114.144252,
+    "hash": "65811c13083433dc154db70e300e45ca"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/SessionHeader.jsx": {
+    "mtime": 1777597272.9142766,
+    "hash": "7edf1b9cac582f8406c237047a9d7586"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/PlayerChip.jsx": {
+    "mtime": 1777597099.4603343,
+    "hash": "6409c71a6e7f65678b9423660ffd3f2f"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/freeplay/TeamCard.jsx": {
+    "mtime": 1777597124.7214813,
+    "hash": "4822804c27ae2f4452940b67dfc957ac"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/ProfileHeroCard.jsx": {
+    "mtime": 1777973418.0649776,
+    "hash": "aaec4f5ae8ec3cdad5d07a6cc97aca3f"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/profileExplanations.jsx": {
+    "mtime": 1777976358.1285174,
+    "hash": "26096967dc6e05a3aa41d6dc374f4284"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/PlayerStatsSection.jsx": {
+    "mtime": 1777974504.8761683,
+    "hash": "0b9e9fc4408ec74c46717c5ed4f32c34"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/AchievementDetailSheet.jsx": {
+    "mtime": 1777976806.0137587,
+    "hash": "5b629647229a0a60d1bd90f9e678c4da"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/AchievementsSection.jsx": {
+    "mtime": 1777976842.1245503,
+    "hash": "511cfec81e348c83f978475e148baa27"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/sheets/TournamentDrillSheet.jsx": {
+    "mtime": 1777973418.0683687,
+    "hash": "251089c58caa3bfbb7c8516f960716af"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/sheets/MatchDrillSheet.jsx": {
+    "mtime": 1777973418.067512,
+    "hash": "4455cbcc3047576fcb35adf7993849f2"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/sheets/PointDrillSheet.jsx": {
+    "mtime": 1777973418.0678875,
+    "hash": "cda04417a5fc65784f92ed7f7a957ef3"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/panels/ServingPanel.jsx": {
+    "mtime": 1777973418.066452,
+    "hash": "ac6ba0899334454d0bcc247f27299ba7"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/panels/PressurePanel.jsx": {
+    "mtime": 1777973418.0655653,
+    "hash": "e7f6a40d7a6f4706ee2c8690b6912255"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/panels/StrengthsPanel.jsx": {
+    "mtime": 1777973418.0670679,
+    "hash": "6b995689cdfe537e1ec83a416bdd3eb5"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/profile/panels/PlaystylePanel.jsx": {
+    "mtime": 1777973418.0652807,
+    "hash": "fba70fae6cc27a96bfe646a8c6b60bf2"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/MatchDynamics.jsx": {
+    "mtime": 1777973418.0690763,
+    "hash": "0361f577f92ab0fda1a2a59bea7bb41d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/TeamDetailSheet.jsx": {
+    "mtime": 1777973418.0704305,
+    "hash": "2295d782ae42179fc2fa4a048cf10a17"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/SegmentStrip.jsx": {
+    "mtime": 1777878562.019873,
+    "hash": "90f4342fa55d5ee658002ca68b23baa0"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/MatchFlow.jsx": {
+    "mtime": 1777973418.0693314,
+    "hash": "fbdbae05e498b77855fd04a949ccdefb"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/MatchBreakdownSheet.jsx": {
+    "mtime": 1777973418.06879,
+    "hash": "878e03b1b13b149c72309d6bd35f59bf"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/MiniSparkline.jsx": {
+    "mtime": 1777878562.0197952,
+    "hash": "f0f255f72ae998c0df9ccf7cd44dc6a7"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/ServeBreakdown.jsx": {
+    "mtime": 1777973418.070074,
+    "hash": "9cb302f7543e325ea742cbd1bc277eaf"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/explanations.jsx": {
+    "mtime": 1777973418.0710773,
+    "hash": "b7777b556009294f8cfe37f08b2a96a2"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/AwardRankingSheet.jsx": {
+    "mtime": 1777973418.0685701,
+    "hash": "88bc87900c75eac8ad387d7f70e4f27c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/pointTypes.js": {
+    "mtime": 1777973418.0713933,
+    "hash": "128fe3141e281c575e75601eb9a1ca0d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/MatchHighlights.jsx": {
+    "mtime": 1777973418.0695586,
+    "hash": "621fb8ca8312e4c346a0621b1f9a1047"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/TopPerformers.jsx": {
+    "mtime": 1777973418.0708475,
+    "hash": "0236a24280cc01a68ba91ff8d39f9fb8"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/StatInfo.jsx": {
+    "mtime": 1777973418.0702858,
+    "hash": "7c144135fdde6496f8df6967da631a80"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/ExpandableStatCard.jsx": {
+    "mtime": 1777878562.0193539,
+    "hash": "11370cfcfe77ee667027eeb0fbac8a6a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/components/stats/PlayerTournamentDetailSheet.jsx": {
+    "mtime": 1777973418.0698025,
+    "hash": "376ddc21a7aa2aa5c252a73ca0bae6f0"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/layouts/LeagueLayout.jsx": {
+    "mtime": 1776665331.438106,
+    "hash": "0d063d75c15609d0e63f8d8c74aac4c1"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/layouts/MainLayout.jsx": {
+    "mtime": 1776665331.4382193,
+    "hash": "e94aae32bb156594c8257e6d63a904c3"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useBattery.js": {
+    "mtime": 1777516512.7356353,
+    "hash": "5b3bc14a0e129409c02dcc51a2123b82"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useLocalStorage.js": {
+    "mtime": 1776665331.4378386,
+    "hash": "0d958a149420d56784c57c3909a2659d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useAchievementUnlocks.js": {
+    "mtime": 1777973418.073937,
+    "hash": "fe522931898b7090eb8d99591839cb4f"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useFocusTrap.js": {
+    "mtime": 1777595382.946013,
+    "hash": "7447aef30351f45b64a31a6cf16f96e4"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/usePlayerStats.js": {
+    "mtime": 1777974605.3365407,
+    "hash": "56c27600604f3996407b3e65eebc0c04"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useLiveGame.js": {
+    "mtime": 1777973418.074187,
+    "hash": "c6f04a4a754cb6770e5d7ec0b4f3d142"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useFreePlay.js": {
+    "mtime": 1777589185.7540054,
+    "hash": "4f83a14c2bf29f4c23a2ab66164c85a2"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useLeagueRole.js": {
+    "mtime": 1777593649.144132,
+    "hash": "3e910081207d24bc146147ed73ab8d72"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useWakeLock.js": {
+    "mtime": 1777590085.9502645,
+    "hash": "2378561982b88bce357cbe4d0b57c30e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/useLeague.js": {
+    "mtime": 1776690805.1830127,
+    "hash": "eef0441bb74168fb201efbb2c1391dbd"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/liveGame/pointTypes.js": {
+    "mtime": 1777973418.0731506,
+    "hash": "4df170cd5fb7a7572e9a9210593c6078"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/liveGame/useLiveGameScoring.js": {
+    "mtime": 1777973418.073795,
+    "hash": "b45a7bdcec17fac9173a0df72faa5f62"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/liveGame/useLiveGameSetup.js": {
+    "mtime": 1777598093.0970657,
+    "hash": "a373bab55bdfd95d458460b98999544e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/liveGame/useLiveGameUndo.js": {
+    "mtime": 1777598108.6220157,
+    "hash": "4d8293047330cac278a684827d9e86ea"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/liveGame/serveRotation.js": {
+    "mtime": 1777598064.3123286,
+    "hash": "989e2fac54e5240abdd4bee281db1c8c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/hooks/liveGame/useLiveGamePersistence.js": {
+    "mtime": 1777598305.6284544,
+    "hash": "6dce4b58cf9b619e185ec72fb735e9fa"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/playerStatsExport.js": {
+    "mtime": 1777973418.0756783,
+    "hash": "5b1945ebe5c1949564f165d4cab709a4"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/tournamentStats.js": {
+    "mtime": 1777973418.0758972,
+    "hash": "f2749a3e2919b18467a0b245221b91d1"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/standings.js": {
+    "mtime": 1777603424.7296317,
+    "hash": "df2e7ea0301591a0ec1840f434b64f6d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/supabase.js": {
+    "mtime": 1776748749.2473848,
+    "hash": "8101ef2b2e0322f1d1dc110c925f7e9a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/achievements.js": {
+    "mtime": 1778108732.004541,
+    "hash": "f4bdbcf8942bb2cdc3d6e71fcf1391cb"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/tournament.js": {
+    "mtime": 1777610694.9084117,
+    "hash": "485b80ed94cffa5e7c16a8afd1b8b98f"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/matchStats.js": {
+    "mtime": 1777878562.0212011,
+    "hash": "f2a6b6378b0d5b73634b7988d3b2237c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/utils.js": {
+    "mtime": 1777516512.7371728,
+    "hash": "6e2baa3efd1d1b6b0a63a5e531daf62f"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/chime.js": {
+    "mtime": 1777973418.075306,
+    "hash": "ceb7b345515b828e55ea4b1879882d34"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/lib/playerStats.js": {
+    "mtime": 1777973418.0754662,
+    "hash": "f589992a0617ae5d459f99859afcfb12"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/Landing.jsx": {
+    "mtime": 1777878562.021539,
+    "hash": "8bf9bcb57e8367dac317455286ef8415"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/EditProfile.jsx": {
+    "mtime": 1777593571.6788127,
+    "hash": "1043da27ff530dfcd34196f82032c97e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/JoinLeague.jsx": {
+    "mtime": 1777593590.9385452,
+    "hash": "079e719ed0e95555def07fb11c74adef"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/TournamentSetupWizard.jsx": {
+    "mtime": 1777878562.0225222,
+    "hash": "62675bf5b02e49bbb2d8edd7fa390054"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/Profile.jsx": {
+    "mtime": 1777974589.270532,
+    "hash": "8eca71a61bbdd68ef504f01400724c7d"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/Signup.jsx": {
+    "mtime": 1777593533.4533565,
+    "hash": "31aa48eac8b6d8fb3f2518c1b9c753af"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/FreePlaySession.jsx": {
+    "mtime": 1777682151.530797,
+    "hash": "52d78154c0bbbb6900fa833dab6a9705"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/GuestHome.jsx": {
+    "mtime": 1777682151.5316167,
+    "hash": "9ea450429e3930391497622ff2c6a1f5"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/Login.jsx": {
+    "mtime": 1777593521.9885323,
+    "hash": "e8d7d53c5625e626bbd9113941f1b399"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/LeaguePublicView.jsx": {
+    "mtime": 1777531195.2132027,
+    "hash": "796ea1bb3aa48dbc9af2a3e8a6dfb6fa"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/FreePlayWizard.jsx": {
+    "mtime": 1777593626.2164416,
+    "hash": "2f3ac271c396084ec38cf0a5c12aa05a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/LiveMatch.jsx": {
+    "mtime": 1777612897.2091453,
+    "hash": "3be45eea213a2ab9f196413b2124e524"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/LeagueDetail.jsx": {
+    "mtime": 1777592349.0729208,
+    "hash": "0dc392bda6d3a5b2609e81c74e91168a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/FreePlayList.jsx": {
+    "mtime": 1777527661.5745726,
+    "hash": "1b171dcdc836d73a65f0be378eccc7db"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/Settings.jsx": {
+    "mtime": 1777593558.983854,
+    "hash": "748c63815ee27e62ee0dd33c4e807a07"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/FreePlayJoin.jsx": {
+    "mtime": 1777529963.7078993,
+    "hash": "5728127922fcedd9d95095e54a3f9a44"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/FreePlayLiveMatch.jsx": {
+    "mtime": 1777612933.0902152,
+    "hash": "5858cf138f8d00e99bef0ee8c8daa9f9"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/TournamentDetail.jsx": {
+    "mtime": 1777878562.0220504,
+    "hash": "e0b52994281d89d495cb8ed976b0eb94"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/pages/Home.jsx": {
+    "mtime": 1777682151.5323005,
+    "hash": "0a3cb7d6bdc59d868d64a2201b7d87ad"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/freePlayService.js": {
+    "mtime": 1777532956.1918607,
+    "hash": "b6e23a1e0469774cb9a64cb5ae3fed4c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/profileService.js": {
+    "mtime": 1777593504.7183974,
+    "hash": "557a5fdc563b384b2fbf12de731dc968"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/leagueService.js": {
+    "mtime": 1777683521.0021338,
+    "hash": "823e3531ff8e8f79fa25db58cbe8d0f8"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/inviteService.js": {
+    "mtime": 1777685245.8633916,
+    "hash": "ee07288f67db83924b551f1697a2a891"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/authService.js": {
+    "mtime": 1777593489.0396152,
+    "hash": "379fc06311beb096f61413398dcbcb18"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/notificationService.js": {
+    "mtime": 1777528159.5684206,
+    "hash": "9f8cd357a960cfd7166a678dc7a0b1b6"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/tournamentService.js": {
+    "mtime": 1777612865.061422,
+    "hash": "051a467e37a3351209cede141810bfcc"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/services/playerService.js": {
+    "mtime": 1777878562.0230057,
+    "hash": "7133ada0182d664e76c658ffdaf20470"
+  },
+  "/Users/santi/Documents/Arenix/arenix/ roles-permissions.md": {
+    "mtime": 1776748998.2555375,
+    "hash": "fee8562e493088328ab77adfa2c3e373"
+  },
+  "/Users/santi/Documents/Arenix/arenix/index.html": {
+    "mtime": 1777516512.7189703,
+    "hash": "5ade433749c71eeeb95e4e4d4039fdd5"
+  },
+  "/Users/santi/Documents/Arenix/arenix/README.md": {
+    "mtime": 1776665331.4293954,
+    "hash": "59ebbc563b498018f1684e68725b4eb1"
+  },
+  "/Users/santi/Documents/Arenix/arenix/AGENTS.md": {
+    "mtime": 1778111650.6068175,
+    "hash": "c0da8dd7c2c5621f07d678ee73b4835b"
+  },
+  "/Users/santi/Documents/Arenix/arenix/CLAUDE.md": {
+    "mtime": 1777594271.1765997,
+    "hash": "9c523704a932db60bb6b93523f09ed22"
+  },
+  "/Users/santi/Documents/Arenix/arenix/docs/rls.md": {
+    "mtime": 1777601735.6600103,
+    "hash": "cef711d5062039c662ee6bbf64920c86"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/index.html": {
+    "mtime": 1777682151.51938,
+    "hash": "7d10b7205dcdfa19509ce845911cc0dd"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/README.md": {
+    "mtime": 1777682151.516117,
+    "hash": "5189b1782006ecdeeadc93eebc97178e"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/Arenix Prototype.html": {
+    "mtime": 1777516512.71642,
+    "hash": "2e97e7cf6f184b88505d1fd9555b0f12"
+  },
+  "/Users/santi/Documents/Arenix/arenix/design_handoff_arenix/README.md": {
+    "mtime": 1777682151.5151792,
+    "hash": "5c3771b5cdd90ecac5b1232c6586c319"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/pwa-64x64.png": {
+    "mtime": 1777682151.5251896,
+    "hash": "39532fb331b005d5aab5b7738d52fae6"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/pwa-512x512.png": {
+    "mtime": 1777682151.5250006,
+    "hash": "9a8b75057b93964b5d694634a8623483"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/apple-touch-icon-180x180.png": {
+    "mtime": 1777682151.5205617,
+    "hash": "cace509cccb382bbedf16eb89f4df08c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/maskable-icon-512x512.png": {
+    "mtime": 1777682151.5234594,
+    "hash": "5ba0ef9166933ca9b238bc76ec00cd8b"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/icons.svg": {
+    "mtime": 1776665331.4326832,
+    "hash": "3b4fcfcf393eca4d264dca4a4663bc37"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/pwa-192x192.png": {
+    "mtime": 1777682151.524365,
+    "hash": "7d4efbd55745eb53e4396c4a960d3733"
+  },
+  "/Users/santi/Documents/Arenix/arenix/public/favicon.svg": {
+    "mtime": 1777682151.521892,
+    "hash": "c6c35391a7c40cfd07861a4bcfed7828"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/apple-touch-icon-180.png": {
+    "mtime": 1777682151.51623,
+    "hash": "cace509cccb382bbedf16eb89f4df08c"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-256.png": {
+    "mtime": 1777682151.5173302,
+    "hash": "1525d21748381cce1a4b0219aca7ae50"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/favicon-16.png": {
+    "mtime": 1777682151.5163612,
+    "hash": "5c2d31aba7ef336edfb2fb0cd3205116"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-192.png": {
+    "mtime": 1777682151.517163,
+    "hash": "7d4efbd55745eb53e4396c4a960d3733"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-384.png": {
+    "mtime": 1777682151.5175452,
+    "hash": "57086301672c4f62ec80ae72b7276291"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-maskable-192.png": {
+    "mtime": 1777682151.5182843,
+    "hash": "3a149667b98e59ccae8622ac5b58d371"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-1024.png": {
+    "mtime": 1777682151.5168786,
+    "hash": "bfdc77b20862dee572e68515a7c8e1b0"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-maskable-384.png": {
+    "mtime": 1777682151.5187078,
+    "hash": "03f35ad91ddd9a87cd88dc181b48bb25"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon.svg": {
+    "mtime": 1777682151.5190282,
+    "hash": "c702bb191fb12c5071f90872bf887c6a"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-64.png": {
+    "mtime": 1777682151.5181417,
+    "hash": "39532fb331b005d5aab5b7738d52fae6"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/favicon-32.png": {
+    "mtime": 1777682151.5164318,
+    "hash": "c4e6ed171fc0eab0f99b5d88a8ae2345"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-maskable-512.png": {
+    "mtime": 1777682151.51885,
+    "hash": "5ba0ef9166933ca9b238bc76ec00cd8b"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-maskable.svg": {
+    "mtime": 1777682151.518952,
+    "hash": "554453fbbbf59504b68b783c7f2538af"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/favicon.svg": {
+    "mtime": 1777682151.5165083,
+    "hash": "2ade5a1d1f0108b446664d48fcf2f555"
+  },
+  "/Users/santi/Documents/Arenix/arenix/icons/icon-512.png": {
+    "mtime": 1777682151.5179944,
+    "hash": "9a8b75057b93964b5d694634a8623483"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/assets/hero.png": {
+    "mtime": 1776665331.4334123,
+    "hash": "5cf2b0762834cdddc0dd3ec1397b5011"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/assets/vite.svg": {
+    "mtime": 1776665331.434087,
+    "hash": "9960a24288958394ac50e57ff638b036"
+  },
+  "/Users/santi/Documents/Arenix/arenix/src/assets/react.svg": {
+    "mtime": 1776665331.433917,
+    "hash": "f0402b67b6ce880f65666bb49e841696"
+  }
+}

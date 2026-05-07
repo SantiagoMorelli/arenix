@@ -10,6 +10,7 @@ import { useAchievementUnlocks } from '../hooks/useAchievementUnlocks'
 import { evaluateAchievements } from '../lib/achievements'
 import { playUnlockChime } from '../lib/chime'
 import { buildCoachExport } from '../lib/playerStatsExport'
+import { computePlayerLeagueRecord } from '../lib/playerStats'
 
 import ProfileHeroCard from '../components/profile/ProfileHeroCard'
 import AchievementsSection from '../components/profile/AchievementsSection'
@@ -90,11 +91,15 @@ function LeaguesTab({ leagues, navigate, profile, helpMode }) {
 
       {leagues.map((lg) => {
         const myPlayer = lg.players?.find(p => p.userId === profile?.id)
-        const sorted = [...(lg.players || [])].sort((a, b) => (b.points || 0) - (a.points || 0))
+        const { wins, losses } = myPlayer
+          ? computePlayerLeagueRecord(myPlayer.id, lg)
+          : { wins: 0, losses: 0 }
+        const sorted = [...(lg.players || [])].map(p => {
+          const { score } = computePlayerLeagueRecord(p.id, lg)
+          return { ...p, _score: score }
+        }).sort((a, b) => b._score - a._score)
         const myRank = myPlayer ? sorted.findIndex(p => p.id === myPlayer.id) + 1 : 0
         const role = lg.members?.find(m => m.userId === profile?.id)?.roles?.includes('admin') ? 'admin' : 'player'
-        const wins = myPlayer?.wins || 0
-        const losses = myPlayer?.losses || 0
 
         return (
           <div

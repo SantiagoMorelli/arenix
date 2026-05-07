@@ -141,6 +141,7 @@ export async function getFreePlay(id) {
       id:         t.id,
       name:       t.name,
       playerIds:  Array.isArray(t.player_ids) ? t.player_ids : (t.player_ids ? JSON.parse(t.player_ids) : []),
+      serveOrder: Array.isArray(t.serve_order) ? t.serve_order : [],
     })),
     games: (gamesRes.data || []).map(g => ({
       id:           g.id,
@@ -194,6 +195,7 @@ export async function getFreePlayByInviteCode(code) {
       id:        t.id,
       name:      t.name,
       playerIds: Array.isArray(t.player_ids) ? t.player_ids : (t.player_ids ? JSON.parse(t.player_ids) : []),
+      serveOrder: Array.isArray(t.serve_order) ? t.serve_order : [],
     })),
     games: (gamesRes.data || []).map(g => ({
       id:           g.id,
@@ -301,10 +303,11 @@ export async function createFreePlayTeam(freePlayId, name, playerIds = []) {
   }
 }
 
-export async function updateFreePlayTeam(teamId, { name, playerIds } = {}) {
+export async function updateFreePlayTeam(teamId, { name, playerIds, serveOrder } = {}) {
   const updates = {}
-  if (name      !== undefined) updates.name       = name
-  if (playerIds !== undefined) updates.player_ids = playerIds
+  if (name       !== undefined) updates.name        = name
+  if (playerIds  !== undefined) updates.player_ids  = playerIds
+  if (serveOrder !== undefined) updates.serve_order = serveOrder
 
   const { data, error } = await supabase
     .from('free_play_teams')
@@ -315,10 +318,20 @@ export async function updateFreePlayTeam(teamId, { name, playerIds } = {}) {
 
   if (error) throw error
   return {
-    id:        data.id,
-    name:      data.name,
-    playerIds: Array.isArray(data.player_ids) ? data.player_ids : [],
+    id:         data.id,
+    name:       data.name,
+    playerIds:  Array.isArray(data.player_ids) ? data.player_ids : [],
+    serveOrder: Array.isArray(data.serve_order) ? data.serve_order : [],
   }
+}
+
+/**
+ * Persist the default serve order for a free play team.
+ * Called silently when a match starts so the same order is pre-loaded next time.
+ */
+export async function saveFreePlayTeamServeOrder(teamId, serveOrder) {
+  if (!teamId || !Array.isArray(serveOrder) || serveOrder.length === 0) return
+  return updateFreePlayTeam(teamId, { serveOrder })
 }
 
 export async function deleteFreePlayTeam(teamId) {

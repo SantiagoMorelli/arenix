@@ -169,8 +169,11 @@ CREATE TABLE IF NOT EXISTS public.teams (
   name          TEXT NOT NULL,
   wins          INTEGER NOT NULL DEFAULT 0,
   losses        INTEGER NOT NULL DEFAULT 0,
-  points        INTEGER NOT NULL DEFAULT 0
+  points        INTEGER NOT NULL DEFAULT 0,
+  serve_order   JSONB NOT NULL DEFAULT '[]'::JSONB
 );
+-- Migration: add serve_order if it doesn't exist yet (safe to run on existing DBs)
+ALTER TABLE public.teams ADD COLUMN IF NOT EXISTS serve_order JSONB NOT NULL DEFAULT '[]'::JSONB;
 
 -- Back-reference from tournaments to the winning team
 DO $$
@@ -258,8 +261,11 @@ CREATE TABLE IF NOT EXISTS public.free_plays (
 CREATE TABLE IF NOT EXISTS public.free_play_teams (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   free_play_id UUID NOT NULL REFERENCES public.free_plays(id) ON DELETE CASCADE,
-  name         TEXT NOT NULL
+  name         TEXT NOT NULL,
+  serve_order  JSONB NOT NULL DEFAULT '[]'::JSONB
 );
+-- Migration: add serve_order if it doesn't exist yet (safe to run on existing DBs)
+ALTER TABLE public.free_play_teams ADD COLUMN IF NOT EXISTS serve_order JSONB NOT NULL DEFAULT '[]'::JSONB;
 
 CREATE TABLE IF NOT EXISTS public.free_play_team_players (
   free_play_team_id UUID NOT NULL REFERENCES public.free_play_teams(id) ON DELETE CASCADE,

@@ -235,6 +235,7 @@ export function useLiveGame({
     confirmErrorSubtype: scoring.confirmErrorSubtype,
     cancelErrorSubtype:  scoring.cancelErrorSubtype,
     confirmPlayer:       scoring.confirmPlayer,
+    cancelPlayerSelect:  scoring.cancelPlayerSelect,
     confirmSideChange:   scoring.confirmSideChange,
     reset,
     requestUndo:  undo.requestUndo,

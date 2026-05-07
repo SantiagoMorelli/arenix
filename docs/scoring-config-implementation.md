@@ -8,9 +8,9 @@
 ## Purpose
 
 `docs/scoring-config.md` is the design note for configurable scoring levels
-(L1 Basic … L4 Elite). This document operationalizes that design as **seven
-independent PRs**, each with explicit acceptance criteria and a manual
-smoke checklist.
+(L1 Basic … L3 Detailed). This document operationalizes that design as
+**seven independent PRs**, each with explicit acceptance criteria and a
+manual smoke checklist.
 
 ## Prerequisites for any phase
 
@@ -21,13 +21,13 @@ smoke checklist.
 
 ## The golden rule
 
-> **Every PR in this series must leave Level-4 behavior pixel-identical to
-> today.** The default resolver returns 4. Legacy data is treated as L4.
+> **Every PR in this series must leave Level-3 behavior pixel-identical to
+> today.** The default resolver returns 3. Legacy data is treated as L3.
 > Existing leagues, tournaments, and matches must look and behave exactly
 > as before. Phase 1's golden tests enforce this for the four pure-function
 > stat libs; every later phase asserts on those same fixtures.
 
-If a phase's diff makes you change the L4 golden tests, **stop**. Either
+If a phase's diff makes you change the L3 golden tests, **stop**. Either
 the test was wrong (rare) or the refactor is wrong (likely).
 
 ## Conventions (apply to every phase)
@@ -68,8 +68,8 @@ the test was wrong (rare) or the refactor is wrong (likely).
 ## Phase 1 — Test foundation
 
 **Why first.** This phase produces zero behavior change. It captures
-**golden L4 fixtures** that pin down today's `lib/*Stats.js` output
-exactly. Every later phase proves it didn't regress L4 by leaving those
+**golden L3 fixtures** that pin down today's `lib/*Stats.js` output
+exactly. Every later phase proves it didn't regress L3 by leaving those
 fixtures untouched and still green.
 
 ### Prompt
@@ -89,7 +89,8 @@ Read these files end-to-end before writing anything:
 
 Goal of this phase: add Vitest, scoped strictly to the four pure-function
 stat libraries above, and write characterization (golden) tests against
-real Level-4 match logs. These tests are the safety net for Phases 5–7.
+real Level-3 match logs (the richest level — today's data shape).
+These tests are the safety net for Phases 5–7.
 
 Tasks:
 1. Add Vitest as a devDependency. Add scripts:
@@ -97,8 +98,9 @@ Tasks:
      "test:watch": "vitest"
    Create a minimal vitest.config.js — no jsdom, no setup files.
    The libs are pure JS.
-2. Create src/lib/__tests__/fixtures/ with one or two complete L4
-   match logs. To get realistic data, either:
+2. Create src/lib/__tests__/fixtures/ with one or two complete L3
+   match logs (point category + errors with subtype + server). To get
+   realistic data, either:
      (a) export an existing match's `log` from the live DB and sanitize
          (replace player UUIDs with stable strings like "p1"…"p4"), or
      (b) hand-construct one match-end log that exercises every point
@@ -114,7 +116,7 @@ Tasks:
    on a complete output snapshot. Use `expect(result).toMatchInlineSnapshot()`
    for compact, diff-readable snapshots.
 4. Add a top-of-file comment in each test file:
-     // Golden L4 characterization tests. DO NOT EDIT in Phases 5-7;
+     // Golden L3 characterization tests. DO NOT EDIT in Phases 5-7;
      // ONLY EXTEND. If a phase requires you to change these, the
      // refactor is wrong.
 
@@ -168,7 +170,7 @@ Read first:
 
 Goal: add the `scoring_config JSONB` column to `leagues` and `tournaments`,
 add service helpers to read/write it, and create the `resolveScoringLevel`
-util. Default everywhere remains Level 4 — there is no UI to pick a level
+util. Default everywhere remains Level 3 — there is no UI to pick a level
 yet (Phase 3 adds it).
 
 Tasks:
@@ -182,22 +184,22 @@ Tasks:
      export function resolveScoringLevel(tournament, league) {
        const t = tournament?.scoring_config?.level;
        const l = league?.scoring_config?.level;
-       const lvl = t ?? l ?? 4;
-       return [1, 2, 3, 4].includes(lvl) ? lvl : 4;
+       const lvl = t ?? l ?? 3;
+       return [1, 2, 3].includes(lvl) ? lvl : 3;
      }
    Plus inline JSDoc with one example.
 3. In src/services/leagueService.js add:
      export async function updateLeagueScoringConfig(leagueId, { level })
    In src/services/tournamentService.js add:
      export async function updateTournamentScoringConfig(tournamentId, { level })
-   Both validate `level` is in [1,2,3,4] before writing; throw on bad
+   Both validate `level` is in [1,2,3] before writing; throw on bad
    input. Update existing read paths in those services so the SELECT
    includes the new column.
 4. Add src/lib/__tests__/scoring.test.js covering:
      - tournament set & in range → returns tournament's level
      - tournament null, league set → returns league's level
-     - both null → returns 4
-     - invalid level (0, 5, "foo") falls back to 4
+     - both null → returns 3
+     - invalid level (0, 4, "foo") falls back to 3
      - tournament set takes precedence over league
 5. Lint, test, build.
 
@@ -208,7 +210,7 @@ Acceptance:
 
 Manual smoke:
 - Run the app. Navigate to an existing league + tournament + match.
-  Behavior is identical to before (resolver returns 4 by default).
+  Behavior is identical to before (resolver returns 3 by default).
 - DevTools → Network: confirm league/tournament selects return the
   new `scoring_config` field as null.
 
@@ -243,15 +245,15 @@ Commit prefix: feat:
 
 **Why third.** With Phase 2 landed, admins can now pick a level. Phase 4
 is what makes the choice *do* something for live scoring; Phases 5–7
-make it do something for stats. Until those land, picking a non-L4 level
+make it do something for stats. Until those land, picking a non-L3 level
 is harmless: the resolver returns it but every consumer still defaults
-to L4 behavior.
+to L3 behavior.
 
 ### Prompt
 
 ```text
 Read first:
-- docs/scoring-config.md § 3 (the four levels) and § 5 (config model)
+- docs/scoring-config.md § 3 (the three levels) and § 5 (config model)
 - docs/scoring-config-implementation.md (Conventions + this Phase 3)
 - src/pages/LeagueDetail.jsx           (find the settings/admin area)
 - src/pages/TournamentSetupWizard.jsx  (understand the existing wizard
@@ -268,15 +270,14 @@ Tasks:
    Add a "Default scoring detail" Select with options:
      1 — Basic (team points only)
      2 — Intermediate (+ scoring player)
-     3 — Advanced (+ point category)
-     4 — Elite (+ errors w/ subtype + server) — default
+     3 — Detailed (+ point category + errors w/ subtype + server) — default
    On change, call updateLeagueScoringConfig from leagueService.
    Show a one-line description per level (use the labels above).
 2. In src/pages/TournamentSetupWizard.jsx, decide where this fits:
      - If the wizard has a "Settings" step, add a field there.
      - Otherwise add a new step labelled "Scoring detail" near the end.
    Options:
-     Inherit from league (default) | 1 — Basic | 2 — Int | 3 — Adv | 4 — Elite
+     Inherit from league (default) | 1 — Basic | 2 — Intermediate | 3 — Detailed
    "Inherit" persists as null. Other choices write { level: N } via
    updateTournamentScoringConfig.
 3. If — and only if — the level Select is genuinely used in 2+ places,
@@ -287,14 +288,15 @@ Tasks:
 Acceptance:
 - Phase 1 + Phase 2 tests untouched and still pass.
 - `npm run lint && npm run test && npm run build` all clean.
-- L4 user flow (existing leagues / tournaments without explicit config)
+- L3 user flow (existing leagues / tournaments without explicit config)
   is pixel-identical to before.
 
 Manual smoke (mobile viewport, dark mode):
-- [ ] League settings: change "Default scoring detail" to L2; reload;
-      value persists.
-- [ ] Tournament setup: pick L3; create tournament; DB row has
-      scoring_config = { level: 3 }.
+- [ ] League settings: change "Default scoring detail" to L1; reload;
+      value persists in DB.
+- [ ] League settings: change to L2; reload; value persists.
+- [ ] Tournament setup: pick L2; create tournament; DB row has
+      scoring_config = { level: 2 }.
 - [ ] Tournament setup: leave "Inherit from league"; create; DB row
       has scoring_config = null; resolver returns the league default.
 - [ ] No regression in any other wizard step.
@@ -327,7 +329,7 @@ Commit prefix: feat:
 ## Phase 4 — Live-scoring gating
 
 **Why fourth.** This is the first phase that changes user-visible
-behavior at non-L4 levels. With Phase 3 landed, admins can pick a level;
+behavior at non-L3 levels. With Phase 3 landed, admins can pick a level;
 this phase makes the live scorer respect it.
 
 ### Prompt
@@ -345,11 +347,10 @@ Read first:
 
 Goal: branch the live-scoring dialog stack on the resolved level so:
   L1 = tap → team point committed (no dialogs).
-  L2 = type-skip; player picker only.
-  L3 = point-type → player.
-  L4 = point-type → player → error subtype on errors. (today)
+  L2 = player picker only.
+  L3 = point-type → player → error subtype on errors. (today)
 
-The L4 path must stay pixel-identical and behavioral-identical.
+The L3 path must stay pixel-identical and behavioral-identical.
 
 Tasks:
 1. In src/hooks/useLiveGame.js, fetch the resolved level once when the
@@ -362,9 +363,7 @@ Tasks:
        scoringPlayerId=null, no error fields.
      - L2: skip the type dialog. After picking the player, write a
        log entry with pointType=null, scoringPlayerId set.
-     - L3: skip the error-subtype dialog only. On errors, write
-       errorPlayerId but errorType=null.
-     - L4: unchanged.
+     - L3: unchanged — today's full type → player → error-subtype flow.
    The on-disk shape of `log[]` must remain a strict subset of today's
    shape — never invent new keys at lower levels.
 3. In src/components/LiveScoreboard.jsx, hide the dialogs that don't
@@ -372,21 +371,18 @@ Tasks:
    button when level >= 2 (it's redundant — see § 4).
 4. Make sure src/components/PointButtons.jsx remains agnostic of level.
 5. Vitest: extend src/lib/__tests__/matchStats.test.js with one
-   fixture per non-L4 level. Assert that level-1 lead/dynamics stats
-   compute correctly from a points-only log; that L2 fixtures yield
-   per-player MVP; that L3 fixtures yield byType breakdowns. Existing
-   L4 golden snapshots stay UNTOUCHED.
+   fixture per non-L3 level (L1 + L2). Assert that L1 lead/dynamics
+   stats compute correctly from a points-only log; that L2 fixtures
+   yield per-player MVP. Existing L3 golden snapshots stay UNTOUCHED.
 6. Lint, test, build.
 
 Acceptance:
-- L4 golden tests still pass byte-for-byte.
-- New L1/L2/L3 fixture tests pass.
+- L3 golden tests still pass byte-for-byte.
+- New L1/L2 fixture tests pass.
 - Lint, build clean.
 
 Manual smoke (mobile viewport):
-- [ ] L4 tournament: full flow indistinguishable from before.
-- [ ] L3 tournament: tap → type → player. No error subtype dialog.
-      Errors land with errorType=null in the log.
+- [ ] L3 tournament: full flow indistinguishable from before.
 - [ ] L2 tournament: tap → player. No type dialog. No "Skip Player"
       button visible.
 - [ ] L1 tournament: tap → point committed instantly. No dialogs.
@@ -395,10 +391,10 @@ Manual smoke (mobile viewport):
 
 Out of scope:
 - Stats screen rendering (Phases 5–7). At this point post-match
-  stats screen at L1/L2/L3 will look broken (sections will reference
+  stats screen at L1/L2 will look broken (sections will reference
   missing fields). That is fine and expected — it's fixed in Phase 5.
 - Free-play live-match (FreePlayLiveMatch.jsx). Free play stays at
-  L4 per § 9.
+  L3 per § 9.
 
 Branch: claude/scoring-config-phase-4-live-gating
 Commit prefix: feat:
@@ -410,11 +406,11 @@ Commit prefix: feat:
   `src/hooks/liveGame/useLiveGameScoring.js`,
   `src/components/LiveScoreboard.jsx`. New fixtures + tests added to
   `src/lib/__tests__/matchStats.test.js` (extending, not editing).
-- L4 golden snapshots untouched.
+- L3 golden snapshots untouched.
 
 ### Manual smoke
 
-(Copy the four-level checklist from the prompt.)
+(Copy the three-level checklist from the prompt.)
 
 ---
 
@@ -444,7 +440,7 @@ Tasks:
      calcPlayerContribution // L2
      calcPeakWindow         // L2
      calcClutchPoints       // L2
-     calcServeStats         // L4
+     calcServeStats         // L3
    Either a `MIN_LEVEL` exported map, or per-function `.minLevel = N`
    property. Pick whichever fits the existing style.
 2. In src/components/GameStats.jsx:
@@ -453,26 +449,25 @@ Tasks:
      - For each section in the `statFor` map, gate render on
        level >= section.minLevel.
      - Sections referencing per-player byType: gate at L3.
-     - Error subtype breakdown: gate at L4.
+     - Error subtype breakdown: gate at L3.
    Use existing ui-new primitives. No new styled elements.
 3. Vitest: EXTEND src/lib/__tests__/matchStats.test.js with new
-   fixtures for L1/L2/L3 and assert the `minLevel` annotations match
-   what the design note specifies. The existing L4 snapshots remain
+   fixtures for L1/L2 and assert the `minLevel` annotations match
+   what the design note specifies. The existing L3 snapshots remain
    untouched.
 4. Lint, test, build.
 
 Acceptance:
-- L4 golden snapshots still pass.
+- L3 golden snapshots still pass.
 - New per-level fixture tests pass.
 - minLevel metadata is exported and asserted on.
 - Lint, build clean.
 
 Manual smoke:
-- [ ] Open a finished L4 match. Screen IS PIXEL-IDENTICAL to before.
-- [ ] Open a finished L3 match (pre-seed via DB if needed). Screen
-      hides serve stats and error breakdown; everything else shown.
-- [ ] Open a finished L2 match. Screen further hides per-player
-      byType; player MVP and contributions remain.
+- [ ] Open a finished L3 match. Screen IS PIXEL-IDENTICAL to before.
+- [ ] Open a finished L2 match (pre-seed via DB if needed). Screen
+      hides per-player byType, serving, and error breakdown; player
+      MVP and contributions remain.
 - [ ] Open a finished L1 match. Screen reduces to score + flow chart
       + lead/ties/streaks. No player attribution shown.
 
@@ -490,11 +485,11 @@ Commit prefix: refactor:
 
 - Modified: `src/components/GameStats.jsx`, `src/lib/matchStats.js`.
   Tests extended in `matchStats.test.js`.
-- L4 golden snapshots byte-for-byte unchanged.
+- L3 golden snapshots byte-for-byte unchanged.
 
 ### Manual smoke
 
-(Four-level finished-match walkthrough from the prompt.)
+(Three-level finished-match walkthrough from the prompt.)
 
 ---
 
@@ -518,10 +513,10 @@ section is missing.
 Tasks:
 1. In src/lib/tournamentStats.js:
      - Annotate ranking functions with their minLevel (top scorers L2,
-       awards-by-type L3, serve award L4).
+       awards-by-type L3, serve award L3).
      - `computePlayerTournamentBreakdown` learns to return a partial
-       object when level < 4: { points, errors } at L2, plus byType at
-       L3, plus serve fields at L4.
+       object when level < 3: { points, errors } at L2; full object
+       (plus byType + serve fields) at L3.
 2. In src/components/TournamentStatsScreen.jsx:
      - Resolve the tournament's level once.
      - Add a "Scoring level: N" badge at the top (use ui-new <Badge>).
@@ -529,19 +524,19 @@ Tasks:
      - When a section's data is empty because of level, hide the
        whole section (don't render an empty card).
 3. Vitest: EXTEND src/lib/__tests__/tournamentStats.test.js with one
-   fixture per level. Existing L4 golden snapshots untouched.
+   fixture per level (L1 + L2). Existing L3 golden snapshots untouched.
 4. Lint, test, build.
 
 Acceptance:
-- L4 golden snapshots untouched and green.
+- L3 golden snapshots untouched and green.
 - New per-level fixture tests pass.
 - Lint, build clean.
 
 Manual smoke:
-- [ ] Open a finished L4 tournament. Screen IS PIXEL-IDENTICAL to
-      before, with the only addition being a small "Scoring level: 4"
+- [ ] Open a finished L3 tournament. Screen IS PIXEL-IDENTICAL to
+      before, with the only addition being a small "Scoring level: 3"
       badge at the top.
-- [ ] Open finished L3, L2, L1 tournaments — sections hide per § 6b.
+- [ ] Open finished L2 and L1 tournaments — sections hide per § 6b.
 - [ ] Standings + team totals render at every level.
 
 Out of scope:
@@ -556,11 +551,11 @@ Commit prefix: refactor:
 
 - Modified: `src/components/TournamentStatsScreen.jsx`,
   `src/lib/tournamentStats.js`. Tests extended in `tournamentStats.test.js`.
-- L4 snapshots untouched.
+- L3 snapshots untouched.
 
 ### Manual smoke
 
-(Four-level finished-tournament walkthrough.)
+(Three-level finished-tournament walkthrough.)
 
 ---
 
@@ -568,7 +563,7 @@ Commit prefix: refactor:
 
 **Why last.** Highest blast radius. Touches every tile in the Profile
 across every league a user has played in. The non-regression check is
-strongest here: an L4-only player must see byte-identical output.
+strongest here: an L3-only player must see byte-identical output.
 
 ### Prompt
 
@@ -598,7 +593,7 @@ Tasks:
          W/L, win rate, win streak, tournaments won → L1
          points/match, errors/match, net points     → L2
          strengths, byType, top-shot                → L3
-         serving, pressure, playstyle               → L4
+         serving, pressure, playstyle               → L3
      - Refactor each sub-computer to receive only matches that meet
        its MIN_LEVEL, and to return:
          { value, sampleSize, totalMatches, minLevel }
@@ -609,33 +604,33 @@ Tasks:
      "based on {sampleSize} of {totalMatches} matches"
    Hide tiles where sampleSize < 3 (don't render with bad sample).
 4. Vitest in src/lib/__tests__/playerStats.test.js:
-     - The existing L4 golden test is REPLACED with an asserter that
-       calls computeAllPlayerStats on the same L4 fixture and proves:
+     - The existing L3 golden test is REPLACED with an asserter that
+       calls computeAllPlayerStats on the same L3 fixture and proves:
          (a) every result.value matches the original bare value, AND
          (b) every result.sampleSize equals totalMatches.
        Keep the original snapshot in a const at the top of the file
        for the diff. This is the single strongest non-regression
        check in the whole series.
-     - Add new fixtures: a player with mixed L4 + L2 history. Assert
+     - Add new fixtures: a player with mixed L3 + L2 history. Assert
        that aceRate.sampleSize, serveWinPct.sampleSize, etc. equal
-       only the L4 match count, while pointsPerMatch.sampleSize
+       only the L3 match count, while pointsPerMatch.sampleSize
        equals all matches.
 5. Lint, test, build.
 
 Acceptance:
-- L4-only fixture: every stat's value matches the pre-refactor
+- L3-only fixture: every stat's value matches the pre-refactor
   snapshot exactly. sampleSize == totalMatches everywhere.
 - Mixed-level fixture: per-stat sampleSize matches the expected
-  filter (L4-only stats see only L4 matches; L2+ stats see L4 + L2;
+  filter (L3-only stats see only L3 matches; L2+ stats see L3 + L2;
   L1+ stats see all).
 - Lint, build clean.
 
 Manual smoke:
-- [ ] An L4-only player Profile renders pixel-identical to before.
+- [ ] An L3-only player Profile renders pixel-identical to before.
       No sample-size captions visible (sampleSize == totalMatches
       everywhere).
 - [ ] Create or use a player with at least one L2 match alongside
-      L4 matches. Confirm: serving / strengths / playstyle tiles
+      L3 matches. Confirm: serving / strengths / playstyle tiles
       show "based on N of M matches" captions; W/L tile does not.
 - [ ] Tiles with too-few-matches are hidden, not zeroed.
 
@@ -653,11 +648,11 @@ Commit prefix: refactor:
 - Modified: `src/hooks/usePlayerStats.js`, `src/lib/playerStats.js`,
   `src/pages/Profile.jsx`. Test in `playerStats.test.js` is rewritten
   to assert the strongest non-regression invariant.
-- L4-only output remains byte-identical.
+- L3-only output remains byte-identical.
 
 ### Manual smoke
 
-(L4-only Profile + mixed-level Profile checks from the prompt.)
+(L3-only Profile + mixed-level Profile checks from the prompt.)
 
 ---
 
@@ -665,9 +660,9 @@ Commit prefix: refactor:
 
 - **Order is recommended, not strictly required.** Phase 1 must ship
   first. Phase 2 must ship before any of 3–7. Within 3–7, any order
-  works — each phase defaults to L4 behavior independently.
+  works — each phase defaults to L3 behavior independently.
 - **Rollback for Phases 5–7** is a `git revert` of the single PR; the
-  golden tests guarantee L4 behavior wasn't disturbed elsewhere.
+  golden tests guarantee L3 behavior wasn't disturbed elsewhere.
 - **Rollback for Phase 2** schema:
     `ALTER TABLE leagues     DROP COLUMN scoring_config;`
     `ALTER TABLE tournaments DROP COLUMN scoring_config;`

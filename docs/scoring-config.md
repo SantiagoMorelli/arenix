@@ -29,7 +29,7 @@ levels.
 
 ### Non-goals
 
-- Changing the live-scoring UX at the top level (Level 4 stays exactly as
+- Changing the live-scoring UX at the top level (Level 3 stays exactly as
   today).
 - Changing rule logic: points-to-win, sets-per-match, side-change interval,
   tie-break behavior. Those remain governed by `tournaments.sets_per_match`
@@ -89,24 +89,30 @@ points as team points and excludes them from per-player aggregates. **This
 means Level 1 is already representable in today's schema; we just need to
 gate the UI and stats reads.**
 
-## 3. The four scoring levels
+## 3. The three scoring levels
 
 Each level is a strict superset of the level below. Storage shape never
 changes — lower levels simply leave fields `null` / absent.
 
-| Level | Name         | Captures                                                       | Required keys on each log entry beyond the L1 baseline |
-| ----- | ------------ | -------------------------------------------------------------- | ------------------------------------------------------ |
-| 1     | Basic        | Team points only.                                              | —                                                      |
-| 2     | Intermediate | + scoring player.                                              | `scoringPlayerId`                                      |
-| 3     | Advanced     | + point category (ace / spike / block / tip).                  | `scoringPlayerId`, `pointType`                         |
-| 4     | Elite        | + errors (with subtype) + server attribution.                  | `scoringPlayerId`, `pointType`, `errorPlayerId`, `errorType`, `serverPlayerId` |
+| Level | Name         | Captures                                                                       | Required keys on each log entry beyond the L1 baseline |
+| ----- | ------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| 1     | Basic        | Team points only.                                                              | —                                                      |
+| 2     | Intermediate | + scoring player.                                                              | `scoringPlayerId`                                      |
+| 3     | Detailed     | + point category (ace / spike / block / tip) + errors with subtype + server.   | `scoringPlayerId`, `pointType`, `errorPlayerId`, `errorType`, `serverPlayerId` |
 
 **L1 baseline keys (always present):** `id`, `timestamp`, `team`, `t1`, `t2`,
 `setNum`, `pointNum`, `streak`, `msg`.
 
 > **Historical data:** every match played before this feature ships matches
-> the Level 4 shape. Stats eligibility code treats all pre-existing matches
-> as Level 4. No backfill / migration is required.
+> the Level 3 shape. Stats eligibility code treats all pre-existing matches
+> as Level 3. No backfill / migration is required.
+
+> **Why three, not four?** An earlier draft separated point category from
+> error subtype across two levels. In practice that intermediate state was
+> awkward — admins who want player attribution want categories too, and
+> categories without error attribution produce a half-finished stats screen.
+> Merging "categories" and "errors with subtype" into a single richest level
+> is cleaner for users and for the stats math.
 
 ## 4. The Skip-Player rule
 
@@ -118,7 +124,7 @@ level:
   (Team Point)" affordance in `src/components/LiveScoreboard.jsx` is removed
   whenever the resolved level is ≥ 2.
 
-Rationale: an orthogonal toggle creates four redundant setting combinations
+Rationale: an orthogonal toggle creates redundant setting combinations
 ("L3 with skip", "L3 without skip", …) and produces ambiguous stats.
 Collapsing it into the level keeps the data shape unambiguous from the level
 alone.
@@ -141,18 +147,17 @@ Add a JSONB column called `scoring_config` to **both** tables:
 
 That is the entire v1 shape. The object form (vs. a plain int column) is
 deliberate so that future additions — custom categories, custom error
-subtypes, opt-in serve tracking at L3, etc. — can be added without another
-schema migration.
+subtypes, opt-in serve tracking, etc. — can be added without another schema
+migration.
 
 ### Resolution
 
 ```js
 function resolveScoringLevel(tournament, league) {
-  return (
-    tournament?.scoring_config?.level ??
-    league?.scoring_config?.level ??
-    4 // legacy default — preserves today's behavior for unconfigured leagues
-  );
+  const t = tournament?.scoring_config?.level;
+  const l = league?.scoring_config?.level;
+  const lvl = t ?? l ?? 3; // legacy default — preserves today's behavior
+  return [1, 2, 3].includes(lvl) ? lvl : 3;
 }
 ```
 
@@ -205,8 +210,8 @@ grouped by where they are computed.
 | Per-player points & errors                        | 2         | `calcPlayerContribution` |
 | Peak window, clutch points                        | 2         | `calcPeakWindow`, `calcClutchPoints` |
 | Per-player points-by-type breakdown               | 3         | derived from `byType` in `calcPlayerContribution` |
-| Serving stats (serve win %, serve count)          | 4         | `calcServeStats`  |
-| Error subtype breakdown                           | 4         | derived from log  |
+| Serving stats (serve win %, serve count)          | 3         | `calcServeStats`  |
+| Error subtype breakdown                           | 3         | derived from log  |
 
 ### Tournament-level (`src/lib/tournamentStats.js`)
 
@@ -216,8 +221,8 @@ grouped by where they are computed.
 | Team totals (pointsScored, mistakes, W/L)         | 1         | `computeTeamTournamentTotals` |
 | Top scorers, most errors, cleanest player         | 2         | `rankPlayersByStat` (`points`, `errors`) |
 | Awards by type (Spike Machine, Block Master, …)   | 3         | `rankPlayersByStat` over `byType` |
-| Most Efficient Server (≥ 10 serves)               | 4         | `serveWinPct`     |
-| Player tournament breakdown                       | 2 (partial) / 4 (full) | `computePlayerTournamentBreakdown` |
+| Most Efficient Server (≥ 10 serves)               | 3         | `serveWinPct`     |
+| Player tournament breakdown                       | 2 (partial) / 3 (full) | `computePlayerTournamentBreakdown` |
 
 ### Lifetime / cross-league (`src/lib/playerStats.js`)
 
@@ -227,9 +232,9 @@ grouped by where they are computed.
 | Tournaments won, best finish rank                 | 1         |
 | Points per match, errors per match, net points    | 2         |
 | Strengths (top shot, shot share, byType)          | 3         |
-| Serve stats (totalServes, serveWinPct, aceRate)   | 4         |
-| Pressure stats (clutch, side-out %)               | 4         |
-| Playstyle classification                          | 4         |
+| Serve stats (totalServes, serveWinPct, aceRate)   | 3         |
+| Pressure stats (clutch, side-out %)               | 3         |
+| Playstyle classification                          | 3         |
 
 ## 6a. Post-match stats screen
 
@@ -237,21 +242,20 @@ Renders right after a match ends. Driven by `src/components/GameStats.jsx`
 and `src/lib/matchStats.js`. The screen branches on the **match's** resolved
 level — single match, single level, no cross-level mixing applies here.
 
-| Section                                                      | L1     | L2     | L3     | L4     |
-| ------------------------------------------------------------ | ------ | ------ | ------ | ------ |
-| Final score, set-by-set                                      | shown  | shown  | shown  | shown  |
-| Lead chart, ties, close points                               | shown  | shown  | shown  | shown  |
-| Best / longest streak per team                               | shown  | shown  | shown  | shown  |
-| MVP, per-player points & errors                              | hidden | shown  | shown  | shown  |
-| Peak window, clutch points                                   | hidden | shown  | shown  | shown  |
-| Per-player points-by-type breakdown                          | hidden | hidden | shown  | shown  |
-| Serving stats (serve win %, serve count)                     | hidden | hidden | hidden | shown  |
-| Error subtype breakdown (net / out / serve / other)          | hidden | hidden | hidden | shown  |
+| Section                                                      | L1     | L2     | L3     |
+| ------------------------------------------------------------ | ------ | ------ | ------ |
+| Final score, set-by-set                                      | shown  | shown  | shown  |
+| Lead chart, ties, close points                               | shown  | shown  | shown  |
+| Best / longest streak per team                               | shown  | shown  | shown  |
+| MVP, per-player points & errors                              | hidden | shown  | shown  |
+| Peak window, clutch points                                   | hidden | shown  | shown  |
+| Per-player points-by-type breakdown                          | hidden | hidden | shown  |
+| Serving stats (serve win %, serve count)                     | hidden | hidden | shown  |
+| Error subtype breakdown (net / out / serve / other)          | hidden | hidden | shown  |
 
 - L1 collapses to a "match summary" card: score, sets, flow chart.
-- L2 adds the player-attribution sections.
-- L3 adds the type-breakdown chart.
-- L4 is today's full screen.
+- L2 adds the player-attribution sections (MVP, peak window, clutch).
+- L3 is today's full screen: type breakdown, serving, error subtypes.
 
 The post-match screen does **not** show sample-size captions — it is
 single-match, single-level data.
@@ -263,19 +267,19 @@ Driven by `src/components/TournamentStatsScreen.jsx` and
 (see § 5 lock rule), so all matches inside a tournament share that level —
 no per-match filtering needed at this scope.
 
-| Section                                                      | L1     | L2      | L3      | L4     |
-| ------------------------------------------------------------ | ------ | ------- | ------- | ------ |
-| Standings (`calcOverallStandings`)                           | shown  | shown   | shown   | shown  |
-| Team totals (pointsScored, mistakes, W/L)                    | shown  | shown   | shown   | shown  |
-| Top scorers (`rankPlayersByStat` on `points`)                | hidden | shown   | shown   | shown  |
-| Most errors / cleanest player                                | hidden | shown   | shown   | shown  |
-| Awards by type (Spike Machine, Block Master, Ace King)       | hidden | hidden  | shown   | shown  |
-| Most Efficient Server (gated ≥ 10 serves)                    | hidden | hidden  | hidden  | shown  |
-| Player tournament breakdown                                  | hidden | partial | partial | shown  |
+| Section                                                      | L1     | L2      | L3     |
+| ------------------------------------------------------------ | ------ | ------- | ------ |
+| Standings (`calcOverallStandings`)                           | shown  | shown   | shown  |
+| Team totals (pointsScored, mistakes, W/L)                    | shown  | shown   | shown  |
+| Top scorers (`rankPlayersByStat` on `points`)                | hidden | shown   | shown  |
+| Most errors / cleanest player                                | hidden | shown   | shown  |
+| Awards by type (Spike Machine, Block Master, Ace King)       | hidden | hidden  | shown  |
+| Most Efficient Server (gated ≥ 10 serves)                    | hidden | hidden  | shown  |
+| Player tournament breakdown                                  | hidden | partial | shown  |
 
-`partial` — render the screen with only the fields available at that level
-(e.g. show `points` and `errors` but omit the `byType` card and the serve
-card) rather than rendering empty zeros.
+`partial` (L2 only) — render the breakdown with `points` and `errors` but
+omit the `byType` card and the serve card rather than rendering empty
+zeros.
 
 A small **"Scoring level: N"** badge sits at the top of the screen so the
 user understands why a section is missing rather than assuming it broke.
@@ -300,7 +304,7 @@ e.g. "based on 18 of your 30 matches".
 
 ### Worked example
 
-Player has 30 matches across two leagues — 18 in League A (Level 4) and 12
+Player has 30 matches across two leagues — 18 in League A (Level 3) and 12
 in League B (Level 2):
 
 - **Win rate** — uses all 30. L1+ stat.
@@ -332,7 +336,7 @@ in League B (Level 2):
 - **Segregate per league** — kills the unified career view that
   `Profile.jsx` is built around. Worst UX.
 - **Silent merge** (today's behavior) — produces misleading numbers. A
-  player with one L2 league and one L4 league sees a diluted "ace %"
+  player with one L2 league and one L3 league sees a diluted "ace %"
   because L2 matches contribute zero aces just because they didn't capture
   any.
 
@@ -343,8 +347,7 @@ in League B (Level 2):
   - L1 — no dialogs at all; tapping a team button immediately commits a team
     point.
   - L2 — player picker only.
-  - L3 — point-type → player.
-  - L4 — point-type → player → error subtype (when type === error). Today's
+  - L3 — point-type → player → error subtype (when type === error). Today's
     flow.
 - **Post-match stats** (`src/components/GameStats.jsx`): branches per § 6a.
   Hide whole sections rather than showing zeroed cards.
@@ -361,17 +364,17 @@ in League B (Level 2):
     detail" selector.
 - **Free play** (`src/pages/FreePlayWizard.jsx`,
   `src/components/FreePlayStatsScreen.jsx`): free play has no league, so it
-  defaults to Level 4 to preserve today's behavior. A level picker on the
+  defaults to Level 3 to preserve today's behavior. A level picker on the
   wizard is a stretch goal. The free-play stats screen follows the § 6b
   rules using its own resolved level.
 
 ## 9. Backward compatibility
 
-- All existing rows (matches, free-play games): implicitly Level 4 — their
-  `log` already contains the L4 shape.
+- All existing rows (matches, free-play games): implicitly Level 3 — their
+  `log` already contains the L3 shape.
 - Leagues created before this feature ships: `scoring_config = NULL` →
-  resolver returns Level 4. No change for existing users.
-- Leagues created post-feature without explicit config: same default (4),
+  resolver returns Level 3. No change for existing users.
+- Leagues created post-feature without explicit config: same default (3),
   but the League settings UI surfaces a "Choose default scoring detail"
   prompt to nudge admins.
 
@@ -384,7 +387,7 @@ in League B (Level 2):
 - **Locking** — § 5 recommends locking the level once a tournament has any
   played match. Confirm before implementation.
 - **Free-play override** — should free-play sessions be allowed to choose
-  a non-Elite level? Probably yes for symmetry, but punt to v2.
+  a non-Detailed level? Probably yes for symmetry, but punt to v2.
 - **Custom categories / error subtypes** — out of scope for v1. The JSONB
   shape is reserved for it.
 

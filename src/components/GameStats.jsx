@@ -296,7 +296,7 @@ const GameStats = ({
             />
           )}
 
-          {allIds.length > 0 && scoringLevel >= 3 && (
+          {allIds.length > 0 && scoringLevel >= 1 && (
             <AppCard className="px-3.5 py-3 mb-3">
               <ServeBreakdown
                 pointLog={pointLog}

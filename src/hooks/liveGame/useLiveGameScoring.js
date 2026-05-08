@@ -201,11 +201,17 @@ export function useLiveGameScoring({
       };
     } else {
       // L1/L2: minimal entry — strict subset of the L3 shape.
+      // Server info is always recorded: it comes from game state automatically,
+      // not from referee input, so it adds no burden at any level.
+      const rot       = serveRotation;
+      const newServer = rot[newServeIndex % rot.length];
       logEntry = {
         id: uid(), timestamp: Date.now(),
         team: teamNum, t1: newS1, t2: newS2,
         setNum: sets.length + 1, pointNum: newPoints,
         streak,
+        serverPlayerId: currentServer.playerId, serverTeam: currentServer.team,
+        nextServerPlayerId: newServer.playerId, nextServerTeam: newServer.team,
         ...(playerId !== null ? { scoringPlayerId: playerId } : {}),
         msg: teamDisplayName + " • " + newS1 + ":" + newS2,
       };

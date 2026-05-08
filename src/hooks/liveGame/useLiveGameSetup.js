@@ -40,6 +40,7 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
   const [t2FirstServer, setT2FirstServer] = useState(0);
   const [t1InitialSide, setT1InitialSide] = useState(null);
   const [firstServingTeam, setFirstServingTeam] = useState(null);
+  const [rotateOnFirstPoint, setRotateOnFirstPoint] = useState(false);
 
   // ── Preload match from tournament fixture ──────────────────────────────────
   useEffect(() => {
@@ -109,6 +110,7 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
     setT1ServeOrder([]); setT2ServeOrder([]);
     setT1FirstServer(0); setT2FirstServer(0); setT1InitialSide(null);
     setFirstServingTeam(null);
+    setRotateOnFirstPoint(false);
     if (informalMode) {
       setInformalStep("config");
       setInformalTeam1({ name: "", players: [] });
@@ -124,6 +126,7 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
     setT1FirstServer(s.t1FirstServer);
     setT2FirstServer(s.t2FirstServer);
     setT1InitialSide(s.t1InitialSide);
+    if (s.rotateOnFirstPoint !== undefined) setRotateOnFirstPoint(s.rotateOnFirstPoint);
   };
 
   return {
@@ -145,6 +148,7 @@ export function useLiveGameSetup({ teams, tournamentMatches, preloadMatchId }) {
     t2FirstServer, setT2FirstServer,
     t1InitialSide, setT1InitialSide,
     firstServingTeam, setFirstServingTeam,
+    rotateOnFirstPoint, setRotateOnFirstPoint,
     // Methods
     startGame,
     resetSetup,

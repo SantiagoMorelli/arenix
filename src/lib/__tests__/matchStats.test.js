@@ -25,7 +25,9 @@ import {
   calcRunnerUp,
   calcServeStreaks,
 } from '../matchStats.js'
-import fixture from './fixtures/l3-match.json'
+import fixture    from './fixtures/l3-match.json'
+import fixtureL1  from './fixtures/l1-match.json'
+import fixtureL2  from './fixtures/l2-match.json'
 
 const log = fixture.match.log
 
@@ -434,6 +436,70 @@ describe('calcServeStreaks', () => {
         "longest": 0,
         "trailing": 0,
         "trailingWon": null,
+      }
+    `)
+  })
+})
+
+// ── L1 fixture tests (extend-only; L3 golden snapshots above stay untouched) ─
+
+const logL1 = fixtureL1.match.log
+
+describe('L1 (Basic) — lead and dynamics from a points-only log', () => {
+  it('calcLeadStats works with no pointType or scoringPlayerId fields', () => {
+    expect(calcLeadStats(logL1)).toMatchInlineSnapshot(`
+      {
+        "changes": 0,
+        "maxLead": 2,
+        "maxLeadTeam": 1,
+      }
+    `)
+  })
+
+  it('calcDynamics works with no pointType or scoringPlayerId fields', () => {
+    expect(calcDynamics(logL1)).toMatchInlineSnapshot(`
+      {
+        "closePoints": 6,
+        "timesTied": 1,
+      }
+    `)
+  })
+})
+
+// ── L2 fixture tests ─────────────────────────────────────────────────────────
+
+const logL2         = fixtureL2.match.log
+const allPidsL2     = ['p1', 'p2', 'p3', 'p4']
+const t1PidsL2      = ['p1', 'p2']
+
+// Team stats derived from l2 log: scoringPlayerId counts only, no pointType.
+const s1L2 = {
+  total: 4,
+  playerPts:    { p1: 2, p2: 2 },
+  playerErrors: {},
+}
+const s2L2 = {
+  total: 2,
+  playerPts:    { p3: 1, p4: 1 },
+  playerErrors: {},
+}
+
+describe('L2 (Intermediate) — per-player MVP from scoringPlayerId log', () => {
+  it('calcMVP returns highest-net player using L2 stats', () => {
+    expect(calcMVP(allPidsL2, s1L2, s2L2, t1PidsL2)).toMatchInlineSnapshot(`
+      {
+        "net": 2,
+        "pid": "p1",
+      }
+    `)
+  })
+
+  it('calcLeadStats also works on an L2 log', () => {
+    expect(calcLeadStats(logL2)).toMatchInlineSnapshot(`
+      {
+        "changes": 0,
+        "maxLead": 2,
+        "maxLeadTeam": 1,
       }
     `)
   })

@@ -129,8 +129,8 @@ export default function LiveScoreboard({
     )
   }
 
-  // ── Point type dialog ────────────────────────────────────────────────────
-  if (live.pendingPoint) {
+  // ── Point type dialog (L3 only) ──────────────────────────────────────────
+  if (live.scoringLevel >= 3 && live.pendingPoint) {
     const ptTeamName = live.pendingPoint.teamNum === 1 ? t1Name : t2Name
     const ptTeamC = live.pendingPoint.teamNum === 1 ? T1 : T2
     return (
@@ -167,8 +167,8 @@ export default function LiveScoreboard({
     )
   }
 
-  // ── Error subtype dialog ─────────────────────────────────────────────────
-  if (live.pendingErrorSubtype) {
+  // ── Error subtype dialog (L3 only) ──────────────────────────────────────
+  if (live.scoringLevel >= 3 && live.pendingErrorSubtype) {
     // The team that made the error is the rival of the scoring team.
     const erroringTeam = live.pendingErrorSubtype.teamNum === 1 ? 2 : 1
     // Only show "Serve" if the erroring team was actually serving this point.
@@ -211,6 +211,7 @@ export default function LiveScoreboard({
   // ── Player select dialog ─────────────────────────────────────────────────
   if (live.pendingPlayerSelect) {
     const isError = live.pendingPlayerSelect.ptId === 'error'
+    const isL2Picker = live.pendingPlayerSelect.ptId === null
     const teamNum = isError ? (live.pendingPlayerSelect.teamNum === 1 ? 2 : 1) : live.pendingPlayerSelect.teamNum
     const scoringTeamC = live.pendingPlayerSelect.teamNum === 1 ? T1 : T2
     const roster = live.serveRotation.filter(r => r.team === teamNum)
@@ -220,7 +221,9 @@ export default function LiveScoreboard({
           <div className={`text-[24px] font-black mb-2 ${isError ? 'text-error' : scoringTeamC.text}`}>
             {isError ? 'Who made the error?' : 'Who scored the point?'}
           </div>
-          <div className="text-[13px] text-dim">Tap a player to assign the point</div>
+          <div className="text-[13px] text-dim">
+            {isL2Picker ? 'Tap a player, or Rival Error' : 'Tap a player to assign the point'}
+          </div>
         </div>
         <div className="flex flex-col gap-4 flex-1 justify-center">
           {roster.map(r => (
@@ -234,6 +237,14 @@ export default function LiveScoreboard({
               <User size={18} className="shrink-0" /> {live.playerName(r.playerId)}
             </button>
           ))}
+          {isL2Picker && (
+            <button
+              onClick={() => live.confirmPlayer(null)}
+              className="w-full p-5 rounded-2xl border-2 border-error/30 bg-error/10 text-error flex items-center justify-center gap-3 text-[18px] font-bold shadow-md active:scale-95 transition-transform"
+            >
+              <X size={18} className="shrink-0" /> Rival Error
+            </button>
+          )}
         </div>
         <button onClick={live.cancelPlayerSelect} className="w-full py-4 mt-4 rounded-xl text-dim font-bold tracking-widest uppercase border-0 bg-transparent active:bg-surface transition-colors">
           Cancel
@@ -538,6 +549,11 @@ export default function LiveScoreboard({
                           <X size={11} className="shrink-0 inline text-error" />
                           {entry.errorType && (() => { const EI = ERROR_SUBTYPE_ICON[entry.errorType]; return EI ? <EI size={11} className="shrink-0 inline text-error" /> : null })()}
                           {entry.errorPlayerId ? <span className="text-dim">{live.playerName(entry.errorPlayerId)}</span> : null}
+                        </>
+                      ) : !entry.pointType && !entry.scoringPlayerId && live.scoringLevel === 2 ? (
+                        <>
+                          <X size={11} className="shrink-0 inline text-error" />
+                          <span className="text-dim">Rival Error</span>
                         </>
                       ) : (
                         <>

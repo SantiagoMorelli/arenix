@@ -10,6 +10,17 @@
  * No side effects, no React, safe to memoize at the caller.
  */
 
+/** Minimum scoring level required to render each computed section. */
+export const MIN_LEVEL = {
+  calcLeadStats: 1,
+  calcDynamics: 1,
+  calcMVP: 2,
+  calcPlayerContribution: 2,
+  calcPeakWindow: 2,
+  calcClutchPoints: 2,
+  calcServeStats: 3,
+};
+
 // ── Lead / momentum ──────────────────────────────────────────────────────────
 
 export function calcLeadStats(pointLog) {

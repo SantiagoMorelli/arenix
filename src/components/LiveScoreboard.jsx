@@ -294,6 +294,7 @@ export default function LiveScoreboard({
             pendingUndo={live.pendingUndo}
             onConfirmUndo={live.confirmUndo}
             onCancelUndo={live.cancelUndo}
+            scoringLevel={live.scoringLevel}
           />
         </main>
       </div>

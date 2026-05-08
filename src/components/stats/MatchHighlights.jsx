@@ -37,7 +37,7 @@ import { EXPLANATIONS } from "./explanations";
  */
 export default function MatchHighlights({
   pointLog, mvp, leadStats, t1Ids, allPlayerIds, getPlayer, getTeam, team1Id, team2Id,
-  teamPlayerStats, selectedPointId, onPointSelect, helpMode = false,
+  teamPlayerStats, selectedPointId, onPointSelect, helpMode = false, scoringLevel = 3,
 }) {
   const [open, setOpen] = useState(null); // "mvp" | "lead" | "changes" | null
   const tName = id => getTeam(id)?.name || "?";
@@ -58,16 +58,18 @@ export default function MatchHighlights({
       </SectionLabelWithHelp>
 
       <div className="flex gap-2">
-        <Tile
-          selected={open === "mvp"}
-          onClick={() => mvp && toggle("mvp")}
-          disabled={!mvp}
-          icon={<Flame size={14} className={mvp ? `${mvpAccent} mx-auto mb-1` : "text-dim mx-auto mb-1"} />}
-          primary={mvp ? firstName(mvp.pid) : "—"}
-          primaryClass="text-text"
-          secondary={mvp ? `${mvp.net > 0 ? "+" : ""}${mvp.net} net pts` : null}
-          label="MVP"
-        />
+        {scoringLevel >= 2 && (
+          <Tile
+            selected={open === "mvp"}
+            onClick={() => mvp && toggle("mvp")}
+            disabled={!mvp}
+            icon={<Flame size={14} className={mvp ? `${mvpAccent} mx-auto mb-1` : "text-dim mx-auto mb-1"} />}
+            primary={mvp ? firstName(mvp.pid) : "—"}
+            primaryClass="text-text"
+            secondary={mvp ? `${mvp.net > 0 ? "+" : ""}${mvp.net} net pts` : null}
+            label="MVP"
+          />
+        )}
         <Tile
           selected={open === "lead"}
           onClick={() => leadStats.maxLead > 0 && toggle("lead")}

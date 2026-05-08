@@ -63,6 +63,7 @@ export default function TournamentDetail() {
   const [conflictScorer,  setConflictScorer]  = useState(null)
   const [checkingScorer,  setCheckingScorer]  = useState(false)
   const [savingScore,     setSavingScore]     = useState(false)
+  const [isGeneratingKnockout, setIsGeneratingKnockout] = useState(false)
 
   // ── Tie-breaker state (shared across all tournament tabs, persisted to DB) ──
   const DEFAULT_TB = { tieBreakerMode: 'id', seedMap: {}, drawMap: {} }
@@ -223,6 +224,8 @@ export default function TournamentDetail() {
   }
 
   const handleGenerateKnockout = async () => {
+    if (isGeneratingKnockout) return
+    setIsGeneratingKnockout(true)
     // Flush any pending debounced save so the DB is up-to-date before we read it back
     clearTimeout(tbDebounceRef.current)
     try {
@@ -234,6 +237,8 @@ export default function TournamentDetail() {
     } catch (err) {
       console.error('Failed to generate knockout:', err)
       showError(err, 'Failed to generate knockout')
+    } finally {
+      setIsGeneratingKnockout(false)
     }
   }
 
@@ -334,6 +339,7 @@ export default function TournamentDetail() {
             currentUserId={isGuest ? null : profile?.id}
             isAdmin={isGuest ? false : isAdmin}
             onRenameTeam={handleRenameTeam}
+            isGeneratingKnockout={isGeneratingKnockout}
           />
         )}
         {activeTab === 'matches' && (

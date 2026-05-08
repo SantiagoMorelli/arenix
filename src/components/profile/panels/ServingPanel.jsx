@@ -31,7 +31,9 @@ function MiniBar({ pct, color }) {
 }
 
 export default function ServingPanel({ stats }) {
-  if (!stats || stats.totalServes === 0) {
+  if (!stats || (stats.sampleSize || 0) < 3) return null
+  const value = stats.value || {}
+  if (value.totalServes === 0) {
     return (
       <div className="text-center text-[12px] text-dim py-6">
         No serves recorded yet.
@@ -43,30 +45,33 @@ export default function ServingPanel({ stats }) {
     <div>
       {/* Headline numbers */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        <Headline value={stats.totalServes} label="Serves" colorClass="text-text" />
-        <Headline value={PCT(stats.serveWinPct)} label="Serve win" colorClass="text-success" />
-        <Headline value={PCT(stats.serveInPlayPct)} label="In play" colorClass="text-free" />
+        <Headline value={value.totalServes} label="Serves" colorClass="text-text" />
+        <Headline value={PCT(value.serveWinPct)} label="Serve win" colorClass="text-success" />
+        <Headline value={PCT(value.serveInPlayPct)} label="In play" colorClass="text-free" />
       </div>
 
       {/* Bars for visual context */}
       <div className="space-y-2 mb-3">
-        <BarRow label="Serve win %" value={PCT(stats.serveWinPct)} pct={stats.serveWinPct} color="bg-success" />
-        <BarRow label="In play %"   value={PCT(stats.serveInPlayPct)} pct={stats.serveInPlayPct} color="bg-free" />
-        <BarRow label="Ace rate"    value={PCT(stats.aceRate)} pct={stats.aceRate} color="bg-accent" />
-        <BarRow label="Error rate"  value={PCT(stats.errorRate)} pct={stats.errorRate} color="bg-error" />
+        <BarRow label="Serve win %" value={PCT(value.serveWinPct)} pct={value.serveWinPct} color="bg-success" />
+        <BarRow label="In play %"   value={PCT(value.serveInPlayPct)} pct={value.serveInPlayPct} color="bg-free" />
+        <BarRow label="Ace rate"    value={PCT(value.aceRate)} pct={value.aceRate} color="bg-accent" />
+        <BarRow label="Error rate"  value={PCT(value.errorRate)} pct={value.errorRate} color="bg-error" />
       </div>
 
-      <StatRow icon={<Zap size={14} />} label="Aces" value={stats.aces} sub="Successful service points" color="text-accent" />
-      <StatRow icon={<AlertTriangle size={14} />} label="Serve errors" value={stats.serveErrors} sub="Net, out, foot fault, etc." color="text-error" />
-      <StatRow icon={<Flame size={14} />} label="Longest run" value={stats.longestServingRun} sub="Consecutive points won serving" color="text-text" />
-      {stats.bestSet && (
+      <StatRow icon={<Zap size={14} />} label="Aces" value={value.aces} sub="Successful service points" color="text-accent" />
+      <StatRow icon={<AlertTriangle size={14} />} label="Serve errors" value={value.serveErrors} sub="Net, out, foot fault, etc." color="text-error" />
+      <StatRow icon={<Flame size={14} />} label="Longest run" value={value.longestServingRun} sub="Consecutive points won serving" color="text-text" />
+      {value.bestSet && (
         <StatRow
           icon={<Target size={14} />}
           label="Best serving set"
-          value={`${stats.bestSet.wins}/${stats.bestSet.serves}`}
-          sub={`Set ${stats.bestSet.setNum} · ${PCT(stats.bestSet.serveWinPct)} win`}
+          value={`${value.bestSet.wins}/${value.bestSet.serves}`}
+          sub={`Set ${value.bestSet.setNum} · ${PCT(value.bestSet.serveWinPct)} win`}
           color="text-success"
         />
+      )}
+      {stats.sampleSize < stats.totalMatches && (
+        <div className="text-[10px] text-dim mt-2">based on {stats.sampleSize} of {stats.totalMatches} matches</div>
       )}
     </div>
   )

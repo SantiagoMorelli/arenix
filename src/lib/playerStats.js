@@ -78,6 +78,18 @@ export function computePlayerLeagueRecord(playerId, league) {
 
 const PCT = (num, den) => (den > 0 ? num / den : 0)
 
+const MIN_LEVEL_L1 = 1
+const MIN_LEVEL_L2 = 2
+const MIN_LEVEL_L3 = 3
+
+function eligibleMatches(annotated, minLevel) {
+  return (annotated || []).filter(a => (a.level || 3) >= minLevel)
+}
+
+function wrapStat(value, sampleSize, totalMatches, minLevel) {
+  return { value, sampleSize, totalMatches, minLevel }
+}
+
 /**
  * Maps a raw errorType value (any era) to the canonical action-based id.
  * Legacy trajectory-based values "net" / "out" → "other"
@@ -91,7 +103,7 @@ function normalizeErrorType(raw) {
 
 /* ─── Serving ─────────────────────────────────────────────────────────────── */
 
-export function computeServingStats(annotated) {
+function computeServingStatsValue(annotated) {
   let totalServes = 0
   let aces = 0
   let serveErrors = 0
@@ -181,6 +193,11 @@ export function computeServingStats(annotated) {
   }
 }
 
+export function computeServingStats(annotated, totalMatches = annotated.length) {
+  const sampleSize = (annotated || []).length
+  return wrapStat(computeServingStatsValue(annotated), sampleSize, totalMatches, MIN_LEVEL_L3)
+}
+
 /* ─── Pressure ────────────────────────────────────────────────────────────── */
 
 function thresholdForSet(match, setNum) {
@@ -189,7 +206,7 @@ function thresholdForSet(match, setNum) {
   return Math.max(s.s1 || 0, s.s2 || 0)
 }
 
-export function computePressureStats(annotated) {
+function computePressureStatsValue(annotated) {
   let clutchPlayed = 0
   let clutchWon = 0
   let clutchLost = 0
@@ -262,9 +279,14 @@ export function computePressureStats(annotated) {
   }
 }
 
+export function computePressureStats(annotated, totalMatches = annotated.length) {
+  const sampleSize = (annotated || []).length
+  return wrapStat(computePressureStatsValue(annotated), sampleSize, totalMatches, MIN_LEVEL_L3)
+}
+
 /* ─── Strengths ───────────────────────────────────────────────────────────── */
 
-export function computeStrengths(annotated, leagueAverages) {
+function computeStrengthsValue(annotated, leagueAverages) {
   const byType = { ace: 0, spike: 0, block: 0, tip: 0 }
   const errorsByType = { spike: 0, tip: 0, serve: 0, other: 0, untyped: 0 }
   let totalScoring = 0
@@ -322,9 +344,14 @@ export function computeStrengths(annotated, leagueAverages) {
   }
 }
 
+export function computeStrengths(annotated, leagueAverages, totalMatches = annotated.length) {
+  const sampleSize = (annotated || []).length
+  return wrapStat(computeStrengthsValue(annotated, leagueAverages), sampleSize, totalMatches, MIN_LEVEL_L3)
+}
+
 /* ─── Playstyle ───────────────────────────────────────────────────────────── */
 
-export function computePlaystyle(annotated, strengths) {
+function computePlaystyleValue(annotated, strengths) {
   const total = strengths.totalScoring
   const share = total > 0
     ? {
@@ -376,6 +403,11 @@ export function computePlaystyle(annotated, strengths) {
     consistencyByMatch,
     consistency,
   }
+}
+
+export function computePlaystyle(annotated, strengths, totalMatches = annotated.length) {
+  const sampleSize = (annotated || []).length
+  return wrapStat(computePlaystyleValue(annotated, strengths), sampleSize, totalMatches, MIN_LEVEL_L3)
 }
 
 /* ─── Tournament breakdown ────────────────────────────────────────────────── */
@@ -432,7 +464,7 @@ export function computeByTournament(annotated) {
 
 /* ─── Win streak ──────────────────────────────────────────────────────────── */
 
-export function computeWinStreak(annotated) {
+function computeWinStreakValue(annotated) {
   const ordered = [...annotated].sort((a, b) => (a.date || 0) - (b.date || 0))
   let best = 0
   let cur = 0
@@ -448,36 +480,80 @@ export function computeWinStreak(annotated) {
   return { bestStreak: best, currentStreak: cur }
 }
 
+export function computeWinStreak(annotated, totalMatches = annotated.length) {
+  const sampleSize = (annotated || []).length
+  return wrapStat(computeWinStreakValue(annotated), sampleSize, totalMatches, MIN_LEVEL_L1)
+}
+
+export function computePerMatchAverages(annotated, totalMatches = annotated.length) {
+  let points = 0
+  let errors = 0
+  for (const a of annotated || []) {
+    const pid = a.pid
+    for (const e of a.match.log || []) {
+      if (e.scoringPlayerId === pid) points++
+      if (e.errorPlayerId === pid) errors++
+    }
+  }
+  const sampleSize = (annotated || []).length
+  const value = {
+    pointsPerMatch: PCT(points, sampleSize),
+    errorsPerMatch: PCT(errors, sampleSize),
+    netPointsPerMatch: PCT(points - errors, sampleSize),
+  }
+  return wrapStat(value, sampleSize, totalMatches, MIN_LEVEL_L2)
+}
+
 /* ─── Headline bundle ─────────────────────────────────────────────────────── */
 
 export function computeAllPlayerStats(annotated) {
-  const serving = computeServingStats(annotated)
-  const pressure = computePressureStats(annotated)
-  const strengths = computeStrengths(annotated)
-  const playstyle = computePlaystyle(annotated, strengths)
+  const totalMatches = (annotated || []).length
+  const l1Matches = eligibleMatches(annotated, MIN_LEVEL_L1)
+  const l2Matches = eligibleMatches(annotated, MIN_LEVEL_L2)
+  const l3Matches = eligibleMatches(annotated, MIN_LEVEL_L3)
+
+  const serving = computeServingStats(l3Matches, totalMatches)
+  const pressure = computePressureStats(l3Matches, totalMatches)
+  const strengths = computeStrengths(l3Matches, null, totalMatches)
+  const playstyle = computePlaystyle(l3Matches, strengths.value, totalMatches)
   const byTournament = computeByTournament(annotated)
-  const streaks = computeWinStreak(annotated)
+  const streaks = computeWinStreak(l1Matches, totalMatches)
+  const perMatchAverages = computePerMatchAverages(l2Matches, totalMatches)
 
   let wins = 0
   let losses = 0
-  for (const a of annotated) {
+  for (const a of l1Matches) {
     if (a.match.winner === a.playerTeamId) wins++
     else if (a.match.winner) losses++
   }
-  const totalMatches = wins + losses
+  const wlTotal = wins + losses
+
+  const winsStat = wrapStat(wins, l1Matches.length, totalMatches, MIN_LEVEL_L1)
+  const lossesStat = wrapStat(losses, l1Matches.length, totalMatches, MIN_LEVEL_L1)
+  const winRateStat = wrapStat(PCT(wins, wlTotal), l1Matches.length, totalMatches, MIN_LEVEL_L1)
+  const bestWinStreakStat = wrapStat(streaks.value.bestStreak, l1Matches.length, totalMatches, MIN_LEVEL_L1)
+  const currentWinStreakStat = wrapStat(streaks.value.currentStreak, l1Matches.length, totalMatches, MIN_LEVEL_L1)
 
   return {
     totalMatches,
-    wins,
-    losses,
-    winRate: PCT(wins, totalMatches),
-    bestWinStreak: streaks.bestStreak,
-    currentWinStreak: streaks.currentStreak,
+    wins: winsStat,
+    losses: lossesStat,
+    winRate: winRateStat,
+    bestWinStreak: bestWinStreakStat,
+    currentWinStreak: currentWinStreakStat,
+    perMatchAverages,
     serving,
     pressure,
     strengths,
     playstyle,
-    byType: strengths.byType,
+    byType: wrapStat(strengths.value.byType, l3Matches.length, totalMatches, MIN_LEVEL_L3),
     byTournament,
+
+    // Compatibility aliases for existing consumers that still read bare values.
+    winsValue: wins,
+    lossesValue: losses,
+    winRateValue: winRateStat.value,
+    bestWinStreakValue: bestWinStreakStat.value,
+    currentWinStreakValue: currentWinStreakStat.value,
   }
 }

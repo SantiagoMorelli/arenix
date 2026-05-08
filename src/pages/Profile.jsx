@@ -35,18 +35,22 @@ const PROFILE_TABS = [
 // ─── Stats tab (slim summary) ─────────────────────────────────────────────────
 function StatsTab({ stats, helpMode }) {
   const PCT = (n) => `${Math.round((n || 0) * 100)}%`
-  const acesPerMatch = stats.totalMatches > 0
-    ? ((stats.serving?.aces || 0) / stats.totalMatches).toFixed(1)
+  const l1Sample = stats.winRate?.sampleSize ?? stats.totalMatches
+  const l1Total = stats.winRate?.totalMatches ?? stats.totalMatches
+  const l2 = stats.perMatchAverages
+  const l3 = stats.serving
+  const acesPerMatch = (l3?.sampleSize || 0) > 0
+    ? (((l3?.value?.aces || 0) / l3.sampleSize).toFixed(1))
     : '-'
-  const pointsPerMatch = stats.totalMatches > 0
-    ? (((stats.byTournament || []).reduce((s, t) => s + (t.points || 0), 0)) / stats.totalMatches).toFixed(1)
+  const pointsPerMatch = (l2?.sampleSize || 0) > 0
+    ? (l2?.value?.pointsPerMatch || 0).toFixed(1)
     : '-'
   const rows = [
     { l: 'Points per match', v: pointsPerMatch },
     { l: 'Aces per match',   v: acesPerMatch },
-    { l: 'Serve win %',      v: PCT(stats.serving?.serveWinPct) },
-    { l: 'Side-out %',       v: PCT(stats.pressure?.sideOutPct) },
-    { l: 'Best win streak',  v: stats.bestWinStreak || 0 },
+    { l: 'Serve win %',      v: PCT(stats.serving?.value?.serveWinPct) },
+    { l: 'Side-out %',       v: PCT(stats.pressure?.value?.sideOutPct) },
+    { l: 'Best win streak',  v: stats.bestWinStreak?.value || 0 },
     { l: 'Tournaments won',  v: stats.tournamentWins || 0 },
   ]
   return (
@@ -68,6 +72,11 @@ function StatsTab({ stats, helpMode }) {
           </div>
         ))}
       </div>
+      {l1Sample < l1Total && (
+        <div className="text-[10px] text-dim mt-1 px-1">
+          based on {l1Sample} of {l1Total} matches
+        </div>
+      )}
     </div>
   )
 }
@@ -258,7 +267,7 @@ export default function Profile() {
     const PCT = (n) => `${Math.round((n || 0) * 100)}%`
     return [
       { value: String(bundle.totalMatches || 0), label: 'Matches', colorClass: 'text-accent' },
-      { value: PCT(bundle.winRate), label: 'Win rate', colorClass: 'text-success' },
+      { value: PCT(bundle.winRate?.value), label: 'Win rate', colorClass: 'text-success' },
       { value: bundle.bestRank ? `#${bundle.bestRank}` : '-', label: 'Best rank', colorClass: 'text-free' },
     ]
   }, [bundle])

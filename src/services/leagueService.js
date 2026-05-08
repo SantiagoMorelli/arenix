@@ -10,18 +10,19 @@ import { supabase } from '../lib/supabase'
 
 function normalizeLeague(row) {
   return {
-    id:          row.id,
-    name:        row.name,
-    season:      row.season,
-    location:    row.location    || '',
-    visibility:  row.visibility  || 'public',
-    inviteCode:  row.invite_code,
-    ownerId:     row.owner_id,
-    createdAt:   row.created_at,
+    id:            row.id,
+    name:          row.name,
+    season:        row.season,
+    location:      row.location    || '',
+    visibility:    row.visibility  || 'public',
+    inviteCode:    row.invite_code,
+    ownerId:       row.owner_id,
+    createdAt:     row.created_at,
+    scoringConfig: row.scoring_config ?? null,
     // filled in by getLeagueById with sub-queries:
-    players:     row.players     || [],
-    tournaments: row.tournaments || [],
-    members:     row.members     || [],
+    players:       row.players     || [],
+    tournaments:   row.tournaments || [],
+    members:       row.members     || [],
   }
 }
 
@@ -364,19 +365,20 @@ async function normalizeTournament(row) {
     .map(normalizeMatch)
 
   return {
-    id:            row.id,
-    name:          row.name,
-    date:          row.date,
-    teamSize:      row.team_size,
-    setsPerMatch:  row.sets_per_match,
-    phase:         row.phase,
-    status:        row.status,
-    winnerTeamId:  row.winner_team_id,
+    id:               row.id,
+    name:             row.name,
+    date:             row.date,
+    teamSize:         row.team_size,
+    setsPerMatch:     row.sets_per_match,
+    phase:            row.phase,
+    status:           row.status,
+    winnerTeamId:     row.winner_team_id,
     tieBreakerConfig: row.tie_breaker_config ?? { tieBreakerMode: 'id', seedMap: {}, drawMap: {} },
+    scoringConfig:    row.scoring_config ?? null,
     teams,
     groups,
     knockout,
-    matches:       fpMatches,
+    matches:          fpMatches,
     // Supabase row id of each knockout round (needed for saving match results)
     _knockoutRoundDbIds: Object.fromEntries(
       (koRoundsRes.data || []).map(r => [r.round_key, r.id])
@@ -445,4 +447,23 @@ export async function deleteLeague(leagueId) {
     .delete()
     .eq('id', leagueId)
   if (error) throw error
+}
+
+/**
+ * Persist the scoring level for a league.
+ * level must be 1, 2, or 3; throws for any other value.
+ * Passing null as level clears the override (inherits platform default = 3).
+ */
+export async function updateLeagueScoringConfig(leagueId, { level }) {
+  if (![1, 2, 3].includes(level)) {
+    throw new Error(`Invalid scoring level "${level}". Must be 1, 2, or 3.`)
+  }
+  const { data, error } = await supabase
+    .from('leagues')
+    .update({ scoring_config: { level } })
+    .eq('id', leagueId)
+    .select()
+    .single()
+  if (error) throw error
+  return normalizeLeague(data)
 }

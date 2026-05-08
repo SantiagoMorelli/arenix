@@ -638,3 +638,19 @@ export async function deleteTournament(tournamentId) {
     .eq('id', tournamentId)
   if (error) throw error
 }
+
+/**
+ * Persist the scoring level for a tournament.
+ * level must be 1, 2, or 3; throws for any other value.
+ * null means "inherit from league" — use updateLeagueScoringConfig to clear it there.
+ */
+export async function updateTournamentScoringConfig(tournamentId, { level }) {
+  if (![1, 2, 3].includes(level)) {
+    throw new Error(`Invalid scoring level "${level}". Must be 1, 2, or 3.`)
+  }
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ scoring_config: { level } })
+    .eq('id', tournamentId)
+  if (error) throw error
+}

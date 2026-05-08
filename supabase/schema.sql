@@ -35,15 +35,16 @@ CREATE TRIGGER on_auth_user_created
 -- leagues
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.leagues (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        TEXT NOT NULL,
-  season      TEXT NOT NULL DEFAULT '2026',
-  location    TEXT,
-  visibility  TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
-  invite_code TEXT UNIQUE NOT NULL
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name           TEXT NOT NULL,
+  season         TEXT NOT NULL DEFAULT '2026',
+  location       TEXT,
+  visibility     TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
+  invite_code    TEXT UNIQUE NOT NULL
     DEFAULT UPPER(SUBSTRING(replace(gen_random_uuid()::TEXT, '-', ''), 1, 8)),
-  owner_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  owner_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  scoring_config JSONB,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_leagues_invite_code ON public.leagues(invite_code);
 
@@ -145,19 +146,20 @@ CREATE TABLE IF NOT EXISTS public.players (
 -- tournaments
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tournaments (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  league_id      UUID NOT NULL REFERENCES public.leagues(id) ON DELETE CASCADE,
-  name           TEXT NOT NULL,
-  date           TEXT NOT NULL,
-  team_size      INTEGER NOT NULL DEFAULT 2,
-  sets_per_match INTEGER NOT NULL DEFAULT 1,
-  phase          TEXT NOT NULL DEFAULT 'setup'
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id          UUID NOT NULL REFERENCES public.leagues(id) ON DELETE CASCADE,
+  name               TEXT NOT NULL,
+  date               TEXT NOT NULL,
+  team_size          INTEGER NOT NULL DEFAULT 2,
+  sets_per_match     INTEGER NOT NULL DEFAULT 1,
+  phase              TEXT NOT NULL DEFAULT 'setup'
     CHECK (phase IN ('setup', 'group', 'knockout', 'freeplay', 'completed')),
-  status         TEXT NOT NULL DEFAULT 'active'
+  status             TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'completed')),
-  winner_team_id UUID,
-  tie_breaker_config jsonb NOT NULL DEFAULT '{"tieBreakerMode":"id","seedMap":{},"drawMap":{}}'::jsonb,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  winner_team_id     UUID,
+  tie_breaker_config JSONB NOT NULL DEFAULT '{"tieBreakerMode":"id","seedMap":{},"drawMap":{}}'::jsonb,
+  scoring_config     JSONB,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ──────────────────────────────────────────────────────────────

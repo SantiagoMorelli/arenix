@@ -32,6 +32,7 @@ const GameStats = ({
   pendingUndo,
   onConfirmUndo,
   onCancelUndo,
+  scoringLevel = 3,
 }) => {
   const [tab, setTab] = useState("overview");
   const [selectedPointId, setSelectedPointId] = useState(null);
@@ -99,7 +100,7 @@ const GameStats = ({
   const t1Ids = teamPlayerIds(team1Id);
   const t2Ids = teamPlayerIds(team2Id);
   const allIds = [...t1Ids, ...t2Ids];
-  const mvp = calcMVP(allIds, s1, s2, t1Ids);
+  const mvp = scoringLevel >= 2 ? calcMVP(allIds, s1, s2, t1Ids) : null;
   const leadStats = calcLeadStats(pointLog);
   const dynStats  = calcDynamics(pointLog);
 
@@ -238,6 +239,7 @@ const GameStats = ({
             selectedPointId={selectedPointId}
             onPointSelect={setSelectedPointId}
             helpMode={helpMode}
+            scoringLevel={scoringLevel}
           />
 
           {/* Total points — multi-set only; single-set score is in the banner */}
@@ -278,21 +280,23 @@ const GameStats = ({
             </AppCard>
           )}
 
-          <TopPerformers
-            pointLog={pointLog}
-            s1={s1}
-            s2={s2}
-            t1Ids={t1Ids}
-            t2Ids={t2Ids}
-            mvp={mvp}
-            getPlayer={getPlayer}
-            getTeam={getTeam}
-            team1Id={team1Id}
-            team2Id={team2Id}
-            helpMode={helpMode}
-          />
+          {scoringLevel >= 2 && (
+            <TopPerformers
+              pointLog={pointLog}
+              s1={s1}
+              s2={s2}
+              t1Ids={t1Ids}
+              t2Ids={t2Ids}
+              mvp={mvp}
+              getPlayer={getPlayer}
+              getTeam={getTeam}
+              team1Id={team1Id}
+              team2Id={team2Id}
+              helpMode={helpMode}
+            />
+          )}
 
-          {allIds.length > 0 && (
+          {allIds.length > 0 && scoringLevel >= 3 && (
             <AppCard className="px-3.5 py-3 mb-3">
               <ServeBreakdown
                 pointLog={pointLog}
@@ -308,65 +312,69 @@ const GameStats = ({
 
       {tab === "stats" && (
         <>
-          <AppCard className="px-3.5 py-3 mb-3">
-            <div className="flex justify-between items-center mb-2.5">
-              <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
-              <span className="text-[10px] font-bold text-dim uppercase tracking-wide flex items-center gap-1.5">
-                How points were won
-                <HelpInlineButton
-                  helpMode={helpMode}
-                  open={pointTypesHelpOpen}
-                  onToggle={() => setPointTypesHelpOpen(o => !o)}
-                />
-              </span>
-              <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
-            </div>
-            <InfoPanel open={helpMode && pointTypesHelpOpen}>
-              {EXPLANATIONS.pointTypes}
-            </InfoPanel>
-            {POINT_TYPES
-              .filter(pt => (s1.byType[pt.id] || 0) + (s2.byType[pt.id] || 0) > 0)
-              .map(pt => renderStatBar(pt, s1.byType[pt.id], s2.byType[pt.id]))}
-            <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
-              <span className="font-bold text-accent">{s1.total}</span>
-              <span className="text-dim">total</span>
-              <span className="font-bold text-free">{s2.total}</span>
-            </div>
-          </AppCard>
+          {scoringLevel >= 3 && (
+            <AppCard className="px-3.5 py-3 mb-3">
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
+                <span className="text-[10px] font-bold text-dim uppercase tracking-wide flex items-center gap-1.5">
+                  How points were won
+                  <HelpInlineButton
+                    helpMode={helpMode}
+                    open={pointTypesHelpOpen}
+                    onToggle={() => setPointTypesHelpOpen(o => !o)}
+                  />
+                </span>
+                <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
+              </div>
+              <InfoPanel open={helpMode && pointTypesHelpOpen}>
+                {EXPLANATIONS.pointTypes}
+              </InfoPanel>
+              {POINT_TYPES
+                .filter(pt => (s1.byType[pt.id] || 0) + (s2.byType[pt.id] || 0) > 0)
+                .map(pt => renderStatBar(pt, s1.byType[pt.id], s2.byType[pt.id]))}
+              <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
+                <span className="font-bold text-accent">{s1.total}</span>
+                <span className="text-dim">total</span>
+                <span className="font-bold text-free">{s2.total}</span>
+              </div>
+            </AppCard>
+          )}
 
-          <AppCard className="px-3.5 py-3 mb-3">
-            <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveEfficiency}>
-              Serve efficiency
-            </SectionLabelWithHelp>
-            <div className="flex gap-2">
-              {[
-                { tn: 1, st: s1, tid: team1Id, isTeam1: true  },
-                { tn: 2, st: s2, tid: team2Id, isTeam1: false },
-              ].map(({ tn, st, tid, isTeam1 }) => {
-                const tot = st.whileServing + st.whileReceiving || 1;
-                const pct = Math.round(st.whileServing / tot * 100);
-                return (
-                  <div
-                    key={tn}
-                    className={`flex-1 rounded-[10px] px-2.5 py-2.5 text-center ${isTeam1 ? "bg-accent/15" : "bg-free/15"}`}
-                  >
-                    <div className={`text-[11px] font-bold mb-1.5 ${isTeam1 ? "text-accent" : "text-free"}`}>{tName(tid)}</div>
-                    <div className={`font-display text-[28px] mb-1 leading-none ${isTeam1 ? "text-accent" : "text-free"}`}>{pct}%</div>
-                    <div className="flex justify-around">
-                      <div>
-                        <div className="text-[14px] font-bold text-text">{st.whileServing}</div>
-                        <div className="text-[8px] text-dim uppercase">serving</div>
-                      </div>
-                      <div>
-                        <div className="text-[14px] font-bold text-text">{st.whileReceiving}</div>
-                        <div className="text-[8px] text-dim uppercase">receiving</div>
+          {scoringLevel >= 3 && (
+            <AppCard className="px-3.5 py-3 mb-3">
+              <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveEfficiency}>
+                Serve efficiency
+              </SectionLabelWithHelp>
+              <div className="flex gap-2">
+                {[
+                  { tn: 1, st: s1, tid: team1Id, isTeam1: true  },
+                  { tn: 2, st: s2, tid: team2Id, isTeam1: false },
+                ].map(({ tn, st, tid, isTeam1 }) => {
+                  const tot = st.whileServing + st.whileReceiving || 1;
+                  const pct = Math.round(st.whileServing / tot * 100);
+                  return (
+                    <div
+                      key={tn}
+                      className={`flex-1 rounded-[10px] px-2.5 py-2.5 text-center ${isTeam1 ? "bg-accent/15" : "bg-free/15"}`}
+                    >
+                      <div className={`text-[11px] font-bold mb-1.5 ${isTeam1 ? "text-accent" : "text-free"}`}>{tName(tid)}</div>
+                      <div className={`font-display text-[28px] mb-1 leading-none ${isTeam1 ? "text-accent" : "text-free"}`}>{pct}%</div>
+                      <div className="flex justify-around">
+                        <div>
+                          <div className="text-[14px] font-bold text-text">{st.whileServing}</div>
+                          <div className="text-[8px] text-dim uppercase">serving</div>
+                        </div>
+                        <div>
+                          <div className="text-[14px] font-bold text-text">{st.whileReceiving}</div>
+                          <div className="text-[8px] text-dim uppercase">receiving</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </AppCard>
+                  );
+                })}
+              </div>
+            </AppCard>
+          )}
 
           <MatchDynamics
             pointLog={pointLog}

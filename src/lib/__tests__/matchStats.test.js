@@ -24,6 +24,7 @@ import {
   calcMvpMoments,
   calcRunnerUp,
   calcServeStreaks,
+  MIN_LEVEL,
 } from '../matchStats.js'
 import fixture    from './fixtures/l3-match.json'
 import fixtureL1  from './fixtures/l1-match.json'
@@ -502,5 +503,36 @@ describe('L2 (Intermediate) — per-player MVP from scoringPlayerId log', () => 
         "maxLeadTeam": 1,
       }
     `)
+  })
+})
+
+// ── MIN_LEVEL metadata assertions ─────────────────────────────────────────────
+
+describe('MIN_LEVEL annotations', () => {
+  it('lead and dynamics functions are L1', () => {
+    expect(MIN_LEVEL.calcLeadStats).toBe(1)
+    expect(MIN_LEVEL.calcDynamics).toBe(1)
+  })
+
+  it('MVP and player contribution functions are L2', () => {
+    expect(MIN_LEVEL.calcMVP).toBe(2)
+    expect(MIN_LEVEL.calcPlayerContribution).toBe(2)
+    expect(MIN_LEVEL.calcPeakWindow).toBe(2)
+    expect(MIN_LEVEL.calcClutchPoints).toBe(2)
+  })
+
+  it('serve stats are L3', () => {
+    expect(MIN_LEVEL.calcServeStats).toBe(3)
+  })
+
+  it('L1 functions compute correctly from a points-only log (no scoringPlayerId)', () => {
+    expect(calcLeadStats(logL1).maxLead).toBeGreaterThan(0)
+    expect(calcDynamics(logL1).timesTied).toBeGreaterThanOrEqual(0)
+  })
+
+  it('L2 functions compute correctly when scoringPlayerId is present but pointType is absent', () => {
+    expect(calcMVP(allPidsL2, s1L2, s2L2, t1PidsL2)?.pid).toBe('p1')
+    expect(calcClutchPoints('p1', logL2)).toBeGreaterThanOrEqual(0)
+    expect(calcPeakWindow('p1', logL2, 3).count).toBeGreaterThanOrEqual(0)
   })
 })

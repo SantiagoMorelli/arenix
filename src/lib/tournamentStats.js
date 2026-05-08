@@ -117,6 +117,16 @@ export function rankPlayersByStat(playerStats, statKey, opts = {}) {
   return rows
 }
 
+export const TOURNAMENT_RANKING_MIN_LEVELS = {
+  points: 2,
+  errors: 2,
+  aces: 3,
+  spikes: 3,
+  blocks: 3,
+  tips: 3,
+  serveWinPct: 3,
+}
+
 // ─── Per-team tournament totals ─────────────────────────────────────────────
 // `team` is the team object on `tournament.teams`: { id, name, players: [pid] }
 // Returns { pointsScored, mistakes, wins, losses, perPlayer: [...] }
@@ -182,7 +192,7 @@ export function computeTeamTournamentTotals(team, allMatches, leaguePlayers = []
 // ─── Per-player tournament breakdown ────────────────────────────────────────
 // Used by PlayerTournamentDetailSheet. Returns the full picture for one player
 // across every match they appeared in.
-export function computePlayerTournamentBreakdown(pid, allMatches) {
+export function computePlayerTournamentBreakdown(pid, allMatches, scoringLevel = 3) {
   const result = {
     points: 0,
     byType: { ace: 0, spike: 0, block: 0, tip: 0 },
@@ -227,6 +237,13 @@ export function computePlayerTournamentBreakdown(pid, allMatches) {
     }
 
     if (touchedThisMatch) result.matchIds.add(m.id)
+  }
+
+  if (scoringLevel < 3) {
+    return {
+      points: result.points,
+      errors: result.errors,
+    }
   }
 
   const matchesPlayed = result.matchIds.size

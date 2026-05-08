@@ -254,6 +254,7 @@ export default function TournamentDetail() {
       {showTournamentStats && (
         <TournamentStatsScreen
           tournament={tournament}
+          league={league}
           leaguePlayers={leaguePlayers}
           onClose={() => setShowTournamentStats(false)}
           tbOptions={tbOptions}

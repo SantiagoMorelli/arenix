@@ -6,8 +6,9 @@ import {
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings } from '../lib/standings'
 import { getAllMatches } from '../lib/tournament'
-import { computePlayerStats, rankPlayersByStat } from '../lib/tournamentStats'
-import { AppCard, SectionLabel } from './ui-new'
+import { resolveScoringLevel } from '../lib/scoring'
+import { computePlayerStats, rankPlayersByStat, TOURNAMENT_RANKING_MIN_LEVELS } from '../lib/tournamentStats'
+import { AppBadge, AppCard, SectionLabel } from './ui-new'
 import TieBreakerControls from './standings/TieBreakerControls'
 import AwardRankingSheet from './stats/AwardRankingSheet'
 import MatchBreakdownSheet from './stats/MatchBreakdownSheet'
@@ -200,8 +201,10 @@ function AwardCard(props) {
   )
 }
 
-function Awards({ playerStats, leaguePlayers, onSelectAward }) {
+function Awards({ playerStats, leaguePlayers, scoringLevel, onSelectAward }) {
   const cards = TOURNAMENT_AWARDS.map(award => {
+    const minLevel = TOURNAMENT_RANKING_MIN_LEVELS[award.statKey] ?? 3
+    if (scoringLevel < minLevel) return null
     const ranked = rankPlayersByStat(playerStats, award.statKey, {
       leaguePlayers,
       minThreshold: award.minThreshold || 0,
@@ -214,11 +217,11 @@ function Awards({ playerStats, leaguePlayers, onSelectAward }) {
   }).filter(Boolean)
 
   if (!cards.length) {
-    return (
-      <div className="px-4 text-[13px] text-dim text-center py-4">
-        No live match stats recorded
-      </div>
-    )
+      return (
+        <div className="px-4 text-[13px] text-dim text-center py-4">
+          No live match stats recorded
+        </div>
+      )
   }
 
   return (
@@ -384,10 +387,12 @@ function MatchRecords({ records, tournament, onSelectRecord }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TournamentStatsScreen({ tournament, leaguePlayers, onClose, tbOptions, onTbOptionsChange, isAdmin = false }) {
+export default function TournamentStatsScreen({ tournament, league, leaguePlayers, onClose, tbOptions, onTbOptionsChange, isAdmin = false }) {
   const allMatches = useMemo(() => getAllMatches(tournament), [tournament])
   const playerStats = useMemo(() => computePlayerStats(allMatches), [allMatches])
   const records = useMemo(() => computeMatchRecords(allMatches), [allMatches])
+  const scoringLevel = useMemo(() => resolveScoringLevel(tournament, league), [tournament, league])
+  const showPlayerAwards = scoringLevel >= 2
   const DEFAULT_TB = { tieBreakerMode: 'id', seedMap: {}, drawMap: {} }
   // If not controlled from parent, fall back to local state (e.g. when used outside TournamentDetail)
   const [localTbOptions, setLocalTbOptions] = useState(DEFAULT_TB)
@@ -422,6 +427,9 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
             Tournament Complete
           </div>
           <div className="text-[11px] text-dim truncate">{tournament.name}</div>
+          <div className="mt-1">
+            <AppBadge text={`Scoring level: ${scoringLevel}`} variant="dim" />
+          </div>
         </div>
         <Trophy size={20} className="text-accent" />
       </div>
@@ -439,19 +447,24 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
 
         <div className="h-px bg-line mx-4 mb-5" />
 
-        {/* Awards */}
-        <div className="mb-5">
-          <div className="px-4 mb-3">
-            <SectionLabel>Player Awards</SectionLabel>
-          </div>
-          <Awards
-            playerStats={playerStats}
-            leaguePlayers={leaguePlayers}
-            onSelectAward={({ award, ranked }) => setActiveSheet({ kind: 'award', payload: { award, ranked } })}
-          />
-        </div>
+        {showPlayerAwards && (
+          <>
+            {/* Awards */}
+            <div className="mb-5">
+              <div className="px-4 mb-3">
+                <SectionLabel>Player Awards</SectionLabel>
+              </div>
+              <Awards
+                playerStats={playerStats}
+                leaguePlayers={leaguePlayers}
+                scoringLevel={scoringLevel}
+                onSelectAward={({ award, ranked }) => setActiveSheet({ kind: 'award', payload: { award, ranked } })}
+              />
+            </div>
 
-        <div className="h-px bg-line mx-4 mb-5" />
+            <div className="h-px bg-line mx-4 mb-5" />
+          </>
+        )}
 
         {/* Final Standings */}
         <div className="mb-5">
@@ -530,6 +543,7 @@ export default function TournamentStatsScreen({ tournament, leaguePlayers, onClo
         playerId={activeSheet?.payload?.pid}
         playerName={activeSheet?.payload?.name}
         allMatches={allMatches}
+        scoringLevel={scoringLevel}
       />
     </div>
   )

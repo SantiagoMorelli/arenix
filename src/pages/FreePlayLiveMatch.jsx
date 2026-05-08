@@ -207,6 +207,27 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
             </div>
           </div>
         )}
+
+        {/* Rotate on first point (3v3 only) */}
+        {(live.t1ServeOrder?.length === 3 || live.t2ServeOrder?.length === 3) && (
+          <label className="bg-surface rounded-xl border border-line p-4 flex items-center justify-between gap-4 cursor-pointer m-0">
+            <div className="flex flex-col">
+              <span className="text-[13px] font-bold text-text">Rotate on first point</span>
+              <span className="text-[11px] text-dim">Receiving team rotates before their first serve.</span>
+            </div>
+            <div className="relative flex items-center justify-center shrink-0">
+              <input
+                type="checkbox"
+                checked={live.rotateOnFirstPoint}
+                onChange={(e) => live.setRotateOnFirstPoint(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${live.rotateOnFirstPoint ? 'bg-accent border-accent text-bg' : 'border-line bg-transparent'}`}>
+                {live.rotateOnFirstPoint && <Svg size={14}><polyline points="20 6 9 17 4 12" strokeWidth="3" /></Svg>}
+              </div>
+            </div>
+          </label>
+        )}
       </div>
 
       {/* Start button */}

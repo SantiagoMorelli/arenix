@@ -41,6 +41,7 @@ export function useLiveGameScoring({
   tName,
   team1Id,
   team2Id,
+  rotateOnFirstPoint = false,
   onBeforeApply,
   scoringLevel = 3,
 }) {
@@ -162,9 +163,27 @@ export function useLiveGameScoring({
     let newServeIndex = serveIndex;
     if (currentServer.team !== teamNum) {
       const rot = serveRotation;
-      for (let i = 1; i <= rot.length; i++) {
-        const candidate = (serveIndex + i) % rot.length;
-        if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
+      const currentSetNum = sets.length + 1;
+      const hasServedInSet = log
+        .filter(l => l.setNum === currentSetNum)
+        .some(l => l.serverTeam === teamNum);
+      const isFirstServe = !hasServedInSet;
+
+      if (isFirstServe) {
+        const firstSlot = rot.findIndex(r => r.team === teamNum);
+        if (!rotateOnFirstPoint) {
+          newServeIndex = firstSlot;
+        } else {
+          for (let i = 1; i <= rot.length; i++) {
+            const candidate = (firstSlot + i) % rot.length;
+            if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
+          }
+        }
+      } else {
+        for (let i = 1; i <= rot.length; i++) {
+          const candidate = (serveIndex + i) % rot.length;
+          if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
+        }
       }
     }
 

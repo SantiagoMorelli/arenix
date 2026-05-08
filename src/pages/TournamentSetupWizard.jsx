@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
-import { createTournament } from '../services/tournamentService'
+import { createTournament, updateTournamentScoringConfig } from '../services/tournamentService'
 import { addPlayer } from '../services/playerService'
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 import { useToast } from '../components/ToastContext'
 import AddPlayerSheet from '../components/AddPlayerSheet'
+import ScoringLevelSelect from '../components/ScoringLevelSelect'
 
 const FORMAT_OPTIONS = [
   { id: 'group',    label: 'Group + Knockout' },
@@ -172,10 +173,11 @@ export default function TournamentSetupWizard() {
   const [saving, setSaving] = useState(false)
 
   // Step 0 state
-  const [name,         setName]         = useState('')
-  const [date,         setDate]         = useState(new Date().toISOString().slice(0, 10))
-  const [teamSize,     setTeamSize]     = useState(2)
-  const [setsPerMatch, setSetsPerMatch] = useState(1)
+  const [name,          setName]          = useState('')
+  const [date,          setDate]          = useState(new Date().toISOString().slice(0, 10))
+  const [teamSize,      setTeamSize]      = useState(2)
+  const [setsPerMatch,  setSetsPerMatch]  = useState(1)
+  const [scoringLevel,  setScoringLevel]  = useState(null) // null = inherit from league
   const [pickedPlayers, setPickedPlayers] = useState([])
 
   // Step 1 state — teams live fully in local state
@@ -318,6 +320,10 @@ export default function TournamentSetupWizard() {
 
       const tournament = await createTournament(id, { name: name.trim(), date, teamSize, setsPerMatch, teams, groups, matches })
 
+      if (scoringLevel !== null) {
+        await updateTournamentScoringConfig(tournament.id, { level: scoringLevel })
+      }
+
       await createNotificationsForLeagueMembers(
         id,
         'tournament_started',
@@ -453,6 +459,16 @@ export default function TournamentSetupWizard() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Scoring detail */}
+            <div>
+              <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Scoring detail</div>
+              <ScoringLevelSelect
+                value={scoringLevel}
+                onChange={setScoringLevel}
+                showInherit
+              />
             </div>
 
           </div>

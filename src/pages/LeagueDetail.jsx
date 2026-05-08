@@ -4,10 +4,11 @@ import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
-import { deleteLeague, leaveLeague, updateLeague } from '../services/leagueService'
+import { deleteLeague, leaveLeague, updateLeague, updateLeagueScoringConfig } from '../services/leagueService'
 import { buildInviteLink, buildViewLink, regenerateInviteCode, addMemberRole, removeMemberRole, grantMemberPermission, revokeMemberPermission } from '../services/inviteService'
 import { BottomNav, SectionLabel, AppBadge } from '../components/ui-new'
 import LeaguePlayersTab from '../components/LeaguePlayersTab'
+import ScoringLevelSelect from '../components/ScoringLevelSelect'
 import { createNotification } from '../services/notificationService'
 import { computePlayerLeagueRecord } from '../lib/playerStats'
 import { useToast } from '../components/ToastContext'
@@ -181,6 +182,10 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
   const [savingGeneral,  setSavingGeneral]  = useState(false)
   const [generalSaved,   setGeneralSaved]   = useState(false)
 
+  const [scoringLevel,   setScoringLevel]   = useState(league?.scoringConfig?.level ?? 3)
+  const [scoringSaving,  setScoringSaving]  = useState(false)
+  const [scoringSaved,   setScoringSaved]   = useState(false)
+
   async function handleSaveGeneral(e) {
     e.preventDefault()
     if (!editName.trim()) return
@@ -205,6 +210,19 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
     setEditLocation(league?.location   || '')
     setEditVisibility(league?.visibility || 'public')
     setEditingGeneral(false)
+  }
+
+  async function handleScoringLevelChange(level) {
+    setScoringLevel(level)
+    setScoringSaving(true)
+    try {
+      await updateLeagueScoringConfig(league.id, { level })
+      await refetch()
+      setScoringSaved(true)
+      setTimeout(() => setScoringSaved(false), 2000)
+    } finally {
+      setScoringSaving(false)
+    }
   }
 
   async function handleToggleAdmin(member) {
@@ -383,6 +401,20 @@ function SettingsTab({ league, isAdmin, isSuperAdmin, refetch, currentUserId }) 
               </button>
             </form>
           )}
+
+          <SectionLabel color="accent">Default Scoring Detail</SectionLabel>
+          <div className="bg-surface border border-line rounded-xl p-4 mb-4">
+            <ScoringLevelSelect
+              value={scoringLevel}
+              onChange={handleScoringLevelChange}
+            />
+            {scoringSaving && (
+              <div className="mt-3 text-[12px] text-dim">Saving…</div>
+            )}
+            {scoringSaved && !scoringSaving && (
+              <div className="mt-3 text-[12px] text-success font-semibold">Saved!</div>
+            )}
+          </div>
 
           <SectionLabel color="accent">Invite Players</SectionLabel>
           <div className="bg-surface border border-line rounded-xl p-4 mb-4">

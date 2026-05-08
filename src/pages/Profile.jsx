@@ -11,6 +11,7 @@ import { evaluateAchievements } from '../lib/achievements'
 import { playUnlockChime } from '../lib/chime'
 import { buildCoachExport } from '../lib/playerStatsExport'
 import { computePlayerLeagueRecord } from '../lib/playerStats'
+import { resolveScoringLevel } from '../lib/scoring'
 
 import ProfileHeroCard from '../components/profile/ProfileHeroCard'
 import AchievementsSection from '../components/profile/AchievementsSection'
@@ -346,6 +347,7 @@ export default function Profile() {
       leaguePlayers: lg.players || [],
       leagueId: lg.id,
       tournamentId: tour.id,
+      scoringLevel: resolveScoringLevel(tour, lg),
     })
   }
 
@@ -492,6 +494,7 @@ export default function Profile() {
           isAdmin={false}
           leagueId={statsOverlayMatch.leagueId}
           tournamentId={statsOverlayMatch.tournamentId}
+          scoringLevel={statsOverlayMatch.scoringLevel}
           navigate={navigate}
           onClose={() => setStatsOverlayMatch(null)}
           onSaved={() => setStatsOverlayMatch(null)}

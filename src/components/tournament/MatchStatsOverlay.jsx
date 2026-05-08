@@ -20,7 +20,7 @@ const STATS_T = {
   newMatch: 'New Match',
 }
 
-export default function MatchStatsOverlay({ match, tournament, leaguePlayers, isAdmin, leagueId, tournamentId, navigate, onClose, onSaved }) {
+export default function MatchStatsOverlay({ match, tournament, leaguePlayers, isAdmin, leagueId, tournamentId, navigate, onClose, onSaved, scoringLevel = 3 }) {
   const [showMenu, setShowMenu] = useState(false)
   const [editingMatch, setEditingMatch] = useState(null)
 
@@ -76,6 +76,7 @@ export default function MatchStatsOverlay({ match, tournament, leaguePlayers, is
             log={match.log}
             teams={tournament.teams}
             players={leaguePlayers}
+            scoringLevel={scoringLevel}
             t={k => STATS_T[k] || k}
           />
         ) : (

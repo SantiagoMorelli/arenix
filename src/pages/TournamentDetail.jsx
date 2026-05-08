@@ -17,6 +17,7 @@ import {
 } from '../services/tournamentService'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
 import { buildKnockout } from '../lib/tournament'
+import { resolveScoringLevel } from '../lib/scoring'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
 import { PillTabs } from '../components/ui-new'
 import { useToast } from '../components/ToastContext'
@@ -41,6 +42,7 @@ export default function TournamentDetail() {
   const { session, profile } = useAuth()
   const tournament    = league?.tournaments?.find(t => t.id === tid) || null
   const leaguePlayers = league?.players || []
+  const scoringLevel = resolveScoringLevel(tournament, league)
 
   const isGuest = !session
 
@@ -269,6 +271,7 @@ export default function TournamentDetail() {
           match={selectedStatsMatch}
           tournament={tournament}
           leaguePlayers={leaguePlayers}
+          scoringLevel={scoringLevel}
           isAdmin={isAdmin && !isGuest}
           leagueId={id}
           tournamentId={tid}

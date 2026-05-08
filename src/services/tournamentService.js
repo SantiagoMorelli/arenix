@@ -289,6 +289,15 @@ export async function completeTournament(tournamentId, winnerTeamId, runnerUpTea
  * Called after "Generate Knockout" is triggered.
  */
 export async function saveKnockoutRounds(tournamentId, rounds) {
+  const { data: existingRounds, error: existingRoundsError } = await supabase
+    .from('knockout_rounds')
+    .select('id')
+    .eq('tournament_id', tournamentId)
+    .limit(1)
+
+  if (existingRoundsError) throw existingRoundsError
+  if ((existingRounds || []).length > 0) return
+
   let order = 0
   for (const round of rounds) {
     const { data: r, error } = await supabase

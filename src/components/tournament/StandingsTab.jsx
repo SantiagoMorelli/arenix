@@ -14,6 +14,7 @@ export default function StandingsTab({
   currentUserId,
   isAdmin,
   onRenameTeam,
+  isGeneratingKnockout = false,
 }) {
   const { phase, groups, teams, matches } = tournament
   const hasGroups = (groups || []).length > 0
@@ -92,12 +93,16 @@ export default function StandingsTab({
         <div className="mt-2 mb-6">
           <button
             onClick={onGenerateKnockout}
-            disabled={!allGroupMatchesPlayed}
+            disabled={!allGroupMatchesPlayed || isGeneratingKnockout}
             className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white border-0 transition-all ${
-              allGroupMatchesPlayed ? 'bg-free cursor-pointer hover:opacity-90' : 'bg-surface border border-line text-dim cursor-not-allowed'
+              allGroupMatchesPlayed && !isGeneratingKnockout
+                ? 'bg-free cursor-pointer hover:opacity-90'
+                : 'bg-surface border border-line text-dim cursor-not-allowed'
             }`}
           >
-            {allGroupMatchesPlayed ? '⚡ Generate Knockout' : '⏳ Complete all group matches first'}
+            {isGeneratingKnockout
+              ? '⏳ Generating knockout...'
+              : (allGroupMatchesPlayed ? '⚡ Generate Knockout' : '⏳ Complete all group matches first')}
           </button>
         </div>
       )}

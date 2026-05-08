@@ -42,6 +42,7 @@ export function useLiveGameScoring({
   team1Id,
   team2Id,
   onBeforeApply,
+  scoringLevel = 3,
 }) {
   // ── Core in-game state ─────────────────────────────────────────────────────
   const [score1, setScore1]           = useState(0);
@@ -172,28 +173,43 @@ export function useLiveGameScoring({
       ? { t1: side.t1 === "left" ? "right" : "left", t2: side.t2 === "left" ? "right" : "left" }
       : side;
 
-    const rot        = serveRotation;
-    const newServer  = rot[newServeIndex % rot.length];
-    const pt         = POINT_TYPES.find(p => p.id === ptId) || POINT_TYPES[4];
-
     let streak = 1;
     for (let i = log.length - 1; i >= 0; i--) {
       if (log[i].team === teamNum) streak++; else break;
     }
 
-    const logEntry = {
-      id: uid(), timestamp: Date.now(),
-      team: teamNum, t1: newS1, t2: newS2,
-      setNum: sets.length + 1, pointNum: newPoints,
-      pointType: ptId, pointTypeLabel: pt.label, pointTypeIcon: pt.icon,
-      serverPlayerId: currentServer.playerId, serverTeam: currentServer.team,
-      nextServerPlayerId: newServer.playerId, nextServerTeam: newServer.team,
-      sideBeforePoint: { ...side }, sideChange: isSideChange, streak,
-      scoringPlayerId: ptId !== "error" ? playerId : null,
-      errorPlayerId:   ptId === "error" ? playerId : null,
-      errorType:       ptId === "error" ? errorType : null,
-      msg: pt.icon + " " + pt.label + " • " + tName(teamNum === 1 ? team1Id : team2Id) + " • " + newS1 + ":" + newS2,
-    };
+    const teamDisplayName = tName(teamNum === 1 ? team1Id : team2Id);
+
+    let logEntry;
+    if (ptId !== null) {
+      // L3: full entry with type, server, side metadata.
+      const rot       = serveRotation;
+      const newServer = rot[newServeIndex % rot.length];
+      const pt        = POINT_TYPES.find(p => p.id === ptId) || POINT_TYPES[4];
+      logEntry = {
+        id: uid(), timestamp: Date.now(),
+        team: teamNum, t1: newS1, t2: newS2,
+        setNum: sets.length + 1, pointNum: newPoints,
+        pointType: ptId, pointTypeLabel: pt.label, pointTypeIcon: pt.icon,
+        serverPlayerId: currentServer.playerId, serverTeam: currentServer.team,
+        nextServerPlayerId: newServer.playerId, nextServerTeam: newServer.team,
+        sideBeforePoint: { ...side }, sideChange: isSideChange, streak,
+        scoringPlayerId: ptId !== "error" ? playerId : null,
+        errorPlayerId:   ptId === "error" ? playerId : null,
+        errorType:       ptId === "error" ? errorType : null,
+        msg: pt.icon + " " + pt.label + " • " + teamDisplayName + " • " + newS1 + ":" + newS2,
+      };
+    } else {
+      // L1/L2: minimal entry — strict subset of the L3 shape.
+      logEntry = {
+        id: uid(), timestamp: Date.now(),
+        team: teamNum, t1: newS1, t2: newS2,
+        setNum: sets.length + 1, pointNum: newPoints,
+        streak,
+        ...(playerId !== null ? { scoringPlayerId: playerId } : {}),
+        msg: teamDisplayName + " • " + newS1 + ":" + newS2,
+      };
+    }
 
     const isWin = (s, opp) => s >= pointsToWin && s - opp >= 2;
     const setOver = isWin(newS1, newS2) || isWin(newS2, newS1);
@@ -206,7 +222,20 @@ export function useLiveGameScoring({
   };
 
   // ── Public point actions ───────────────────────────────────────────────────
-  const addPoint = (teamNum) => setPendingPoint({ teamNum });
+  const addPoint = (teamNum) => {
+    if (scoringLevel === 1) {
+      // L1: commit immediately — no dialogs, no player attribution.
+      resolvePoint(teamNum, null, null, null);
+      return;
+    }
+    if (scoringLevel === 2) {
+      // L2: skip point-type dialog, go straight to player picker.
+      setPendingPlayerSelect({ teamNum, ptId: null });
+      return;
+    }
+    // L3: current full dialog flow.
+    setPendingPoint({ teamNum });
+  };
 
   const confirmPointType = (ptId) => {
     if (!pendingPoint) return;

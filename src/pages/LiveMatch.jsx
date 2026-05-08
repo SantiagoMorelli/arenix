@@ -259,7 +259,9 @@ export default function LiveMatch() {
     // effect fires with a populated tournamentMatches array (it only re-runs
     // when preloadMatchId changes, so null → mid triggers correct population).
     preloadMatchId: tournament ? mid : null,
-    setsPerMatch: tournament?.setsPerMatch || 1
+    setsPerMatch: tournament?.setsPerMatch || 1,
+    tournament,
+    league,
   })
 
   const [showQRImport, setShowQRImport] = useState(false)

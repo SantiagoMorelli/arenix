@@ -4,6 +4,7 @@ import { useLiveGameScoring }      from "./liveGame/useLiveGameScoring";
 import { useLiveGameUndo }         from "./liveGame/useLiveGameUndo";
 import { useLiveGamePersistence }  from "./liveGame/useLiveGamePersistence";
 import { buildServeRotation }      from "./liveGame/serveRotation";
+import { resolveScoringLevel }     from "../lib/scoring";
 
 // ── Public constants & helpers (re-exported so consumers need no changes) ─────
 export const SAVE_KEY    = "bv_live_game";
@@ -26,7 +27,10 @@ export function useLiveGame({
   preloadMatchId,
   setsPerMatch = 1,
   saveKey = SAVE_KEY,
+  tournament = null,
+  league = null,
 }) {
+  const scoringLevel = resolveScoringLevel(tournament, league);
   // ── 1. Setup sub-hook ──────────────────────────────────────────────────────
   const setup = useLiveGameSetup({ teams, tournamentMatches, preloadMatchId });
 
@@ -94,6 +98,7 @@ export function useLiveGame({
     team1Id: setup.team1Id,
     team2Id: setup.team2Id,
     onBeforeApply: undo.pushHistory,
+    scoringLevel,
   });
 
   // Patch the undo applier now that scoring is available.
@@ -220,6 +225,9 @@ export function useLiveGame({
     pendingErrorSubtype:  scoring.pendingErrorSubtype,
     pendingPlayerSelect:  scoring.pendingPlayerSelect,
     pendingEnd:           scoring.pendingEnd,
+
+    // Scoring level (resolved from tournament + league; 1 | 2 | 3)
+    scoringLevel,
 
     // Derived helpers
     serveRotation:  scoring.serveRotation,

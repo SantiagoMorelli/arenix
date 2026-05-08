@@ -129,8 +129,8 @@ export default function LiveScoreboard({
     )
   }
 
-  // ── Point type dialog ────────────────────────────────────────────────────
-  if (live.pendingPoint) {
+  // ── Point type dialog (L3 only) ──────────────────────────────────────────
+  if (live.scoringLevel >= 3 && live.pendingPoint) {
     const ptTeamName = live.pendingPoint.teamNum === 1 ? t1Name : t2Name
     const ptTeamC = live.pendingPoint.teamNum === 1 ? T1 : T2
     return (
@@ -167,8 +167,8 @@ export default function LiveScoreboard({
     )
   }
 
-  // ── Error subtype dialog ─────────────────────────────────────────────────
-  if (live.pendingErrorSubtype) {
+  // ── Error subtype dialog (L3 only) ──────────────────────────────────────
+  if (live.scoringLevel >= 3 && live.pendingErrorSubtype) {
     // The team that made the error is the rival of the scoring team.
     const erroringTeam = live.pendingErrorSubtype.teamNum === 1 ? 2 : 1
     // Only show "Serve" if the erroring team was actually serving this point.

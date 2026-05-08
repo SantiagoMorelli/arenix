@@ -550,6 +550,11 @@ export default function LiveScoreboard({
                           {entry.errorType && (() => { const EI = ERROR_SUBTYPE_ICON[entry.errorType]; return EI ? <EI size={11} className="shrink-0 inline text-error" /> : null })()}
                           {entry.errorPlayerId ? <span className="text-dim">{live.playerName(entry.errorPlayerId)}</span> : null}
                         </>
+                      ) : !entry.pointType && !entry.scoringPlayerId && live.scoringLevel === 2 ? (
+                        <>
+                          <X size={11} className="shrink-0 inline text-error" />
+                          <span className="text-dim">Rival Error</span>
+                        </>
                       ) : (
                         <>
                           {(() => { const LI = POINT_TYPE_ICON[entry.pointType] || Volleyball; return <LI size={11} className={`shrink-0 inline ${isTeam1 ? 'text-accent' : 'text-free'}`} /> })()}

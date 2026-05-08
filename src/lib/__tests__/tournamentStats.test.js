@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computePlayerStats,
   rankPlayersByStat,
+  TOURNAMENT_RANKING_MIN_LEVELS,
   computeTeamTournamentTotals,
   computePlayerTournamentBreakdown,
   computeMatchBreakdown,
@@ -483,6 +484,76 @@ describe('computeMatchBreakdown', () => {
           "teamName": "Hawks",
           "total": 0,
         },
+      }
+    `)
+  })
+})
+
+describe('Phase 6 level-aware tournament stats', () => {
+  const l1Match = {
+    id: 'm-l1',
+    played: true,
+    team1: 'team-1',
+    team2: 'team-2',
+    score1: 3,
+    score2: 2,
+    winner: 'team-1',
+    log: [
+      { id: 'l1-1', team: 1, setNum: 1 },
+      { id: 'l1-2', team: 2, setNum: 1 },
+      { id: 'l1-3', team: 1, setNum: 1 },
+      { id: 'l1-4', team: 2, setNum: 1 },
+      { id: 'l1-5', team: 1, setNum: 1 },
+    ],
+  }
+
+  const l2Match = {
+    id: 'm-l2',
+    played: true,
+    team1: 'team-1',
+    team2: 'team-2',
+    score1: 4,
+    score2: 3,
+    winner: 'team-1',
+    log: [
+      { id: 'l2-1', team: 1, scoringPlayerId: 'p1', setNum: 1 },
+      { id: 'l2-2', team: 2, scoringPlayerId: 'p3', setNum: 1 },
+      { id: 'l2-3', team: 1, scoringPlayerId: 'p2', setNum: 1 },
+      { id: 'l2-4', team: 2, scoringPlayerId: 'p4', setNum: 1 },
+      { id: 'l2-5', team: 1, scoringPlayerId: 'p1', setNum: 1 },
+      { id: 'l2-6', team: 2, errorPlayerId: 'p1', setNum: 1 },
+      { id: 'l2-7', team: 1, errorPlayerId: 'p3', setNum: 1 },
+    ],
+  }
+
+  it('returns zero partial shape for L1 player breakdown', () => {
+    expect(computePlayerTournamentBreakdown('p1', [l1Match], 1)).toMatchInlineSnapshot(`
+      {
+        "errors": 0,
+        "points": 0,
+      }
+    `)
+  })
+
+  it('returns partial points/errors shape for L2 player breakdown', () => {
+    expect(computePlayerTournamentBreakdown('p1', [l2Match], 2)).toMatchInlineSnapshot(`
+      {
+        "errors": 1,
+        "points": 2,
+      }
+    `)
+  })
+
+  it('exposes tournament ranking min levels used by UI gating', () => {
+    expect(TOURNAMENT_RANKING_MIN_LEVELS).toMatchInlineSnapshot(`
+      {
+        "aces": 3,
+        "blocks": 3,
+        "errors": 2,
+        "points": 2,
+        "serveWinPct": 3,
+        "spikes": 3,
+        "tips": 3,
       }
     `)
   })

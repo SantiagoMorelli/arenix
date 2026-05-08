@@ -1,0 +1,157 @@
+{
+  "teams": [
+    { "id": "team-1", "name": "Eagles", "players": ["p1", "p2"] },
+    { "id": "team-2", "name": "Hawks",  "players": ["p3", "p4"] }
+  ],
+  "players": [
+    { "id": "p1", "name": "Alice",   "displayName": "Alice" },
+    { "id": "p2", "name": "Bob",     "displayName": "Bob" },
+    { "id": "p3", "name": "Charlie", "displayName": "Charlie" },
+    { "id": "p4", "name": "Diana",   "displayName": "Diana" }
+  ],
+  "match": {
+    "id": "match-1",
+    "team1": "team-1",
+    "team2": "team-2",
+    "score1": 7,
+    "score2": 5,
+    "winner": "team-1",
+    "played": true,
+    "created_at": "2024-01-15T10:00:00.000Z",
+    "sets": [{ "s1": 7, "s2": 5 }],
+    "log": [
+      {
+        "id": "e01", "timestamp": 1705312801000,
+        "team": 1, "t1": 1, "t2": 0,
+        "pointType": "ace", "pointTypeLabel": "Ace", "pointTypeIcon": "zap",
+        "scoringPlayerId": "p1",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p1", "serverTeam": 1,
+        "nextServerPlayerId": "p2", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 1, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e02", "timestamp": 1705312810000,
+        "team": 1, "t1": 2, "t2": 0,
+        "pointType": "spike", "pointTypeLabel": "Spike", "pointTypeIcon": "trending-up",
+        "scoringPlayerId": "p2",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p2", "serverTeam": 1,
+        "nextServerPlayerId": "p1", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 2, "streak": 2,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e03", "timestamp": 1705312820000,
+        "team": 2, "t1": 2, "t2": 1,
+        "pointType": "error", "pointTypeLabel": "Error", "pointTypeIcon": "x",
+        "scoringPlayerId": null,
+        "errorPlayerId": "p1", "errorType": "net",
+        "serverPlayerId": "p1", "serverTeam": 1,
+        "nextServerPlayerId": "p3", "nextServerTeam": 2,
+        "setNum": 1, "pointNum": 3, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e04", "timestamp": 1705312831000,
+        "team": 2, "t1": 2, "t2": 2,
+        "pointType": "spike", "pointTypeLabel": "Spike", "pointTypeIcon": "trending-up",
+        "scoringPlayerId": "p3",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p3", "serverTeam": 2,
+        "nextServerPlayerId": "p4", "nextServerTeam": 2,
+        "setNum": 1, "pointNum": 4, "streak": 2,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e05", "timestamp": 1705312842000,
+        "team": 1, "t1": 3, "t2": 2,
+        "pointType": "error", "pointTypeLabel": "Error", "pointTypeIcon": "x",
+        "scoringPlayerId": null,
+        "errorPlayerId": "p3", "errorType": "serve",
+        "serverPlayerId": "p4", "serverTeam": 2,
+        "nextServerPlayerId": "p1", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 5, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e06", "timestamp": 1705312853000,
+        "team": 1, "t1": 4, "t2": 2,
+        "pointType": "block", "pointTypeLabel": "Block", "pointTypeIcon": "shield",
+        "scoringPlayerId": "p2",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p1", "serverTeam": 1,
+        "nextServerPlayerId": "p2", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 6, "streak": 2,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e07", "timestamp": 1705312864000,
+        "team": 2, "t1": 4, "t2": 3,
+        "pointType": "error", "pointTypeLabel": "Error", "pointTypeIcon": "x",
+        "scoringPlayerId": null,
+        "errorPlayerId": "p1", "errorType": "out",
+        "serverPlayerId": "p2", "serverTeam": 1,
+        "nextServerPlayerId": "p3", "nextServerTeam": 2,
+        "setNum": 1, "pointNum": 7, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e08", "timestamp": 1705312875000,
+        "team": 2, "t1": 4, "t2": 4,
+        "pointType": "spike", "pointTypeLabel": "Spike", "pointTypeIcon": "trending-up",
+        "scoringPlayerId": "p4",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p3", "serverTeam": 2,
+        "nextServerPlayerId": "p4", "nextServerTeam": 2,
+        "setNum": 1, "pointNum": 8, "streak": 2,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e09", "timestamp": 1705312886000,
+        "team": 1, "t1": 5, "t2": 4,
+        "pointType": "error", "pointTypeLabel": "Error", "pointTypeIcon": "x",
+        "scoringPlayerId": null,
+        "errorPlayerId": "p4", "errorType": "tip",
+        "serverPlayerId": "p4", "serverTeam": 2,
+        "nextServerPlayerId": "p1", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 9, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e10", "timestamp": 1705312897000,
+        "team": 1, "t1": 6, "t2": 4,
+        "pointType": "tip", "pointTypeLabel": "Tip", "pointTypeIcon": "hand",
+        "scoringPlayerId": "p1",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p1", "serverTeam": 1,
+        "nextServerPlayerId": "p2", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 10, "streak": 2,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e11", "timestamp": 1705312908000,
+        "team": 2, "t1": 6, "t2": 5,
+        "pointType": "error", "pointTypeLabel": "Error", "pointTypeIcon": "x",
+        "scoringPlayerId": null,
+        "errorPlayerId": "p2", "errorType": "other",
+        "serverPlayerId": "p2", "serverTeam": 1,
+        "nextServerPlayerId": "p3", "nextServerTeam": 2,
+        "setNum": 1, "pointNum": 11, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      },
+      {
+        "id": "e12", "timestamp": 1705312919000,
+        "team": 1, "t1": 7, "t2": 5,
+        "pointType": "ace", "pointTypeLabel": "Ace", "pointTypeIcon": "zap",
+        "scoringPlayerId": "p1",
+        "errorPlayerId": null, "errorType": null,
+        "serverPlayerId": "p3", "serverTeam": 2,
+        "nextServerPlayerId": "p1", "nextServerTeam": 1,
+        "setNum": 1, "pointNum": 12, "streak": 1,
+        "sideBeforePoint": null, "sideChange": false, "msg": null
+      }
+    ]
+  }
+}

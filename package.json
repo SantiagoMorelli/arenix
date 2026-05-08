@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/favicon.svg"
+    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/favicon.svg",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",
@@ -35,6 +37,7 @@
     "globals": "^17.4.0",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.4",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^3.2.4"
   }
 }

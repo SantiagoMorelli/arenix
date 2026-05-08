@@ -5,6 +5,7 @@
 
 const PCT_FMT = (n) => `${Math.round((n || 0) * 100)}%`
 const ROUND = (n, digits = 1) => Number.isFinite(n) ? n.toFixed(digits) : '-'
+const V = (x) => (x && typeof x === 'object' && 'value' in x ? x.value : x)
 
 function shotName(key) {
   if (!key) return '-'
@@ -40,26 +41,26 @@ export function buildCoachExport(profile, stats, recentMatches = []) {
   const gender = profile?.gender ? `  Gender: ${profile.gender}` : ''
   lines.push(`Player: ${profile?.full_name || 'Unknown'}${handle}${country}${gender}`)
   lines.push(
-    `Active leagues: ${stats.leagueCount || 0}   ` +
-    `Tournaments played: ${stats.byTournament?.length || 0}   ` +
-    `Matches played: ${stats.totalMatches || 0}`
+      `Active leagues: ${stats.leagueCount || 0}   ` +
+      `Tournaments played: ${stats.byTournament?.length || 0}   ` +
+      `Matches played: ${stats.totalMatches || 0}`
   )
   lines.push('')
 
   // Overall
   lines.push('OVERALL')
   lines.push(
-    `  Wins / Losses: ${stats.wins || 0} / ${stats.losses || 0}  ` +
-    `(${PCT_FMT(stats.winRate)} win rate)`
+    `  Wins / Losses: ${V(stats.wins) || 0} / ${V(stats.losses) || 0}  ` +
+    `(${PCT_FMT(V(stats.winRate))} win rate)`
   )
   if (stats.bestRank) {
     lines.push(`  Best tournament finish: ${stats.bestRank}`)
   }
-  lines.push(`  Best win streak: ${stats.bestWinStreak || 0}`)
+  lines.push(`  Best win streak: ${V(stats.bestWinStreak) || 0}`)
   lines.push('')
 
   // Serving
-  const sv = stats.serving || {}
+  const sv = V(stats.serving) || {}
   lines.push('SERVING')
   lines.push(`  Total serves: ${sv.totalServes || 0}`)
   lines.push(`  Serve-in-play %: ${PCT_FMT(sv.serveInPlayPct)}`)
@@ -77,7 +78,7 @@ export function buildCoachExport(profile, stats, recentMatches = []) {
   lines.push('')
 
   // Pressure
-  const p = stats.pressure || {}
+  const p = V(stats.pressure) || {}
   lines.push('PRESSURE')
   lines.push(
     `  Clutch points (last 4 of a set or deciding sets): ` +
@@ -91,7 +92,7 @@ export function buildCoachExport(profile, stats, recentMatches = []) {
   lines.push('')
 
   // Strengths
-  const st = stats.strengths || {}
+  const st = V(stats.strengths) || {}
   lines.push('STRENGTHS')
   if (st.topShot) {
     lines.push(
@@ -117,7 +118,7 @@ export function buildCoachExport(profile, stats, recentMatches = []) {
   lines.push('')
 
   // Playstyle
-  const ps = stats.playstyle || {}
+  const ps = V(stats.playstyle) || {}
   lines.push('PLAYSTYLE')
   if (ps.label) lines.push(`  Profile: ${ps.label}`)
   lines.push(`  Risk: errors are ${PCT_FMT(ps.riskProfile)} of total attempts`)

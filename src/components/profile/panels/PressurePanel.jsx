@@ -20,7 +20,9 @@ function StatRow({ icon, label, value, sub, color = 'text-text' }) {
 }
 
 export default function PressurePanel({ stats }) {
-  if (!stats || stats.clutchPlayed === 0) {
+  if (!stats || (stats.sampleSize || 0) < 3) return null
+  const value = stats.value || {}
+  if (value.clutchPlayed === 0) {
     return (
       <div className="text-center text-[12px] text-dim py-6">
         Not enough close-game data yet.
@@ -32,10 +34,10 @@ export default function PressurePanel({ stats }) {
     <div>
       {/* Headline */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        <Headline value={PCT(stats.clutchWinPct)} label="Clutch win" colorClass="text-error" />
-        <Headline value={PCT(stats.sideOutPct)} label="Side-out" colorClass="text-free" />
+        <Headline value={PCT(value.clutchWinPct)} label="Clutch win" colorClass="text-error" />
+        <Headline value={PCT(value.sideOutPct)} label="Side-out" colorClass="text-free" />
         <Headline
-          value={`${stats.decidingSetWins}-${stats.decidingSetLosses}`}
+          value={`${value.decidingSetWins}-${value.decidingSetLosses}`}
           label="Deciders"
           colorClass="text-success"
         />
@@ -44,31 +46,34 @@ export default function PressurePanel({ stats }) {
       <StatRow
         icon={<Flame size={14} />}
         label="Clutch points"
-        value={`${stats.clutchWon}W · ${stats.clutchLost}L`}
-        sub={`${stats.clutchPlayed} total · last 4 of a set or deciding sets`}
+        value={`${value.clutchWon}W · ${value.clutchLost}L`}
+        sub={`${value.clutchPlayed} total · last 4 of a set or deciding sets`}
         color="text-error"
       />
       <StatRow
         icon={<Shield size={14} />}
         label="Side-out conversion"
-        value={`${stats.receivesWon}/${stats.receives}`}
+        value={`${value.receivesWon}/${value.receives}`}
         sub="Won rallies on receive"
         color="text-free"
       />
       <StatRow
         icon={<TrendingUp size={14} />}
         label="Comeback contribution"
-        value={stats.comebackPoints}
+        value={value.comebackPoints}
         sub="Points scored while trailing 2+"
         color="text-accent"
       />
       <StatRow
         icon={<Hourglass size={14} />}
         label="Deciding sets"
-        value={`${stats.decidingSetWins}-${stats.decidingSetLosses}`}
-        sub={`${PCT(stats.decidingSetWinPct)} won when it goes the distance`}
+        value={`${value.decidingSetWins}-${value.decidingSetLosses}`}
+        sub={`${PCT(value.decidingSetWinPct)} won when it goes the distance`}
         color="text-success"
       />
+      {stats.sampleSize < stats.totalMatches && (
+        <div className="text-[10px] text-dim mt-2">based on {stats.sampleSize} of {stats.totalMatches} matches</div>
+      )}
     </div>
   )
 }

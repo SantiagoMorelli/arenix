@@ -10,13 +10,14 @@ const STYLE_META = {
 }
 
 export default function PlaystylePanel({ stats }) {
-  if (!stats) return null
+  if (!stats || (stats.sampleSize || 0) < 3) return null
+  const value = stats.value || {}
 
-  const meta = STYLE_META[stats.label] || STYLE_META['All-rounder']
+  const meta = STYLE_META[value.label] || STYLE_META['All-rounder']
   const Icon = meta.icon
 
   // Per-match consistency mini-chart
-  const matches = (stats.consistencyByMatch || []).slice(-12) // last 12 matches
+  const matches = (value.consistencyByMatch || []).slice(-12) // last 12 matches
   const maxShare = Math.max(0.01, ...matches.map(m => m.share))
 
   return (
@@ -28,7 +29,7 @@ export default function PlaystylePanel({ stats }) {
         </div>
         <div className="flex-1">
           <div className="text-[10px] uppercase tracking-wide text-dim">Profile</div>
-          <div className={`text-[18px] font-bold ${meta.color}`}>{stats.label}</div>
+          <div className={`text-[18px] font-bold ${meta.color}`}>{value.label}</div>
           <div className="text-[10px] text-dim mt-0.5">{meta.desc}</div>
         </div>
       </div>
@@ -39,9 +40,9 @@ export default function PlaystylePanel({ stats }) {
           <AlertTriangle size={14} className="text-error" />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] text-dim uppercase tracking-wide">Risk</div>
-            <div className="font-display text-[18px] text-error leading-none">
-              {PCT(stats.riskProfile)}
-            </div>
+              <div className="font-display text-[18px] text-error leading-none">
+                {PCT(value.riskProfile)}
+              </div>
             <div className="text-[9px] text-dim mt-0.5">errors / attempts</div>
           </div>
         </div>
@@ -49,9 +50,9 @@ export default function PlaystylePanel({ stats }) {
           <Activity size={14} className="text-success" />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] text-dim uppercase tracking-wide">Consistency</div>
-            <div className="font-display text-[18px] text-success leading-none">
-              {(stats.consistency || 0).toFixed(2)}
-            </div>
+              <div className="font-display text-[18px] text-success leading-none">
+                {(value.consistency || 0).toFixed(2)}
+              </div>
             <div className="text-[9px] text-dim mt-0.5">1.0 = identical share</div>
           </div>
         </div>
@@ -74,6 +75,9 @@ export default function PlaystylePanel({ stats }) {
             ))}
           </div>
         </div>
+      )}
+      {stats.sampleSize < stats.totalMatches && (
+        <div className="text-[10px] text-dim mt-2">based on {stats.sampleSize} of {stats.totalMatches} matches</div>
       )}
     </div>
   )

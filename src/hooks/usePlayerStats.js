@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import { getMyLeagues, getLeagueById } from '../services/leagueService'
 import { computeAllPlayerStats } from '../lib/playerStats'
+import { resolveScoringLevel } from '../lib/scoring'
 import { calcOverallStandings } from './../lib/standings'
 
 function getAllMatches(tour) {
@@ -89,6 +90,7 @@ export function usePlayerStats(profile) {
           if (!myPlayer) continue
 
           for (const tour of league.tournaments || []) {
+            const level = resolveScoringLevel(tour, league)
             // Find my team in this tournament
             const myTeam = tour.teams?.find(t => t.players?.includes(myPlayer.id))
             const myTeamId = myTeam?.id || null
@@ -127,6 +129,7 @@ export function usePlayerStats(profile) {
                 leagueName: league.name,
                 date,
                 finishRank,
+                level,
               })
 
               recentMatches.push({

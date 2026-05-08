@@ -14,7 +14,9 @@ const ERROR_LABEL = {
 }
 
 export default function StrengthsPanel({ stats }) {
-  if (!stats || (stats.totalScoring === 0 && stats.totalErrors === 0)) {
+  if (!stats || (stats.sampleSize || 0) < 3) return null
+  const value = stats.value || {}
+  if (value.totalScoring === 0 && value.totalErrors === 0) {
     return (
       <div className="text-center text-[12px] text-dim py-6">
         No scoring data yet.
@@ -22,39 +24,39 @@ export default function StrengthsPanel({ stats }) {
     )
   }
 
-  const total = stats.totalScoring || 1
+  const total = value.totalScoring || 1
   const shots = ['ace', 'spike', 'block', 'tip'].map(k => ({
     key: k,
-    count: stats.byType[k] || 0,
-    share: (stats.byType[k] || 0) / total,
+    count: value.byType[k] || 0,
+    share: (value.byType[k] || 0) / total,
     meta: SHOT_META[k],
   }))
 
   // Error breakdown share
-  const errorTotal = stats.totalErrors || 1
-  const errorEntries = Object.entries(stats.errorsByType || {})
+  const errorTotal = value.totalErrors || 1
+  const errorEntries = Object.entries(value.errorsByType || {})
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])
 
   return (
     <div>
       {/* Top shot callout */}
-      {stats.topShot && (
+      {value.topShot && (
         <div className="bg-bg rounded-xl p-3 mb-3 flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full ${SHOT_META[stats.topShot]?.color || 'bg-accent'} flex items-center justify-center`}>
+          <div className={`w-10 h-10 rounded-full ${SHOT_META[value.topShot]?.color || 'bg-accent'} flex items-center justify-center`}>
             {(() => {
-              const Icon = SHOT_META[stats.topShot]?.icon || Zap
+              const Icon = SHOT_META[value.topShot]?.icon || Zap
               return <Icon size={18} className="text-white" />
             })()}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-wide text-dim">Top shot</div>
             <div className="text-[16px] font-bold text-text">
-              {SHOT_META[stats.topShot]?.label || stats.topShot}
+              {SHOT_META[value.topShot]?.label || value.topShot}
             </div>
           </div>
-          <div className={`font-display ${SHOT_META[stats.topShot]?.text || 'text-accent'}`} style={{ fontSize: 22 }}>
-            {PCT(stats.topShotShare)}
+          <div className={`font-display ${SHOT_META[value.topShot]?.text || 'text-accent'}`} style={{ fontSize: 22 }}>
+            {PCT(value.topShotShare)}
           </div>
         </div>
       )}
@@ -83,11 +85,11 @@ export default function StrengthsPanel({ stats }) {
       {errorEntries.length > 0 && (
         <div className="bg-bg rounded-xl p-3">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={12} className="text-error" />
-            <div className="text-[10px] uppercase tracking-wide text-dim">
-              Error breakdown <span className="text-text font-bold">· {stats.totalErrors}</span>
+              <AlertTriangle size={12} className="text-error" />
+              <div className="text-[10px] uppercase tracking-wide text-dim">
+                Error breakdown <span className="text-text font-bold">· {value.totalErrors}</span>
+              </div>
             </div>
-          </div>
           <div className="space-y-1.5">
             {errorEntries.map(([k, v]) => (
               <div key={k} className="flex justify-between items-center">
@@ -99,6 +101,9 @@ export default function StrengthsPanel({ stats }) {
             ))}
           </div>
         </div>
+      )}
+      {stats.sampleSize < stats.totalMatches && (
+        <div className="text-[10px] text-dim mt-2">based on {stats.sampleSize} of {stats.totalMatches} matches</div>
       )}
     </div>
   )

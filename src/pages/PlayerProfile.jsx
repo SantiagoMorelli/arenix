@@ -7,6 +7,7 @@ import AchievementsSection from '../components/profile/AchievementsSection'
 import PlayerStatsSection from '../components/profile/PlayerStatsSection'
 import { evaluateAchievements } from '../lib/achievements'
 import { computeAllPlayerStats } from '../lib/playerStats'
+import { resolveScoringLevel } from '../lib/scoring'
 import { calcOverallStandings } from '../lib/standings'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
@@ -70,14 +71,16 @@ function MatchList({ matches }) {
 // ── Performance summary tab ───────────────────────────────────────────────────
 function StatsTab({ stats }) {
   const PCT = n => `${Math.round((n || 0) * 100)}%`
+  const l2 = stats.perMatchAverages
+  const l3 = stats.serving
   const rows = [
-    { l: 'Points per match', v: stats.totalMatches > 0
-        ? (((stats.byTournament || []).reduce((s, t) => s + (t.points || 0), 0)) / stats.totalMatches).toFixed(1)
+    { l: 'Points per match', v: (l2?.sampleSize || 0) > 0
+        ? (l2?.value?.pointsPerMatch || 0).toFixed(1)
         : '-' },
-    { l: 'Aces per match',  v: stats.totalMatches > 0 ? ((stats.serving?.aces || 0) / stats.totalMatches).toFixed(1) : '-' },
-    { l: 'Serve win %',     v: PCT(stats.serving?.serveWinPct) },
-    { l: 'Side-out %',      v: PCT(stats.pressure?.sideOutPct) },
-    { l: 'Best win streak', v: stats.bestWinStreak || 0 },
+    { l: 'Aces per match',  v: (l3?.sampleSize || 0) > 0 ? ((l3?.value?.aces || 0) / l3.sampleSize).toFixed(1) : '-' },
+    { l: 'Serve win %',     v: PCT(stats.serving?.value?.serveWinPct) },
+    { l: 'Side-out %',      v: PCT(stats.pressure?.value?.sideOutPct) },
+    { l: 'Best win streak', v: stats.bestWinStreak?.value || 0 },
     { l: 'Tournaments won', v: stats.tournamentWins || 0 },
   ]
   return (
@@ -111,7 +114,7 @@ function FullProfileView({ profile, bundle, rank, player, navigate }) {
     const PCT = n => `${Math.round((n || 0) * 100)}%`
     return [
       { value: String(bundle.totalMatches || 0),                          label: 'Matches',   colorClass: 'text-accent'  },
-      { value: PCT(bundle.winRate),                                        label: 'Win rate',  colorClass: 'text-success' },
+      { value: PCT(bundle.winRate?.value),                                 label: 'Win rate',  colorClass: 'text-success' },
       { value: bundle.bestRank ? `#${bundle.bestRank}` : '-',             label: 'Best rank', colorClass: 'text-free'    },
     ]
   }, [bundle])
@@ -186,6 +189,7 @@ function buildLeagueBundle(league, player) {
   const recentMatches = []
 
   for (const tour of league.tournaments || []) {
+    const level = resolveScoringLevel(tour, league)
     const myTeam = tour.teams?.find(t => t.players?.includes(player.id))
     if (!myTeam) continue
 
@@ -234,6 +238,7 @@ function buildLeagueBundle(league, player) {
         leagueName:     league.name,
         date,
         finishRank,
+        level,
       })
 
       recentMatches.push({

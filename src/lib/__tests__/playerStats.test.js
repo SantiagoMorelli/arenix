@@ -32,8 +32,47 @@ const annotated = [
     leagueName: 'Beach League',
     date: 1705312800000,
     finishRank: 1,
+    level: 3,
   },
 ]
+
+const ORIGINAL_L3_BARE = {
+  totalMatches: 1,
+  wins: 1,
+  losses: 0,
+  winRate: 1,
+  bestWinStreak: 1,
+  currentWinStreak: 1,
+  serving: {
+    totalServes: 4,
+    aces: 1,
+    serveErrors: 0,
+    serveWins: 3,
+    serveInPlayPct: 1,
+    serveWinPct: 0.75,
+    aceRate: 0.25,
+    errorRate: 0,
+    longestServingRun: 1,
+  },
+  pressure: {
+    clutchPlayed: 7,
+    clutchWon: 4,
+    clutchLost: 3,
+    clutchWinPct: 0.5714285714285714,
+    receives: 5,
+    receivesWon: 3,
+    sideOutPct: 0.6,
+    comebackPoints: 0,
+    decidingSetWins: 0,
+    decidingSetLosses: 0,
+    decidingSetWinPct: 0,
+  },
+  strengths: {
+    byType: { ace: 2, spike: 0, block: 0, tip: 1 },
+    topShot: 'ace',
+    topShotShare: 0.6666666666666666,
+  },
+}
 
 // Minimal league shape for computePlayerLeagueRecord
 const league = {
@@ -86,7 +125,15 @@ describe('computePlayerLeagueRecord', () => {
 
 describe('computeServingStats', () => {
   it('returns full serve breakdown for p1 across the L3 match', () => {
-    expect(computeServingStats(annotated)).toMatchInlineSnapshot(`
+    const result = computeServingStats(annotated)
+    expect({ sampleSize: result.sampleSize, totalMatches: result.totalMatches, minLevel: result.minLevel }).toMatchInlineSnapshot(`
+      {
+        "minLevel": 3,
+        "sampleSize": 1,
+        "totalMatches": 1,
+      }
+    `)
+    expect(result.value).toMatchInlineSnapshot(`
       {
         "aceRate": 0.25,
         "aces": 1,
@@ -124,7 +171,7 @@ describe('computeServingStats', () => {
 
 describe('computePressureStats', () => {
   it('returns clutch / side-out / comeback stats for p1', () => {
-    expect(computePressureStats(annotated)).toMatchInlineSnapshot(`
+    expect(computePressureStats(annotated).value).toMatchInlineSnapshot(`
       {
         "clutchLost": 3,
         "clutchPlayed": 7,
@@ -144,7 +191,7 @@ describe('computePressureStats', () => {
 
 describe('computeStrengths', () => {
   it('returns byType breakdown, top-shot and error profile for p1', () => {
-    expect(computeStrengths(annotated, null)).toMatchInlineSnapshot(`
+    expect(computeStrengths(annotated, null).value).toMatchInlineSnapshot(`
       {
         "byType": {
           "ace": 2,
@@ -172,7 +219,7 @@ describe('computeStrengths', () => {
 
   it('computes vsLeague delta when averages are provided', () => {
     const avg = { ace: 0.1, spike: 0.4, block: 0.3, tip: 0.2 }
-    expect(computeStrengths(annotated, avg)).toMatchInlineSnapshot(`
+    expect(computeStrengths(annotated, avg).value).toMatchInlineSnapshot(`
       {
         "byType": {
           "ace": 2,
@@ -206,8 +253,8 @@ describe('computeStrengths', () => {
 
 describe('computePlaystyle', () => {
   it('classifies p1 playstyle from strengths', () => {
-    const strengths = computeStrengths(annotated, null)
-    expect(computePlaystyle(annotated, strengths)).toMatchInlineSnapshot(`
+    const strengths = computeStrengths(annotated, null).value
+    expect(computePlaystyle(annotated, strengths).value).toMatchInlineSnapshot(`
       {
         "consistency": 1,
         "consistencyByMatch": [
@@ -247,6 +294,7 @@ describe('computeByTournament', () => {
               "finishRank": 1,
               "leagueId": "league-1",
               "leagueName": "Beach League",
+              "level": 3,
               "match": {
                 "created_at": "2024-01-15T10:00:00.000Z",
                 "id": "match-1",
@@ -565,7 +613,7 @@ describe('computeByTournament', () => {
 
 describe('computeWinStreak', () => {
   it('returns bestStreak and currentStreak for p1', () => {
-    expect(computeWinStreak(annotated)).toMatchInlineSnapshot(`
+    expect(computeWinStreak(annotated).value).toMatchInlineSnapshot(`
       {
         "bestStreak": 1,
         "currentStreak": 1,
@@ -574,7 +622,7 @@ describe('computeWinStreak', () => {
   })
 
   it('handles empty annotated array', () => {
-    expect(computeWinStreak([])).toMatchInlineSnapshot(`
+    expect(computeWinStreak([]).value).toMatchInlineSnapshot(`
       {
         "bestStreak": 0,
         "currentStreak": 0,
@@ -584,123 +632,42 @@ describe('computeWinStreak', () => {
 })
 
 describe('computeAllPlayerStats', () => {
-  it('returns the full stats bundle for p1 (complete L3 golden snapshot)', () => {
+  it('keeps L3 values identical and sampleSize == totalMatches', () => {
     const result = computeAllPlayerStats(annotated)
-    // Assert top-level shape keys are stable
-    expect(Object.keys(result).sort()).toMatchInlineSnapshot(`
-      [
-        "bestWinStreak",
-        "byTournament",
-        "byType",
-        "currentWinStreak",
-        "losses",
-        "playstyle",
-        "pressure",
-        "serving",
-        "strengths",
-        "totalMatches",
-        "winRate",
-        "wins",
-      ]
-    `)
-    // Assert computed scalar values
-    expect({
-      totalMatches: result.totalMatches,
-      wins:         result.wins,
-      losses:       result.losses,
-      winRate:      result.winRate,
-      bestWinStreak:    result.bestWinStreak,
-      currentWinStreak: result.currentWinStreak,
-    }).toMatchInlineSnapshot(`
-      {
-        "bestWinStreak": 1,
-        "currentWinStreak": 1,
-        "losses": 0,
-        "totalMatches": 1,
-        "winRate": 1,
-        "wins": 1,
-      }
-    `)
-    // Assert rich sub-objects
-    expect(result.serving).toMatchInlineSnapshot(`
-      {
-        "aceRate": 0.25,
-        "aces": 1,
-        "bestSet": {
-          "aces": 1,
-          "errors": 0,
-          "matchId": "match-1",
-          "serveWinPct": 0.75,
-          "serves": 4,
-          "setNum": 1,
-          "wins": 3,
-        },
-        "errorRate": 0,
-        "longestServingRun": 1,
-        "serveErrors": 0,
-        "serveInPlayPct": 1,
-        "serveWinPct": 0.75,
-        "serveWins": 3,
-        "setBySet": [
-          {
-            "aces": 1,
-            "errors": 0,
-            "matchId": "match-1",
-            "serveWinPct": 0.75,
-            "serves": 4,
-            "setNum": 1,
-            "wins": 3,
-          },
-        ],
-        "totalServes": 4,
-      }
-    `)
-    expect(result.pressure).toMatchInlineSnapshot(`
-      {
-        "clutchLost": 3,
-        "clutchPlayed": 7,
-        "clutchWinPct": 0.5714285714285714,
-        "clutchWon": 4,
-        "comebackPoints": 0,
-        "decidingSetLosses": 0,
-        "decidingSetWinPct": 0,
-        "decidingSetWins": 0,
-        "receives": 5,
-        "receivesWon": 3,
-        "sideOutPct": 0.6,
-      }
-    `)
-    expect(result.strengths).toMatchInlineSnapshot(`
-      {
-        "byType": {
-          "ace": 2,
-          "block": 0,
-          "spike": 0,
-          "tip": 1,
-        },
-        "errorsByType": {
-          "other": 2,
-          "serve": 0,
-          "spike": 0,
-          "tip": 0,
-          "untyped": 0,
-        },
-        "topErrorType": "other",
-        "topShot": "ace",
-        "topShotShare": 0.6666666666666666,
-        "totalErrors": 2,
-        "totalScoring": 3,
-        "vsLeague": null,
-        "weakestShot": "tip",
-      }
-    `)
-    expect(result.byType).toMatchInlineSnapshot(`
-      {
-        "ace": 2,
-        "block": 0,
-        "spike": 0,
-        "tip": 1,
-      }
-    `)
+    expect(result.totalMatches).toBe(ORIGINAL_L3_BARE.totalMatches)
+    expect(result.wins.value).toBe(ORIGINAL_L3_BARE.wins)
+    expect(result.losses.value).toBe(ORIGINAL_L3_BARE.losses)
+    expect(result.winRate.value).toBe(ORIGINAL_L3_BARE.winRate)
+    expect(result.bestWinStreak.value).toBe(ORIGINAL_L3_BARE.bestWinStreak)
+    expect(result.currentWinStreak.value).toBe(ORIGINAL_L3_BARE.currentWinStreak)
+    expect(result.serving.value.totalServes).toBe(ORIGINAL_L3_BARE.serving.totalServes)
+    expect(result.serving.value.aces).toBe(ORIGINAL_L3_BARE.serving.aces)
+    expect(result.serving.value.serveWinPct).toBe(ORIGINAL_L3_BARE.serving.serveWinPct)
+    expect(result.serving.value.aceRate).toBe(ORIGINAL_L3_BARE.serving.aceRate)
+    expect(result.pressure.value).toMatchObject(ORIGINAL_L3_BARE.pressure)
+    expect(result.strengths.value.topShot).toBe(ORIGINAL_L3_BARE.strengths.topShot)
+    expect(result.strengths.value.topShotShare).toBe(ORIGINAL_L3_BARE.strengths.topShotShare)
+    expect(result.byType.value).toMatchObject(ORIGINAL_L3_BARE.strengths.byType)
+
+    for (const key of ['wins', 'losses', 'winRate', 'bestWinStreak', 'currentWinStreak', 'serving', 'pressure', 'strengths', 'playstyle', 'byType', 'perMatchAverages']) {
+      expect(result[key].sampleSize).toBe(result[key].totalMatches)
+    }
+  })
+
+  it('filters sample size by min level for mixed L3/L2 history', () => {
+    const l2Match = { ...match, id: 'match-l2' }
+    const mixed = [
+      annotated[0],
+      { ...annotated[0], match: l2Match, level: 2, date: 1705312900000 },
+    ]
+    const result = computeAllPlayerStats(mixed)
+    expect(result.totalMatches).toBe(2)
+    expect(result.serving.sampleSize).toBe(1)
+    expect(result.pressure.sampleSize).toBe(1)
+    expect(result.strengths.sampleSize).toBe(1)
+    expect(result.playstyle.sampleSize).toBe(1)
+    expect(result.perMatchAverages.sampleSize).toBe(2)
+    expect(result.wins.sampleSize).toBe(2)
+    expect(result.winRate.sampleSize).toBe(2)
   })
 })

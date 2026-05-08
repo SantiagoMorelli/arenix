@@ -21,6 +21,7 @@ export const CATEGORIES = [
 ]
 
 const clamp01 = (n) => Math.max(0, Math.min(1, n || 0))
+const V = (x) => (x && typeof x === 'object' && 'value' in x ? x.value : x)
 
 export const ACHIEVEMENTS = [
   // ─── Milestones ─────────────────────────────────────────────────────────
@@ -71,17 +72,17 @@ export const ACHIEVEMENTS = [
     description: '25 aces scored',
     hint: 'An ace is a serve the opponent cannot return before it bounces twice. Focus on placement — deep corners and sideline edges are hardest to reach.',
     goal: 25, goalLabel: 'aces',
-    stat: (s) => s.serving?.aces || 0,
+    stat: (s) => V(s.serving)?.aces || 0,
     icon: 'Zap', color: 'success',
-    unlocked: (s) => (s.serving?.aces || 0) >= 25,
-    progress: (s) => clamp01((s.serving?.aces || 0) / 25),
+    unlocked: (s) => (V(s.serving)?.aces || 0) >= 25,
+    progress: (s) => clamp01((V(s.serving)?.aces || 0) / 25),
   },
   {
     id: 'spike-machine', category: 'skill', name: 'Spike machine',
     description: '100 spikes scored',
     hint: 'Spikes are attacking shots logged as point-winning kills. Score 100 of them across all your matches.',
     goal: 100, goalLabel: 'spikes',
-    stat: (s) => s.strengths?.byType?.spike || 0,
+    stat: (s) => V(s.strengths)?.byType?.spike || 0,
     icon: 'Swords', color: 'success',
     unlocked: (s) => (s.byType?.spike || 0) >= 100,
     progress: (s) => clamp01((s.byType?.spike || 0) / 100),
@@ -91,7 +92,7 @@ export const ACHIEVEMENTS = [
     description: '50 blocks scored',
     hint: 'A block is a defensive point won by stopping an opponent\'s attack. Play at the net, read the spike, and redirect it for a winner.',
     goal: 50, goalLabel: 'blocks',
-    stat: (s) => s.strengths?.byType?.block || 0,
+    stat: (s) => V(s.strengths)?.byType?.block || 0,
     icon: 'Shield', color: 'success',
     unlocked: (s) => (s.byType?.block || 0) >= 50,
     progress: (s) => clamp01((s.byType?.block || 0) / 50),
@@ -101,13 +102,13 @@ export const ACHIEVEMENTS = [
     description: '60% serve win rate on 50+ serves',
     hint: 'You need at least 50 serves recorded AND win 60% of points on your serve. Consistency over pace — keep the ball in and make the opponent work.',
     goal: 50, goalLabel: 'serves + 60% win rate',
-    stat: (s) => s.serving?.totalServes || 0,
+    stat: (s) => V(s.serving)?.totalServes || 0,
     icon: 'Target', color: 'success',
     unlocked: (s) =>
-      (s.serving?.serveWinPct || 0) >= 0.6 && (s.serving?.totalServes || 0) >= 50,
+      (V(s.serving)?.serveWinPct || 0) >= 0.6 && (V(s.serving)?.totalServes || 0) >= 50,
     progress: (s) => {
-      const serves = clamp01((s.serving?.totalServes || 0) / 50)
-      const winPct = clamp01((s.serving?.serveWinPct || 0) / 0.6)
+      const serves = clamp01((V(s.serving)?.totalServes || 0) / 50)
+      const winPct = clamp01((V(s.serving)?.serveWinPct || 0) / 0.6)
       return clamp01((serves + winPct) / 2)
     },
   },
@@ -116,13 +117,13 @@ export const ACHIEVEMENTS = [
     description: '92% serve-in-play rate on 50+ serves',
     hint: 'You need at least 50 serves recorded AND 92% of them landing in play (no net, no out). Reduce foot faults and err on the safe side of the line.',
     goal: 50, goalLabel: 'serves + 92% in-play rate',
-    stat: (s) => s.serving?.totalServes || 0,
+    stat: (s) => V(s.serving)?.totalServes || 0,
     icon: 'Sparkles', color: 'success',
     unlocked: (s) =>
-      (s.serving?.serveInPlayPct || 0) >= 0.92 && (s.serving?.totalServes || 0) >= 50,
+      (V(s.serving)?.serveInPlayPct || 0) >= 0.92 && (V(s.serving)?.totalServes || 0) >= 50,
     progress: (s) => {
-      const serves = clamp01((s.serving?.totalServes || 0) / 50)
-      const inPlay = clamp01((s.serving?.serveInPlayPct || 0) / 0.92)
+      const serves = clamp01((V(s.serving)?.totalServes || 0) / 50)
+      const inPlay = clamp01((V(s.serving)?.serveInPlayPct || 0) / 0.92)
       return clamp01((serves + inPlay) / 2)
     },
   },
@@ -133,30 +134,30 @@ export const ACHIEVEMENTS = [
     description: '5 wins in a row',
     hint: 'Win 5 consecutive tournament matches without a loss in between. Streaks can span multiple tournaments.',
     goal: 5, goalLabel: 'consecutive wins',
-    stat: (s) => s.bestWinStreak || 0,
+    stat: (s) => V(s.bestWinStreak) || 0,
     icon: 'Flame', color: 'accent',
-    unlocked: (s) => (s.bestWinStreak || 0) >= 5,
-    progress: (s) => clamp01((s.bestWinStreak || 0) / 5),
+    unlocked: (s) => (V(s.bestWinStreak) || 0) >= 5,
+    progress: (s) => clamp01((V(s.bestWinStreak) || 0) / 5),
   },
   {
     id: 'unstoppable', category: 'streaks', name: 'Unstoppable',
     description: '10 wins in a row',
     hint: 'String together 10 consecutive wins without a single loss. Your best all-time streak counts.',
     goal: 10, goalLabel: 'consecutive wins',
-    stat: (s) => s.bestWinStreak || 0,
+    stat: (s) => V(s.bestWinStreak) || 0,
     icon: 'Rocket', color: 'accent',
-    unlocked: (s) => (s.bestWinStreak || 0) >= 10,
-    progress: (s) => clamp01((s.bestWinStreak || 0) / 10),
+    unlocked: (s) => (V(s.bestWinStreak) || 0) >= 10,
+    progress: (s) => clamp01((V(s.bestWinStreak) || 0) / 10),
   },
   {
     id: 'comeback-kid', category: 'streaks', name: 'Comeback kid',
     description: '20 points scored while trailing',
     hint: 'Score 20 total points in moments when your team is losing by 2 or more. Measured cumulatively across all matches.',
     goal: 20, goalLabel: 'comeback points',
-    stat: (s) => s.pressure?.comebackPoints || 0,
+    stat: (s) => V(s.pressure)?.comebackPoints || 0,
     icon: 'TrendingUp', color: 'accent',
-    unlocked: (s) => (s.pressure?.comebackPoints || 0) >= 20,
-    progress: (s) => clamp01((s.pressure?.comebackPoints || 0) / 20),
+    unlocked: (s) => (V(s.pressure)?.comebackPoints || 0) >= 20,
+    progress: (s) => clamp01((V(s.pressure)?.comebackPoints || 0) / 20),
   },
 
   // ─── Tournaments ────────────────────────────────────────────────────────
@@ -185,13 +186,13 @@ export const ACHIEVEMENTS = [
     description: '60% clutch win rate on 30+ clutch points',
     hint: 'Clutch points are the last 4 points of any set and all deciding-set moments. You need 30+ of them AND win at least 60%. Stay calm under pressure.',
     goal: 30, goalLabel: 'clutch points + 60% win rate',
-    stat: (s) => s.pressure?.clutchPlayed || 0,
+    stat: (s) => V(s.pressure)?.clutchPlayed || 0,
     icon: 'Flame', color: 'error',
     unlocked: (s) =>
-      (s.pressure?.clutchWinPct || 0) >= 0.6 && (s.pressure?.clutchPlayed || 0) >= 30,
+      (V(s.pressure)?.clutchWinPct || 0) >= 0.6 && (V(s.pressure)?.clutchPlayed || 0) >= 30,
     progress: (s) => {
-      const played = clamp01((s.pressure?.clutchPlayed || 0) / 30)
-      const winPct = clamp01((s.pressure?.clutchWinPct || 0) / 0.6)
+      const played = clamp01((V(s.pressure)?.clutchPlayed || 0) / 30)
+      const winPct = clamp01((V(s.pressure)?.clutchWinPct || 0) / 0.6)
       return clamp01((played + winPct) / 2)
     },
   },
@@ -200,10 +201,10 @@ export const ACHIEVEMENTS = [
     description: 'Won 3 deciding sets',
     hint: 'A deciding set is the final set when the match is tied. Win 3 of these clutch situations across all your matches.',
     goal: 3, goalLabel: 'deciding sets won',
-    stat: (s) => s.pressure?.decidingSetWins || 0,
+    stat: (s) => V(s.pressure)?.decidingSetWins || 0,
     icon: 'Hourglass', color: 'error',
-    unlocked: (s) => (s.pressure?.decidingSetWins || 0) >= 3,
-    progress: (s) => clamp01((s.pressure?.decidingSetWins || 0) / 3),
+    unlocked: (s) => (V(s.pressure)?.decidingSetWins || 0) >= 3,
+    progress: (s) => clamp01((V(s.pressure)?.decidingSetWins || 0) / 3),
   },
 
   // ─── Social ─────────────────────────────────────────────────────────────

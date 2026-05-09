@@ -7,7 +7,7 @@ const ScoreBoard = ({
   t1Sets, t2Sets,
   side,       // { t1: "left"|"right", t2: "left"|"right" }
   srv,        // { team, playerId }  — current server
-  nextSrv,    // { team, playerId }  — next server
+  getNextServer, // (teamNum) => playerId — next server
   serveRotation, // pre-computed array
   points,
 }) => {
@@ -35,7 +35,6 @@ const ScoreBoard = ({
   const TeamPanel = ({ col }) => {
     const isServing = srv.team === col.teamNum;
     const isTeam1   = col.teamNum === 1;
-    const slotsForTeam = serveRotation.filter(r => r.team === col.teamNum);
     return (
       <div className="text-center">
         <div className="text-[12px] font-bold text-[#E8ECF1] mb-1">
@@ -67,7 +66,7 @@ const ScoreBoard = ({
             <div className="text-[11px] text-[#7A8EA0] text-center leading-snug">
               If scores:<br />
               <b className="text-[12px] text-[#7A8EA0]/80">
-                {playerName(nextSrv.team === col.teamNum ? nextSrv.playerId : slotsForTeam[0]?.playerId)}
+                {playerName(getNextServer(col.teamNum))}
               </b>
             </div>
           )}

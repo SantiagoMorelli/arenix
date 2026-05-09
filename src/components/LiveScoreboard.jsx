@@ -304,7 +304,6 @@ export default function LiveScoreboard({
   // ── In-game scoreboard ───────────────────────────────────────────────────
   const currentSrv = live.currentServer
   const rot = live.serveRotation
-  const nextSrv = rot[(live.serveIndex + 1) % rot.length]
 
   // Team 1 = always orange (accent), Team 2 = always blue (free), regardless of side.
   // The scoring team's color stays lit until the other team scores.
@@ -319,7 +318,6 @@ export default function LiveScoreboard({
   const renderServerInfo = (teamNum) => {
     const isServing = currentSrv.team === teamNum
     const teamC = teamNum === 1 ? T1 : T2
-    const slotsForTeam = rot.filter(r => r.team === teamNum)
 
     if (isServing) {
       if (!currentSrv.playerId) return null
@@ -334,7 +332,7 @@ export default function LiveScoreboard({
         </div>
       )
     } else {
-      const pId = nextSrv.team === teamNum ? nextSrv.playerId : slotsForTeam[0]?.playerId
+      const pId = live.getNextServer(teamNum)
       if (!pId) return null
       return (
         <div className="absolute bottom-6 flex flex-col items-center">

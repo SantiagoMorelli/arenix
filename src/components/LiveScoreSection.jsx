@@ -23,7 +23,7 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
     pendingEnd,
     serveRotation, currentServer, playerName, tName, POINT_TYPES,
     addPoint, confirmPointType, confirmErrorSubtype, cancelErrorSubtype,
-    confirmPlayer, confirmSideChange,
+    confirmPlayer, confirmSideChange, getNextServer,
     reset, requestUndo, confirmUndo, cancelUndo,
     requestEnd, confirmEnd, cancelEnd,
   } = useLiveGame({ teams, players, informalMode: false, tournamentMatches, preloadMatchId, setsPerMatch });
@@ -103,7 +103,6 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
   const t2Sets = sets.filter(s => s.winner === 2).length;
   const srv = currentServer;
   const rot = serveRotation;
-  const nextSrv = rot[(serveIndex + 1) % rot.length];
 
   return (
     <div>
@@ -419,7 +418,8 @@ function LiveScoreSection({ teams, players, setsPerMatch = 1, preloadMatchId = n
             score1={score1} score2={score2}
             t1Sets={t1Sets} t2Sets={t2Sets}
             side={side}
-            srv={srv} nextSrv={nextSrv}
+            srv={srv}
+            getNextServer={getNextServer}
         serveRotation={serveRotation}
             points={points}
           />

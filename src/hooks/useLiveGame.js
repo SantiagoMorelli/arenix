@@ -249,6 +249,7 @@ export function useLiveGame({
     confirmPlayer:       scoring.confirmPlayer,
     cancelPlayerSelect:  scoring.cancelPlayerSelect,
     confirmSideChange:   scoring.confirmSideChange,
+    getNextServer:       scoring.getNextServer,
     reset,
     requestUndo:  undo.requestUndo,
     confirmUndo:  undo.confirmUndo,

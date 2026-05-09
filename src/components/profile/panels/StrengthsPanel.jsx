@@ -10,7 +10,7 @@ const SHOT_META = {
 }
 
 const ERROR_LABEL = {
-  net: 'Net', out: 'Out', serve: 'Serve', other: 'Other', untyped: 'Unspecified',
+  spike: 'Spike', tip: 'Tip', serve: 'Serve', other: 'Other', untyped: 'Unspecified',
 }
 
 export default function StrengthsPanel({ stats }) {
@@ -61,24 +61,38 @@ export default function StrengthsPanel({ stats }) {
         </div>
       )}
 
-      {/* Shot distribution */}
-      <div className="space-y-2 mb-3">
-        {shots.map(s => (
-          <div key={s.key}>
-            <div className="flex justify-between items-center mb-0.5">
-              <span className="text-[11px] text-text">{s.meta.label}</span>
-              <span className="text-[11px] text-dim">
-                {s.count} <span className="text-dim/70">· {PCT(s.share)}</span>
-              </span>
+      {/* Shot distribution and Action Efficiency */}
+      <div className="space-y-4 mb-4">
+        {shots.map(s => {
+          const actionEffPct = (s.count + (value.errorsByType[s.key] || 0)) > 0
+            ? PCT(s.count / (s.count + (value.errorsByType[s.key] || 0)))
+            : null;
+
+          return (
+            <div key={s.key}>
+              <div className="flex justify-between items-center mb-0.5">
+                <span className="text-[11px] text-text flex items-center gap-1.5">
+                  <s.meta.icon size={11} className={s.meta.text} />
+                  {s.meta.label}
+                  {actionEffPct && (s.key === 'spike' || s.key === 'tip') && (
+                    <span className="ml-1 text-[9px] bg-alt px-1.5 py-0.5 rounded text-dim">
+                      {actionEffPct} kill
+                    </span>
+                  )}
+                </span>
+                <span className="text-[11px] text-dim">
+                  {s.count} <span className="text-dim/70">· {PCT(s.share)}</span>
+                </span>
+              </div>
+              <div className="h-[5px] bg-alt rounded-full overflow-hidden flex">
+                <div
+                  className={`h-full ${s.meta.color}`}
+                  style={{ width: `${Math.round(s.share * 100)}%` }}
+                />
+              </div>
             </div>
-            <div className="h-[5px] bg-alt rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${s.meta.color}`}
-                style={{ width: `${Math.round(s.share * 100)}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Errors */}

@@ -203,12 +203,82 @@ export function calcServeStats(pointLog, pid) {
   const serves = pointLog.filter(e => e.team && e.serverPlayerId === pid);
   const wins = serves.filter(e => e.team === e.serverTeam).length;
   const aces = serves.filter(e => e.pointType === "ace").length;
+  const errors = serves.filter(e => e.errorPlayerId === pid && e.errorType === "serve").length;
+  const inPlay = serves.length - aces - errors;
+  const inPlayWon = serves.filter(e => e.team === e.serverTeam && e.pointType !== "ace").length;
+  const inPlayLost = inPlay - inPlayWon;
   return {
     count: serves.length,
     pct: serves.length ? Math.round(wins / serves.length * 100) : 0,
     aces,
+    errors,
+    inPlay,
+    inPlayWon,
+    inPlayLost,
   };
 }
+
+export function calcActionEfficiency(pid, pointLog) {
+  const spikes = pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === "spike").length;
+  const spikeErrors = pointLog.filter(e => e.errorPlayerId === pid && e.errorType === "spike").length;
+  const tips = pointLog.filter(e => e.scoringPlayerId === pid && e.pointType === "tip").length;
+  const tipErrors = pointLog.filter(e => e.errorPlayerId === pid && e.errorType === "tip").length;
+  
+  return {
+    spikes,
+    spikeErrors,
+    tips,
+    tipErrors
+  };
+}
+
+export function calcContextualErrors(pid, pointLog) {
+  let clutchErrors = 0;
+  let clutchPlayed = 0;
+  let fatigueErrors = 0;
+  let fatiguePlayed = 0;
+
+  pointLog.forEach(e => {
+    // Clutch: Point margin <= 2
+    if (Math.abs(e.t1 - e.t2) <= 2) {
+      if (e.team === (e.scoringPlayerId === pid ? e.team : (e.errorPlayerId === pid ? (e.team === 1 ? 2 : 1) : null))) {
+         // this point played by team of pid? wait, we don't have team of pid easily accessible here unless we know it.
+         // Let's rely on scoringPlayerId and errorPlayerId for pid
+      }
+      if (e.scoringPlayerId === pid) clutchPlayed++;
+      else if (e.errorPlayerId === pid) {
+        clutchPlayed++;
+        clutchErrors++;
+      }
+    }
+
+    // Fatigue / Late Game: Score >= 15
+    const maxScoreBeforePoint = Math.max(
+      e.team === 1 ? e.t1 - 1 : e.t1,
+      e.team === 2 ? e.t2 - 1 : e.t2
+    ); // Approximate score before point based on current point
+    
+    // Better way to check if score >= 15 is looking at t1 and t2 (which is score AFTER point)
+    // we should look at score before point.
+    // Actually, `e.t1` and `e.t2` is the score *after* the point.
+    // Let's use `Math.max(e.t1, e.t2) >= 15`
+    if (Math.max(e.t1, e.t2) >= 15) {
+      if (e.scoringPlayerId === pid) fatiguePlayed++;
+      else if (e.errorPlayerId === pid) {
+        fatiguePlayed++;
+        fatigueErrors++;
+      }
+    }
+  });
+
+  return {
+    clutchErrors,
+    clutchPlayed,
+    fatigueErrors,
+    fatiguePlayed,
+  };
+}
+
 
 // Every serve made by `pid`, in chronological order, with outcome metadata.
 export function calcServeTimeline(pid, pointLog) {

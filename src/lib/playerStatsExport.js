@@ -79,11 +79,17 @@ export function buildCoachExport(profile, stats, recentMatches = []) {
 
   // Pressure
   const p = V(stats.pressure) || {}
-  lines.push('PRESSURE')
+  lines.push('PRESSURE & FATIGUE')
   lines.push(
     `  Clutch points (last 4 of a set or deciding sets): ` +
     `${p.clutchWon || 0}W / ${p.clutchLost || 0}L (${PCT_FMT(p.clutchWinPct)})`
   )
+  if (p.clutchErrors != null) {
+      lines.push(`  Clutch errors (margin <= 2): ${p.clutchErrors}`)
+  }
+  if (p.fatigueErrors != null) {
+      lines.push(`  Late-game errors (score >= 15): ${p.fatigueErrors}`)
+  }
   lines.push(`  Side-out conversion (won rallies on receive): ${PCT_FMT(p.sideOutPct)}`)
   lines.push(`  Comeback contribution: ${p.comebackPoints || 0} points scored while trailing 2+`)
   lines.push(

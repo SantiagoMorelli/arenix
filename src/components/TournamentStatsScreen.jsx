@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   ChevronLeft, Trophy, Medal, Target, Zap, Shield, Bomb, Hand, Send,
-  Dumbbell, Flame, RotateCcw, Clock, Volleyball, ChevronRight,
+  Dumbbell, Flame, RotateCcw, Clock, Volleyball, ChevronRight, Clipboard,
 } from 'lucide-react'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings } from '../lib/standings'
@@ -14,6 +14,8 @@ import AwardRankingSheet from './stats/AwardRankingSheet'
 import MatchBreakdownSheet from './stats/MatchBreakdownSheet'
 import TeamDetailSheet from './stats/TeamDetailSheet'
 import PlayerTournamentDetailSheet from './stats/PlayerTournamentDetailSheet'
+import { useToast } from './ToastContext'
+import { buildTournamentCoachExport } from '../lib/tournamentStatsExport'
 
 // ─── Awards configuration ────────────────────────────────────────────────────
 // Add a new award by appending an entry. `gateKey` + `minThreshold` filter out
@@ -398,12 +400,21 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
   const [localTbOptions, setLocalTbOptions] = useState(DEFAULT_TB)
   const effectiveTbOptions = tbOptions ?? localTbOptions
   const effectiveOnTbOptionsChange = onTbOptionsChange ?? setLocalTbOptions
+  const { addToast } = useToast()
 
-  // ── Drill-down sheet state ───────────────────────────────────────────────
-  // One state slot keeps the screen simple; only one sheet is ever open.
+  const handleExport = () => {
+      const text = buildTournamentCoachExport(tournament, playerStats, allMatches, leaguePlayers);
+      navigator.clipboard.writeText(text).then(() => {
+        addToast({
+            id: `copy-${Date.now()}`,
+            variant: 'success',
+            title: 'Copied to clipboard',
+            body: 'Paste into ChatGPT or Claude with a coaching prompt.',
+        });
+      }).catch(console.error);
+  }
+
   const [activeSheet, setActiveSheet] = useState(null)
-  // shape: { kind: 'award'|'match'|'team'|'player', payload: ... }
-
   const closeSheet = () => setActiveSheet(null)
 
   const playerNameOf = (pid) => {
@@ -427,8 +438,16 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
             Tournament Complete
           </div>
           <div className="text-[11px] text-dim truncate">{tournament.name}</div>
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-2">
             <AppBadge text={`Scoring level: ${scoringLevel}`} variant="dim" />
+            <button
+                onClick={handleExport}
+                aria-label="Copy tournament stats for AI coach"
+                className="flex items-center gap-1 text-[9px] font-semibold text-free bg-free/15 px-2 py-0.5 rounded cursor-pointer border-0"
+            >
+                <Clipboard size={10} />
+                Copy AI
+            </button>
           </div>
         </div>
         <Trophy size={20} className="text-accent" />

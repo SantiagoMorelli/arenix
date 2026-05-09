@@ -34,9 +34,10 @@ export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer, hel
       <div className="rounded-[10px] overflow-hidden border border-line">
         <div className="flex px-2.5 py-1.5 bg-alt">
           <span className="flex-1 text-[9px] font-bold text-dim">PLAYER</span>
-          <span className="w-10 text-[9px] font-bold text-dim text-center">SRV</span>
-          <span className="w-12 text-[9px] font-bold text-dim text-center">WIN%</span>
-          <span className="w-10 text-[9px] font-bold text-dim text-center">ACES</span>
+          <span className="w-8 text-[9px] font-bold text-dim text-center">SRV</span>
+          <span className="w-10 text-[9px] font-bold text-dim text-center">WIN%</span>
+          <span className="w-8 text-[9px] font-bold text-dim text-center">ACE</span>
+          <span className="w-8 text-[9px] font-bold text-dim text-center">ERR</span>
           <span className="w-[22px] flex-shrink-0" />
         </div>
         {allIds.map(pid => {
@@ -51,11 +52,12 @@ export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer, hel
                   <div className="flex items-center px-2.5 py-[7px]">
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mr-2 ${isTeam1 ? "bg-accent" : "bg-free"}`} />
                     <span className="flex-1 text-[11px] text-text truncate">{firstName(pid)}</span>
-                    <span className="w-10 text-[11px] text-dim text-center">{sv.count}</span>
-                    <span className={`w-12 text-[11px] font-bold text-center ${sv.pct >= 60 ? "text-success" : sv.pct >= 40 ? "text-text" : "text-error"}`}>
+                    <span className="w-8 text-[11px] text-dim text-center">{sv.count}</span>
+                    <span className={`w-10 text-[11px] font-bold text-center ${sv.pct >= 60 ? "text-success" : sv.pct >= 40 ? "text-text" : "text-error"}`}>
                       {sv.count ? `${sv.pct}%` : "—"}
                     </span>
-                    <span className="w-10 text-[11px] text-dim text-center">{sv.aces}</span>
+                    <span className="w-8 text-[11px] text-dim text-center">{sv.aces}</span>
+                    <span className="w-8 text-[11px] text-dim text-center text-error/80">{sv.errors}</span>
                   </div>
                 }
               >
@@ -66,6 +68,7 @@ export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer, hel
                     isTeam1={isTeam1}
                     firstName={firstName}
                     startTs={startTs}
+                    stats={sv}
                   />
                 ) : (
                   <div className="px-3 pb-3 text-[11px] text-dim italic">No serves recorded.</div>
@@ -79,7 +82,7 @@ export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer, hel
   );
 }
 
-function ServeDetail({ pid, pointLog, isTeam1, firstName, startTs }) {
+function ServeDetail({ pid, pointLog, isTeam1, firstName, startTs, stats }) {
   const [selectedKey, setSelectedKey] = useState(null);
   const timeline = calcServeTimeline(pid, pointLog);
   const streaks = calcServeStreaks(timeline);
@@ -137,7 +140,7 @@ function ServeDetail({ pid, pointLog, isTeam1, firstName, startTs }) {
       )}
 
       {/* Run rate */}
-      <div className="grid grid-cols-2 gap-2 mt-2">
+      <div className="grid grid-cols-2 gap-2 mt-2 mb-2">
         <div className="bg-alt rounded-[8px] px-2 py-1.5 text-center">
           <div className="font-display text-[18px] leading-none text-success">{streaks.longest}</div>
           <div className="text-[8px] text-dim uppercase tracking-wide mt-0.5">Best run</div>
@@ -149,6 +152,23 @@ function ServeDetail({ pid, pointLog, isTeam1, firstName, startTs }) {
           <div className="text-[8px] text-dim uppercase tracking-wide mt-0.5">
             Trailing {streaks.trailingWon ? "wins" : "losses"}
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-alt rounded-[8px] px-2 py-1.5 text-center">
+          <div className="font-display text-[16px] leading-none text-accent">{stats.aces}</div>
+          <div className="text-[8px] text-dim uppercase tracking-wide mt-0.5">Aces</div>
+        </div>
+        <div className="bg-alt rounded-[8px] px-2 py-1.5 text-center">
+          <div className="font-display text-[16px] leading-none text-error">{stats.errors}</div>
+          <div className="text-[8px] text-dim uppercase tracking-wide mt-0.5">Errors</div>
+        </div>
+        <div className="bg-alt rounded-[8px] px-2 py-1.5 text-center">
+          <div className="font-display text-[16px] leading-none text-text">
+            {stats.inPlay > 0 ? `${Math.round(stats.inPlayWon / stats.inPlay * 100)}%` : '—'}
+          </div>
+          <div className="text-[8px] text-dim uppercase tracking-wide mt-0.5">In-Play Win</div>
         </div>
       </div>
     </div>

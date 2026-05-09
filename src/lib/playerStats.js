@@ -210,6 +210,9 @@ function computePressureStatsValue(annotated) {
   let clutchPlayed = 0
   let clutchWon = 0
   let clutchLost = 0
+  let clutchErrors = 0
+  let fatiguePlayed = 0
+  let fatigueErrors = 0
   let receives = 0
   let receivesWon = 0
   let comebackPoints = 0
@@ -249,6 +252,18 @@ function computePressureStatsValue(annotated) {
         if (e.team === a.playerTeamNum) clutchWon++; else clutchLost++
       }
 
+      // Clutch Margin <= 2 and Fatigue >= 15
+      if (Math.abs(e.t1 - e.t2) <= 2) {
+        if (e.errorPlayerId === pid) clutchErrors++;
+      }
+      if (Math.max(e.t1, e.t2) >= 15) {
+        if (e.scoringPlayerId === pid) fatiguePlayed++;
+        else if (e.errorPlayerId === pid) {
+          fatiguePlayed++;
+          fatigueErrors++;
+        }
+      }
+
       if (e.serverTeam && e.serverTeam !== a.playerTeamNum) {
         receives++
         if (e.team === a.playerTeamNum) receivesWon++
@@ -268,7 +283,10 @@ function computePressureStatsValue(annotated) {
     clutchPlayed,
     clutchWon,
     clutchLost,
+    clutchErrors,
     clutchWinPct: PCT(clutchWon, clutchPlayed),
+    fatiguePlayed,
+    fatigueErrors,
     receives,
     receivesWon,
     sideOutPct: PCT(receivesWon, receives),

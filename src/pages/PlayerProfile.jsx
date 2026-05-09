@@ -12,6 +12,8 @@ import { calcOverallStandings } from '../lib/standings'
 import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { usePlayerStatsForUser } from '../hooks/usePlayerStatsForUser'
+import { buildCoachExport } from '../lib/playerStatsExport'
+import { useToast } from '../components/ToastContext'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getAllMatches(tour) {
@@ -103,6 +105,7 @@ const PROFILE_TABS = [
 
 function FullProfileView({ profile, bundle, rank, player, navigate }) {
   const [activeTab, setActiveTab] = useState('stats')
+  const { addToast } = useToast()
 
   const achievements = useMemo(
     () => bundle ? evaluateAchievements(bundle) : [],
@@ -127,6 +130,22 @@ function FullProfileView({ profile, bundle, rank, player, navigate }) {
   }, [profile, rank])
 
   const displayName = profile?.nickname?.trim() || profile?.full_name?.split(' ')[0] || player.displayName || player.name
+
+  async function handleExport() {
+    if (!bundle || !profile) return
+    const text = buildCoachExport(profile, bundle, bundle.recentMatches || [])
+    try {
+      await navigator.clipboard.writeText(text)
+      addToast({
+        id: `copy-${Date.now()}`,
+        variant: 'success',
+        title: 'Copied to clipboard',
+        body: 'Paste into ChatGPT or Claude with a coaching prompt.',
+      })
+    } catch (err) {
+      console.error('Failed to copy', err)
+    }
+  }
 
   return (
     <div className="screen bg-bg text-text">
@@ -161,7 +180,7 @@ function FullProfileView({ profile, bundle, rank, player, navigate }) {
             <PlayerStatsSection
               stats={bundle}
               onOpenDrill={null}
-              onExport={null}
+              onExport={handleExport}
             />
           )}
 

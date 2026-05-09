@@ -153,6 +153,39 @@ export function useLiveGameScoring({
     });
   };
 
+  // ── getNextServer (prediction for UI) ──────────────────────────────────────
+  const getNextServer = (teamNum) => {
+    if (currentServer.team === teamNum) {
+      return currentServer.playerId;
+    }
+
+    const rot = serveRotation;
+    const currentSetNum = sets.length + 1;
+    const hasServedInSet = log
+      .filter(l => l.setNum === currentSetNum)
+      .some(l => l.serverTeam === teamNum);
+    const isFirstServe = !hasServedInSet;
+
+    let newServeIndex = serveIndex;
+    if (isFirstServe) {
+      const firstSlot = rot.findIndex(r => r.team === teamNum);
+      if (!rotateOnFirstPoint) {
+        newServeIndex = firstSlot;
+      } else {
+        for (let i = 1; i <= rot.length; i++) {
+          const candidate = (firstSlot + i) % rot.length;
+          if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
+        }
+      }
+    } else {
+      for (let i = 1; i <= rot.length; i++) {
+        const candidate = (serveIndex + i) % rot.length;
+        if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
+      }
+    }
+    return rot[newServeIndex]?.playerId;
+  };
+
   // ── resolvePoint ───────────────────────────────────────────────────────────
   const resolvePoint = (teamNum, ptId, playerId = null, errorType = null) => {
     const newS1     = teamNum === 1 ? score1 + 1 : score1;
@@ -364,7 +397,7 @@ export function useLiveGameScoring({
     // Actions
     addPoint, confirmPointType, confirmErrorSubtype, cancelErrorSubtype,
     confirmPlayer, cancelPlayerSelect, confirmSideChange,
-    requestEnd, confirmEnd, cancelEnd,
+    requestEnd, confirmEnd, cancelEnd, getNextServer,
     // Internal helpers exposed for composer
     setServeIndex,
     resetScoring,

@@ -9,7 +9,6 @@ import SessionHeader from '../components/freeplay/SessionHeader'
 import PlayersTab from '../components/freeplay/PlayersTab'
 import TeamsTab from '../components/freeplay/TeamsTab'
 import MatchesTab from '../components/freeplay/MatchesTab'
-import RankingTab from '../components/freeplay/RankingTab'
 import AddPlayerModal from '../components/freeplay/AddPlayerModal'
 import TeamModal from '../components/freeplay/TeamModal'
 import EditSessionModal from '../components/freeplay/EditSessionModal'
@@ -234,7 +233,6 @@ export default function FreePlaySession() {
           { id: 'players',  label: 'Players' },
           { id: 'teams',    label: 'Teams' },
           { id: 'matches',  label: 'Matches' },
-          { id: 'ranking',  label: 'Ranking' },
         ]}
         active={activeTab}
         onChange={setActiveTab}
@@ -282,12 +280,6 @@ export default function FreePlaySession() {
             pendingGame={pendingGame}
             onResumeMatch={() => handleResumeMatch(pendingGame)}
           />
-        )}
-        {activeTab === 'ranking' && (
-          <RankingTab session={session} canManage={isAdmin} />
-        )}
-        {activeTab === 'ranking' && (
-          <RankingTab session={session} />
         )}
       </div>
 

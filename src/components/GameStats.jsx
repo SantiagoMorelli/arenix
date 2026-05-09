@@ -152,7 +152,7 @@ const GameStats = ({
         <PillTabs
           items={[
             { id: "overview", label: "Overview" },
-            { id: "flow",     label: "Match Flow" },
+            { id: "stats",    label: "Stats" },
             { id: "history",  label: "History" },
           ]}
           active={tab}

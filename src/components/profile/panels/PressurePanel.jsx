@@ -1,4 +1,4 @@
-import { Flame, Hourglass, Shield, TrendingUp } from 'lucide-react'
+import { Flame, Hourglass, Shield, TrendingUp, AlertTriangle } from 'lucide-react'
 
 const PCT = (n) => `${Math.round((n || 0) * 100)}%`
 
@@ -49,6 +49,20 @@ export default function PressurePanel({ stats }) {
         value={`${value.clutchWon}W · ${value.clutchLost}L`}
         sub={`${value.clutchPlayed} total · last 4 of a set or deciding sets`}
         color="text-error"
+      />
+      <StatRow
+        icon={<AlertTriangle size={14} />}
+        label="Clutch mistakes"
+        value={`${value.clutchErrors}`}
+        sub={`Errors made when margin <= 2`}
+        color="text-error"
+      />
+      <StatRow
+        icon={<AlertTriangle size={14} className="text-dim" />}
+        label="Late-game errors"
+        value={`${value.fatigueErrors}`}
+        sub={`Errors made when score >= 15`}
+        color="text-text"
       />
       <StatRow
         icon={<Shield size={14} />}

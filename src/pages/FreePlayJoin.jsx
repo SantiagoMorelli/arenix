@@ -88,7 +88,7 @@ function PlayersRankingTable({ rows }) {
 }
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
-const TABS = ['matches', 'players', 'ranking']
+const TABS = ['matches', 'players', 'teams']
 
 function TabBar({ active, onChange }) {
   return (
@@ -320,11 +320,18 @@ export default function FreePlayJoin() {
         {activeTab === 'players' && (
           <div className="flex flex-col gap-4">
             <div className="text-[11px] font-bold text-dim uppercase tracking-wide">
-              Players ({fpSession.players.length})
+              Player Standings
             </div>
             {fpSession.players.length === 0 ? (
               <div className="text-[13px] text-dim">No players in this session.</div>
             ) : (
+              <PlayersRankingTable rows={playerRanking} />
+            )}
+
+            <div className="text-[11px] font-bold text-dim uppercase tracking-wide mt-4">
+              Roster ({fpSession.players.length})
+            </div>
+            {fpSession.players.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {fpSession.players.map(p => (
                   <div key={p.id} className="flex items-center gap-1.5 bg-surface border border-line rounded-full pl-3 pr-3 py-1.5 shrink-0">
@@ -334,56 +341,46 @@ export default function FreePlayJoin() {
                 ))}
               </div>
             )}
-
-            {fpSession.teams.length > 0 && (
-              <>
-                <div className="text-[11px] font-bold text-dim uppercase tracking-wide mt-2">
-                  Teams ({fpSession.teams.length})
-                </div>
-                <div className="flex flex-col gap-2">
-                  {fpSession.teams.map(team => {
-                    const teamPlayers = (team.playerIds || [])
-                      .map(pid => fpSession.players.find(p => p.id === pid))
-                      .filter(Boolean)
-                    return (
-                      <div key={team.id} className="bg-surface border border-line rounded-xl p-3">
-                        <div className="text-[14px] font-bold text-text mb-2">{team.name}</div>
-                        {teamPlayers.length === 0 ? (
-                          <div className="text-[12px] text-dim">No players assigned</div>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {teamPlayers.map(p => (
-                              <span key={p.id} className="text-[11px] font-semibold bg-bg border border-line rounded-full px-2.5 py-1 text-dim">
-                                {p.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
           </div>
         )}
 
-        {/* ── RANKING tab ─────────────────────────────────────────────── */}
-        {activeTab === 'ranking' && (
+        {/* ── TEAMS tab ─────────────────────────────────────────────── */}
+        {activeTab === 'teams' && (
           <div className="flex flex-col gap-4">
+            <div className="text-[11px] font-bold text-dim uppercase tracking-wide">
+              Team Standings
+            </div>
             {fpSession.teams.length === 0 ? (
-              <div className="text-[13px] text-dim text-center py-10">No teams yet.</div>
+              <div className="text-[13px] text-dim">No teams yet.</div>
             ) : (
-              <>
-                <div>
-                  <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Teams</div>
-                  <TeamsRankingTable rows={teamRanking} />
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold text-dim uppercase tracking-wide mb-2">Players</div>
-                  <PlayersRankingTable rows={playerRanking} />
-                </div>
-              </>
+              <TeamsRankingTable rows={teamRanking} />
+            )}
+
+            <div className="text-[11px] font-bold text-dim uppercase tracking-wide mt-4">
+              Teams Roster ({fpSession.teams.length})
+            </div>
+            {fpSession.teams.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {fpSession.teams.map(t => {
+                  const tPlayers = t.playerIds.map(pid => fpSession.players.find(p => p.id === pid)).filter(Boolean)
+                  return (
+                    <div key={t.id} className="bg-surface border border-line rounded-xl p-3">
+                      <div className="text-[13px] font-bold text-text mb-1.5">{t.name}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {tPlayers.length === 0 ? (
+                          <span className="text-[11px] text-dim">No players</span>
+                        ) : (
+                          tPlayers.map(p => (
+                            <span key={p.id} className="text-[10px] font-semibold bg-bg border border-line rounded-full px-2 py-0.5 text-dim">
+                              {p.name}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
         )}

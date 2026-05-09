@@ -1,9 +1,4 @@
-import { useState, useMemo } from 'react'
-import { PillTabs } from '../ui-new'
-import { calcOverallStandings, calcPlayerStandings } from '../../lib/standings'
-
-// ─── Teams ranking table ───────────────────────────────────────────────────────
-function TeamsRankingTable({ rows }) {
+export function TeamsRankingTable({ rows }) {
   return (
     <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
       <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt justify-between">
@@ -55,8 +50,7 @@ function TeamsRankingTable({ rows }) {
   )
 }
 
-// ─── Players ranking table ────────────────────────────────────────────────────
-function PlayersRankingTable({ rows }) {
+export function PlayersRankingTable({ rows }) {
   return (
     <div className="bg-surface rounded-[14px] overflow-hidden border border-line">
       <div className="flex items-center px-3.5 py-2 border-b border-line bg-alt">
@@ -89,67 +83,6 @@ function PlayersRankingTable({ rows }) {
           <span className="w-12 text-center text-[13px] font-bold text-free flex-shrink-0">{row.pts}</span>
         </div>
       ))}
-    </div>
-  )
-}
-
-// ─── Ranking tab (outer) ──────────────────────────────────────────────────────
-export default function RankingTab({ session }) {
-  const [subTab, setSubTab] = useState('teams')
-  const [tbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
-
-  const matches = useMemo(() => (session.games || [])
-    .filter(g => g.played)
-    .map(g => ({
-      team1:  g.team1Id,
-      team2:  g.team2Id,
-      score1: g.setsPerMatch > 1
-        ? (g.sets || []).filter(s => s.winner === 1).length
-        : (g.score1 ?? 0),
-      score2: g.setsPerMatch > 1
-        ? (g.sets || []).filter(s => s.winner === 2).length
-        : (g.score2 ?? 0),
-      played: true,
-    })),
-  [session.games])
-
-  const teamRows   = useMemo(
-    () => calcOverallStandings(session.teams || [], matches, session.players || [], tbOptions),
-    [session.teams, matches, session.players, tbOptions]
-  )
-  const playerRows = useMemo(
-    () => calcPlayerStandings(session.teams || [], matches, session.players || []),
-    [session.teams, matches, session.players]
-  )
-
-  if ((session.teams || []).length === 0) {
-    return (
-      <div className="px-4 text-[13px] text-dim text-center py-10">
-        Create teams and play a match to see rankings.
-      </div>
-    )
-  }
-
-  return (
-    <div className="px-4">
-      <PillTabs
-        items={[
-          { id: 'teams',   label: 'Teams' },
-          { id: 'players', label: 'Players' },
-        ]}
-        active={subTab}
-        onChange={setSubTab}
-        accent="free"
-        className="mb-3.5"
-      />
-
-      {subTab === 'teams' ? (
-        <div className="flex flex-col gap-3">
-          <TeamsRankingTable rows={teamRows} />
-        </div>
-      ) : (
-        <PlayersRankingTable rows={playerRows} />
-      )}
     </div>
   )
 }

@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import {
   ChevronLeft, Trophy, Medal, Target, Zap, Shield, Bomb,
-  Dumbbell, Flame, RotateCcw, Clock, Volleyball,
+  Dumbbell, Flame, RotateCcw, Clock, Volleyball, Clipboard,
 } from 'lucide-react'
+import { buildFreePlaySessionExport } from '../lib/freePlayStatsExport'
+import { useToast } from './ToastContext'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings, calcPlayerStandings } from '../lib/standings'
 import { AppCard, PillTabs, SectionLabel } from './ui-new'
@@ -540,6 +542,7 @@ function PlayerRankingsSection({ ranking }) {
 export default function FreePlayStatsScreen({ session, onClose }) {
   const [tab, setTab] = useState('teams')
   const [tbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
+  const { addToast } = useToast()
 
   const allMatches = useMemo(() => getAllSessionMatches(session), [session])
 
@@ -572,6 +575,13 @@ export default function FreePlayStatsScreen({ session, onClose }) {
     )
   }, [teamsForStandings, allMatches, session.players, playerStats])
 
+  const handleExport = () => {
+    const text = buildFreePlaySessionExport(session, playerRanking, standings, allMatches)
+    navigator.clipboard.writeText(text).then(() => {
+      addToast({ id: `copy-${Date.now()}`, variant: 'success', title: 'Copied to clipboard', body: 'Paste into ChatGPT or Claude with a coaching prompt.' })
+    }).catch(console.error)
+  }
+
   return (
     <div className="absolute inset-0 z-[110] bg-bg flex flex-col overflow-hidden">
 
@@ -590,7 +600,17 @@ export default function FreePlayStatsScreen({ session, onClose }) {
           </div>
           <div className="text-[11px] text-dim truncate">{session.name}</div>
         </div>
-        <Trophy size={20} className="text-free" />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleExport}
+            aria-label="Copy session stats for AI coach"
+            className="flex items-center gap-1 text-[9px] font-semibold text-free bg-free/15 px-2 py-0.5 rounded cursor-pointer border-0"
+          >
+            <Clipboard size={10} />
+            Copy AI
+          </button>
+          <Trophy size={20} className="text-free" />
+        </div>
       </div>
 
       {/* Tab switcher */}

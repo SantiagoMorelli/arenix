@@ -403,7 +403,7 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
   const { addToast } = useToast()
 
   const handleExport = () => {
-      const text = buildTournamentCoachExport(tournament, playerStats, allMatches);
+      const text = buildTournamentCoachExport(tournament, playerStats, allMatches, leaguePlayers);
       navigator.clipboard.writeText(text).then(() => {
         addToast({
             id: `copy-${Date.now()}`,

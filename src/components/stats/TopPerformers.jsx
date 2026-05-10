@@ -1,12 +1,12 @@
-import { Flame, Target, TrendingUp, Users } from "lucide-react";
+import { Flame, Target, TrendingUp, X } from "lucide-react";
 import { AppCard } from "../ui-new";
 import ExpandableStatCard from "./ExpandableStatCard";
-import MiniSparkline from "./MiniSparkline";
 import {
-  calcClutchPoints, calcPeakWindow, calcCumulativeSeries, calcHeadToHead,
+  calcClutchPoints, calcPeakWindow,
 } from "../../lib/matchStats";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
+import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
 
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
@@ -30,19 +30,9 @@ export default function TopPerformers({
   const tName = id => getTeam(id)?.name || "?";
   const firstName = id => (getPlayer(id)?.name || "?").split(" ")[0];
 
-  // Top scorer per team — used as default "rival" for head-to-head.
-  const topScorerOfTeam = (ids, stat) => {
-    if (!ids.length) return null;
-    return [...ids].sort((a, b) => (stat.playerPts[b] || 0) - (stat.playerPts[a] || 0))[0];
-  };
-  const t1Top = topScorerOfTeam(t1Ids, s1);
-  const t2Top = topScorerOfTeam(t2Ids, s2);
-
   const renderTeamSection = (ids, stat, isTeam1) => {
     if (ids.length === 0) return null;
     const teamColor = isTeam1 ? "text-accent" : "text-free";
-    const teammateOf = (pid) => ids.find(o => o !== pid) || null;
-    const rivalOf = isTeam1 ? t2Top : t1Top;
 
     return (
       <>
@@ -61,9 +51,6 @@ export default function TopPerformers({
               pid={pid}
               isTeam1={isTeam1}
               pointLog={pointLog}
-              teammatePid={teammateOf(pid)}
-              rivalPid={rivalOf}
-              firstName={firstName}
             />
           </ExpandableStatCard>
         ))}
@@ -148,19 +135,21 @@ function StatChip({ value, bold, color = "text-dim" }) {
 
 // ── Detail panel ───────────────────────────────────────────────────────────
 
-function PerformerDetail({ pid, isTeam1, pointLog, teammatePid, rivalPid, firstName }) {
+function PerformerDetail({ pid, isTeam1, pointLog }) {
   const clutch = calcClutchPoints(pid, pointLog);
   const peak = calcPeakWindow(pid, pointLog, 5);
-  const series = calcCumulativeSeries(pid, pointLog);
   const accent = isTeam1 ? "text-accent" : "text-free";
-  const teamSparkColor = isTeam1 ? "var(--color-accent, #F5A623)" : "var(--color-free, #00BCD4)";
 
-  const teammateH2H = teammatePid ? calcHeadToHead(pid, teammatePid, pointLog) : null;
-  const rivalH2H    = rivalPid    ? calcHeadToHead(pid, rivalPid,    pointLog) : null;
+  const playerErrorLog = pointLog.filter(e => e.errorPlayerId === pid);
+  const totalErrors = playerErrorLog.length;
+  const byErrorType = {};
+  playerErrorLog.forEach(e => {
+    const sub = normalizeErrorType(e.errorType);
+    byErrorType[sub] = (byErrorType[sub] || 0) + 1;
+  });
 
   return (
     <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2">
-      {/* 2x2 stat grid */}
       <div className="grid grid-cols-2 gap-2 mb-2.5">
         <DetailStat
           icon={<Target size={11} />}
@@ -176,42 +165,34 @@ function PerformerDetail({ pid, isTeam1, pointLog, teammatePid, rivalPid, firstN
           hint={peak.count > 0 ? `pts ${peak.start}–${peak.end}` : "no streak"}
           accent={accent}
         />
-        {teammatePid && teammateH2H && (
-          <DetailStat
-            icon={<Users size={11} />}
-            label={`vs ${firstName(teammatePid)}`}
-            value={`${teammateH2H.ptsA}–${teammateH2H.ptsB}`}
-            hint="teammate"
-            accent={accent}
-          />
-        )}
-        {rivalPid && rivalH2H && (
-          <DetailStat
-            icon={<Users size={11} />}
-            label={`vs ${firstName(rivalPid)}`}
-            value={`${rivalH2H.ptsA}–${rivalH2H.ptsB}`}
-            hint="rival"
-            accent={accent}
-          />
-        )}
       </div>
 
-      {/* Cumulative pts trend */}
-      {series.length > 1 && series[series.length - 1] > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[8px] font-bold text-dim uppercase tracking-wide">Cumulative pts</span>
-            <span className={`text-[10px] font-bold ${accent}`}>{series[series.length - 1]}</span>
+      {totalErrors > 0 && (
+        <div className="bg-alt rounded-[8px] px-2.5 py-2">
+          <div className="flex items-center gap-1 mb-1.5">
+            <X size={10} className="text-error flex-shrink-0" />
+            <span className="text-[8px] font-bold text-dim uppercase tracking-wide flex-1">Errors</span>
+            <span className="text-[10px] font-bold text-error">{totalErrors}</span>
           </div>
-          <MiniSparkline
-            points={series}
-            width={260}
-            height={26}
-            stroke={teamSparkColor}
-            strokeWidth={1.25}
-            className="w-full"
-            ariaLabel={`${firstName(pid)} cumulative points trend`}
-          />
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {ERROR_SUBTYPES
+              .filter(sub => sub.id !== "untyped" && byErrorType[sub.id])
+              .map(sub => {
+                const Icon = sub.icon;
+                return (
+                  <span key={sub.id} className="flex items-center gap-1">
+                    <Icon size={9} className="text-error/70 flex-shrink-0" />
+                    <span className="text-[9px] text-dim">{sub.label}</span>
+                    <span className="text-[10px] font-bold text-error">{byErrorType[sub.id]}</span>
+                  </span>
+                );
+              })}
+            {byErrorType.untyped > 0 && (
+              <span className="text-[9px] text-dim">
+                Untyped <span className="font-bold text-error">{byErrorType.untyped}</span>
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

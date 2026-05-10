@@ -367,27 +367,6 @@ const GameStats = ({
             </AppCard>
           )}
 
-          {scoringLevel >= 3 && (s1.errsMadeCount + s2.errsMadeCount) > 0 && (
-            <AppCard className="px-3.5 py-3 mb-3">
-              <div className="flex justify-between items-center mb-2.5">
-                <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
-                <span className="text-[10px] font-bold text-dim uppercase tracking-wide">Errors by type</span>
-                <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
-              </div>
-              {ERROR_SUBTYPES
-                .filter(sub => sub.id !== "untyped")
-                .filter(sub => (s1.byErrorType[sub.id] || 0) + (s2.byErrorType[sub.id] || 0) > 0)
-                .map(sub => renderStatBar(sub, s1.byErrorType[sub.id], s2.byErrorType[sub.id]))}
-              {(s1.byErrorType.untyped || 0) + (s2.byErrorType.untyped || 0) > 0 &&
-                renderStatBar(ERROR_SUBTYPE_BY_ID.untyped, s1.byErrorType.untyped || 0, s2.byErrorType.untyped || 0)}
-              <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
-                <span className="font-bold text-accent">{s1.errsMadeCount}</span>
-                <span className="text-dim">total errors</span>
-                <span className="font-bold text-free">{s2.errsMadeCount}</span>
-              </div>
-            </AppCard>
-          )}
-
           {scoringLevel >= 3 && (
             <AppCard className="px-3.5 py-3 mb-3">
               <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveEfficiency}>

@@ -3,6 +3,7 @@ import { ChevronLeft, Clipboard } from 'lucide-react'
 import GameStats from '../GameStats'
 import { buildMatchCoachExport } from '../../lib/matchStatsExport'
 import { useToast } from '../ToastContext'
+import { normalizeErrorType } from '../stats/pointTypes'
 
 const STATS_T = {
   winner: 'Winner',
@@ -30,8 +31,8 @@ export default function MatchStatsOverlay({ match, session, onClose }) {
       const allIds = [...t1Ids, ...t2Ids]
       const getPlayer = id => (session.players || []).find(p => p.id === id) || { name: 'Unknown' }
 
-      const s1 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0 }
-      const s2 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0 }
+      const s1 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0, byErrorType: {} }
+      const s2 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0, byErrorType: {} }
 
       match.log?.forEach(e => {
         const st = t1Ids.includes(e.scoringPlayerId) ? s1 : (t2Ids.includes(e.scoringPlayerId) ? s2 : null)
@@ -49,6 +50,8 @@ export default function MatchStatsOverlay({ match, session, onClose }) {
         if (errSt && e.errorPlayerId) {
           errSt.totalErrors++
           errSt.playerErrors[e.errorPlayerId] = (errSt.playerErrors[e.errorPlayerId] || 0) + 1
+          const sub = normalizeErrorType(e.errorType)
+          errSt.byErrorType[sub] = (errSt.byErrorType[sub] || 0) + 1
         }
       })
 

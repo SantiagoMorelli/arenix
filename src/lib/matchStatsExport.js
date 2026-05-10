@@ -39,6 +39,11 @@ export function buildMatchCoachExport(match, tournament, allPlayerIds, s1, s2, t
     lines.push(`${teamName}:`);
     lines.push(`  Total Points: ${stats.total || 0}`);
     lines.push(`  Errors Made: ${stats.totalErrors || 0}`);
+    const errSubtypeLabels = { serve: "Serve errors", spike: "Spike errors", tip: "Tip errors", other: "Other errors" };
+    const byErrType = stats.byErrorType || {};
+    ["serve", "spike", "tip", "other"].forEach(sub => {
+      if (byErrType[sub]) lines.push(`    ${errSubtypeLabels[sub]}: ${byErrType[sub]}`);
+    });
     lines.push(`  Aces: ${stats.aces || 0}`);
     lines.push(`  Spikes: ${stats.spikes || 0}`);
     lines.push(`  Blocks: ${stats.blocks || 0}`);

@@ -5,6 +5,7 @@ import GameStats from '../GameStats'
 import EditMatchModal from '../EditMatchModal'
 import { buildMatchCoachExport } from '../../lib/matchStatsExport'
 import { useToast } from '../ToastContext'
+import { normalizeErrorType } from '../stats/pointTypes'
 
 // Static translation dict for GameStats
 const STATS_T = {
@@ -35,8 +36,8 @@ export default function MatchStatsOverlay({ match, tournament, leaguePlayers, is
        const getPlayer = (id) => leaguePlayers.find(p => p.id === id) || { name: 'Unknown' }
        
        // Calculate basic stats for export
-       const s1 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0 }
-       const s2 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0 }
+       const s1 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0, byErrorType: {} }
+       const s2 = { playerPts: {}, playerErrors: {}, playerByType: {}, total: 0, totalErrors: 0, aces: 0, spikes: 0, blocks: 0, tips: 0, byErrorType: {} }
        
        match.log?.forEach(e => {
          const st = t1Ids.includes(e.scoringPlayerId) ? s1 : (t2Ids.includes(e.scoringPlayerId) ? s2 : null)
@@ -55,6 +56,8 @@ export default function MatchStatsOverlay({ match, tournament, leaguePlayers, is
          if (errSt && e.errorPlayerId) {
              errSt.totalErrors++
              errSt.playerErrors[e.errorPlayerId] = (errSt.playerErrors[e.errorPlayerId] || 0) + 1
+             const sub = normalizeErrorType(e.errorType)
+             errSt.byErrorType[sub] = (errSt.byErrorType[sub] || 0) + 1
          }
        })
 

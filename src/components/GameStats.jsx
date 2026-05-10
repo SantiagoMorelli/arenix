@@ -7,7 +7,7 @@ import { AppCard, AppButton, PillTabs } from "./ui-new";
 import {
   calcLeadStats, calcDynamics, calcMVP,
 } from "../lib/matchStats";
-import { POINT_TYPES, ERROR_SUBTYPE_BY_ID, normalizeErrorType } from "./stats/pointTypes";
+import { POINT_TYPES, ERROR_SUBTYPES, ERROR_SUBTYPE_BY_ID, normalizeErrorType } from "./stats/pointTypes";
 import MatchFlow from "./stats/MatchFlow";
 import MatchHighlights from "./stats/MatchHighlights";
 import TopPerformers from "./stats/TopPerformers";
@@ -86,7 +86,14 @@ const GameStats = ({
       playerErrors[pid] = pointLog.filter(e => e.errorPlayerId === pid).length;
     });
     const unattributed = pts.filter(e => !e.scoringPlayerId).length;
-    return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerByType, playerErrors, unattributed };
+    const errsMade = pointLog.filter(e => e.team !== tn && e.pointType === "error");
+    const errsMadeCount = errsMade.length;
+    const byErrorType = {};
+    errsMade.forEach(e => {
+      const sub = normalizeErrorType(e.errorType);
+      byErrorType[sub] = (byErrorType[sub] || 0) + 1;
+    });
+    return { total: pts.length, byType, whileServing, whileReceiving, bestStreak, playerPts, playerByType, playerErrors, unattributed, errsMadeCount, byErrorType };
   };
 
   const s1 = statFor(1), s2 = statFor(2);
@@ -356,6 +363,27 @@ const GameStats = ({
                 <span className="font-bold text-accent">{s1.total}</span>
                 <span className="text-dim">total</span>
                 <span className="font-bold text-free">{s2.total}</span>
+              </div>
+            </AppCard>
+          )}
+
+          {scoringLevel >= 3 && (s1.errsMadeCount + s2.errsMadeCount) > 0 && (
+            <AppCard className="px-3.5 py-3 mb-3">
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="text-[10px] font-bold text-accent">{tName(team1Id)}</span>
+                <span className="text-[10px] font-bold text-dim uppercase tracking-wide">Errors by type</span>
+                <span className="text-[10px] font-bold text-free">{tName(team2Id)}</span>
+              </div>
+              {ERROR_SUBTYPES
+                .filter(sub => sub.id !== "untyped")
+                .filter(sub => (s1.byErrorType[sub.id] || 0) + (s2.byErrorType[sub.id] || 0) > 0)
+                .map(sub => renderStatBar(sub, s1.byErrorType[sub.id], s2.byErrorType[sub.id]))}
+              {(s1.byErrorType.untyped || 0) + (s2.byErrorType.untyped || 0) > 0 &&
+                renderStatBar(ERROR_SUBTYPE_BY_ID.untyped, s1.byErrorType.untyped || 0, s2.byErrorType.untyped || 0)}
+              <div className="flex justify-between text-[11px] mt-1.5 pt-1.5 border-t border-line">
+                <span className="font-bold text-accent">{s1.errsMadeCount}</span>
+                <span className="text-dim">total errors</span>
+                <span className="font-bold text-free">{s2.errsMadeCount}</span>
               </div>
             </AppCard>
           )}

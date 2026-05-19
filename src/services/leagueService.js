@@ -307,6 +307,7 @@ function normalizePlayer(row) {
     wins:        row.wins,
     losses:      row.losses,
     points:      row.points,
+    elo:         row.elo,
     userId:      row.user_id,
     leagueId:    row.league_id,
   }
@@ -372,6 +373,8 @@ async function normalizeTournament(row) {
     setsPerMatch:     row.sets_per_match,
     phase:            row.phase,
     status:           row.status,
+    elo_processed:    row.elo_processed,
+    elo_log:          row.elo_log,
     winnerTeamId:     row.winner_team_id,
     tieBreakerConfig: row.tie_breaker_config ?? { tieBreakerMode: 'id', seedMap: {}, drawMap: {} },
     scoringConfig:    row.scoring_config ?? null,

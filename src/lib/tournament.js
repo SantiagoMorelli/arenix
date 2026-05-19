@@ -101,6 +101,32 @@ export function buildKnockout(groups, options = {}) {
   return { rounds }
 }
 
+// ─── Build final only (for round-robin) ───────────────────────────────────────
+export function buildFinalOnly(standings) {
+  const finalMatch = {
+    id: uid(), 
+    team1: standings[0]?.id || null, 
+    team2: standings[1]?.id || null, 
+    played: false, winner: null, score1: 0, score2: 0,
+  }
+
+  // We can include a 3rd place match for 3rd vs 4th if there are at least 4 teams, 
+  // or just leave it empty to match UI structure.
+  const thirdMatch = {
+    id: uid(), 
+    team1: standings[2]?.id || null, 
+    team2: standings[3]?.id || null, 
+    played: false, winner: null, score1: 0, score2: 0,
+  }
+
+  return {
+    rounds: [
+      { id: 'final', name: 'Final', matches: [finalMatch] },
+      { id: 'third_place', name: '3rd Place', matches: [thirdMatch] }
+    ]
+  }
+}
+
 // ─── Group standings (enriched with player names) ─────────────────────────────
 export function calcGroupStandings(group, teams, players = [], options = {}) {
   const rows = group.teamIds.map(teamId => {

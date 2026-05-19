@@ -4,16 +4,18 @@ import { teamName, roundLabel } from '../../lib/tournament'
 export default function MatchesTab({ tournament, onStartMatch, onMatchClick, canScore, players = [], initialSubTab }) {
   const { groups = [], knockout = null, phase } = tournament
   const hasGroups = groups.length > 0
-  const isFreePlay = !hasGroups
 
   const groupTabs = hasGroups ? groups.map(g => ({ id: `g_${g.id}`, label: g.name })) : []
   const koTab = knockout ? [{ id: 'knockout', label: 'Knockout' }] : []
-  const allTabs = [...groupTabs, ...koTab]
+  // If it's a round robin, we still want a tab for the main matches if there's also a knockout
+  const rrTab = (!hasGroups && tournament.matches?.length > 0) ? [{ id: 'all', label: 'Round Robin' }] : []
+  
+  const allTabs = [...groupTabs, ...rrTab, ...koTab]
 
   const [activeSubTab, setActiveSubTab] = useState(() => {
-    if (isFreePlay) return 'all'
     if (initialSubTab && allTabs.some(t => t.id === initialSubTab)) return initialSubTab
     if ((phase === 'knockout' || phase === 'completed') && knockout) return 'knockout'
+    if (!hasGroups && !knockout) return 'all'
     return allTabs[0]?.id || 'all'
   })
 
@@ -29,14 +31,14 @@ export default function MatchesTab({ tournament, onStartMatch, onMatchClick, can
   let matchesToDisplay = []
   let displayTitle = ''
 
-  if (isFreePlay) {
-    matchesToDisplay = (tournament.matches || []).map((m, i) => ({ ...m, label: `Match ${i + 1}` }))
-    displayTitle = 'Free Play Matches'
-  } else if (activeSubTab === 'knockout') {
+  if (activeSubTab === 'knockout') {
     matchesToDisplay = (knockout?.rounds || []).flatMap(r =>
       r.matches.map(m => ({ ...m, label: roundLabel(r.id) }))
     )
     displayTitle = 'Knockout Matches'
+  } else if (!hasGroups && activeSubTab === 'all') {
+    matchesToDisplay = (tournament.matches || []).map((m, i) => ({ ...m, label: `Match ${i + 1}` }))
+    displayTitle = 'Round Robin Matches'
   } else {
     const groupId = activeSubTab.replace('g_', '')
     const group = groups.find(g => g.id === groupId)
@@ -49,7 +51,7 @@ export default function MatchesTab({ tournament, onStartMatch, onMatchClick, can
 
   return (
     <div className="px-4">
-      {hasGroups && allTabs.length > 1 && (
+      {allTabs.length > 1 && (
         <div className="mb-4 overflow-x-auto pb-1 no-scrollbar">
           <div className="flex gap-2 min-w-max">
             {allTabs.map(tab => (

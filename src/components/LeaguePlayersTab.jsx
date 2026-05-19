@@ -130,7 +130,7 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
     },
     {
       label: 'ELO',
-      value: <span className="font-display text-[16px] text-text">{player.points ?? 0}</span>,
+      value: <span className="font-display text-[16px] text-text">{player.elo ?? 1000}</span>,
       last:  true,
     },
   ]
@@ -175,12 +175,18 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
       ) : (
         /* Edit form */
         <div className="bg-bg border border-line rounded-xl p-3 mb-3.5 flex flex-col gap-3">
+          {isLinked && (
+            <div className="text-[11px] text-dim bg-surface border border-line rounded-lg p-2.5 leading-relaxed">
+              This player is linked to a user account. Personal details are managed by the user. You can only change their league level.
+            </div>
+          )}
           <div>
             <div className="text-[10px] font-bold text-dim uppercase tracking-[0.6px] mb-1.5">Full Name</div>
             <input
               value={draft.name}
               onChange={e => setDraft({ ...draft, name: e.target.value })}
-              className="w-full border border-line rounded-lg px-3 py-2.5 text-[13px] text-text bg-surface outline-none focus:border-accent"
+              disabled={isLinked}
+              className={`w-full border border-line rounded-lg px-3 py-2.5 text-[13px] text-text bg-surface outline-none ${isLinked ? 'opacity-50 cursor-not-allowed' : 'focus:border-accent'}`}
             />
           </div>
           <div>
@@ -189,7 +195,8 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
               value={draft.nickname}
               onChange={e => setDraft({ ...draft, nickname: e.target.value })}
               placeholder="Optional"
-              className="w-full border border-line rounded-lg px-3 py-2.5 text-[13px] text-text bg-surface outline-none focus:border-accent"
+              disabled={isLinked}
+              className={`w-full border border-line rounded-lg px-3 py-2.5 text-[13px] text-text bg-surface outline-none ${isLinked ? 'opacity-50 cursor-not-allowed' : 'focus:border-accent'}`}
             />
           </div>
           <div>
@@ -198,8 +205,9 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
               {GENDERS.map(g => (
                 <button
                   key={g.k}
-                  onClick={() => setDraft({ ...draft, gender: g.k })}
-                  className={`flex-1 py-2.5 rounded-lg text-[12px] font-semibold border cursor-pointer transition-colors ${draft.gender === g.k ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-surface text-text'}`}
+                  onClick={() => !isLinked && setDraft({ ...draft, gender: g.k })}
+                  disabled={isLinked}
+                  className={`flex-1 py-2.5 rounded-lg text-[12px] font-semibold border transition-colors ${draft.gender === g.k ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-surface text-text'} ${isLinked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   {g.l}
                 </button>
@@ -408,7 +416,7 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
   const filtered = search.trim()
     ? allPlayers.filter(p => (p.displayName || p.name || '').toLowerCase().includes(search.toLowerCase()))
     : allPlayers
-  const sorted = [...filtered].sort((a, b) => (b.points || 0) - (a.points || 0))
+  const sorted = [...filtered].sort((a, b) => (b.elo ?? 1000) - (a.elo ?? 1000))
 
   const selected = allPlayers.find(p => p.id === selectedId) || null
 
@@ -494,7 +502,7 @@ export default function LeaguePlayersTab({ league, isAdmin, onAdd, onDelete, onU
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-text truncate">{p.displayName || p.name}</div>
                 <div className="text-[10px] text-dim mt-0.5">
-                  ELO {p.points ?? 0}{isAdmin ? ` · ${levelCap(p.level)}` : ''}
+                  ELO {p.elo ?? 1000}{isAdmin ? ` · ${levelCap(p.level)}` : ''}
                 </div>
               </div>
               {isAdmin && <ChevR />}

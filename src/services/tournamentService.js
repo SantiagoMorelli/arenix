@@ -2,6 +2,7 @@
  * tournamentService — Supabase calls for tournaments, teams, and matches.
  */
 import { supabase } from '../lib/supabase'
+import { simulateTournamentElo } from '../lib/elo'
 
 /**
  * Create a tournament with its teams and group/match structure.
@@ -662,4 +663,100 @@ export async function updateTournamentScoringConfig(tournamentId, { level }) {
     .update({ scoring_config: { level } })
     .eq('id', tournamentId)
   if (error) throw error
+}
+
+/**
+ * Calculates and updates Elo ratings for all players in a tournament sequentially.
+ * @param {string} tournamentId
+ */
+export async function processTournamentElo(tournamentId) {
+  // 1. Fetch tournament to check if already processed
+  const { data: tournament, error: tErr } = await supabase
+    .from('tournaments')
+    .select('elo_processed')
+    .eq('id', tournamentId)
+    .single()
+  
+  if (tErr) throw tErr
+  if (tournament.elo_processed) {
+    throw new Error('Tournament Elo already processed')
+  }
+
+  // 2. Fetch all teams in tournament
+  const { data: teams, error: teamsErr } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('tournament_id', tournamentId)
+  if (teamsErr) throw teamsErr
+  
+  const teamIds = teams.map(t => t.id)
+  
+  // 3. Fetch team_players to map players to teams
+  let teamPlayers = []
+  if (teamIds.length > 0) {
+    const { data: tp, error: tpErr } = await supabase
+      .from('team_players')
+      .select('team_id, player_id')
+      .in('team_id', teamIds)
+    if (tpErr) throw tpErr
+    teamPlayers = tp
+  }
+
+  // 4. Fetch all player ratings
+  const playerIds = [...new Set(teamPlayers.map(tp => tp.player_id))]
+  let playersMap = {}
+  if (playerIds.length > 0) {
+    const { data: players, error: pErr } = await supabase
+      .from('players')
+      .select('id, elo, name, profiles(nickname, full_name)')
+      .in('id', playerIds)
+    if (pErr) throw pErr
+    
+    players.forEach(p => {
+      
+      // Derive a reliable display name just like normalizePlayer
+      const linked = p.profiles
+      p.displayName = (linked?.nickname || linked?.full_name) || p.name || 'Unknown'
+      playersMap[p.id] = p
+
+    })
+  }
+
+  // 5. Fetch matches chronologically
+  // Groups first (by id, implicitly created first), then knockouts ordered by round
+  const { data: matches, error: mErr } = await supabase
+    .from('matches')
+    .select('id, source_type, team1_id, team2_id, winner_id, played, knockout_rounds(sort_order, round_key)')
+    .eq('tournament_id', tournamentId)
+    // Supabase JS doesn't perfectly sort by a nested table's column easily using just .order
+    // We fetch them and sort locally to be absolutely certain
+  if (mErr) throw mErr
+
+  const sortedMatches = matches.sort((a, b) => {
+    if (a.source_type === 'group' && b.source_type !== 'group') return -1
+    if (a.source_type !== 'group' && b.source_type === 'group') return 1
+    if (a.source_type === 'knockout' && b.source_type === 'knockout') {
+      const orderA = a.knockout_rounds?.sort_order ?? 999
+      const orderB = b.knockout_rounds?.sort_order ?? 999
+      return orderA - orderB
+    }
+    // Fallback: stable string comparison of IDs
+    return a.id.localeCompare(b.id)
+  })
+
+  // 6. Simulate the Elo updates
+  const { finalRatings: newElos, auditLog } = simulateTournamentElo(sortedMatches, teamPlayers, playersMap)
+
+  // 7. Batch Update Players
+  const updates = Object.entries(newElos).map(([playerId, newElo]) => 
+    supabase.from('players').update({ elo: newElo }).eq('id', playerId)
+  )
+  await Promise.all(updates)
+
+  // 8. Mark tournament as processed
+  const { error: updateTErr } = await supabase
+    .from('tournaments')
+    .update({ elo_processed: true, elo_log: auditLog })
+    .eq('id', tournamentId)
+  if (updateTErr) throw updateTErr
 }

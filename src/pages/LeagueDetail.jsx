@@ -677,7 +677,7 @@ export default function LeagueDetail() {
   const rankedPlayers = [...(league.players || [])]
     .map(p => {
       const { wins, losses, score } = computePlayerLeagueRecord(p.id, league)
-      return { ...p, wins, losses, _score: score }
+      return { ...p, wins, losses, _score: p.elo ?? 1000 }
     })
     .sort((a, b) => b._score - a._score)
   const tournaments   = [...(league.tournaments || [])].reverse()
@@ -744,7 +744,7 @@ export default function LeagueDetail() {
                       <div className="text-[11px] font-bold text-accent tracking-[1.2px] uppercase mb-1">Your Position</div>
                       <div className="flex items-baseline gap-2">
                         <span className="font-display text-[40px] leading-none text-accent">#{myRank}</span>
-                        <span className="text-[12px] text-dim">of {rankedPlayers.length} · {myPlayer._score ?? 0} pts</span>
+                        <span className="text-[12px] text-dim">of {rankedPlayers.length} · {myPlayer.elo ?? 1000} pts</span>
                       </div>
                     </div>
                     <div className="w-20 h-[60px] flex-shrink-0">
@@ -770,10 +770,9 @@ export default function LeagueDetail() {
                   {rankedPlayers.slice(0, 8).map((player, i, arr) => {
                     const isMe  = player.userId === profile?.id
                     const label = player.displayName || player.name
-                    const wl    = (player.wins != null || player.losses != null)
-                      ? `${player.wins ?? 0}W - ${player.losses ?? 0}L`
-                      : null
-                    return (
+                    const wl = `${player.wins ?? 0}W - ${player.losses ?? 0}L`
+                      
+                      return (
                       <div
                         key={player.id}
                         className={`flex items-center px-3.5 py-[11px] ${i < arr.length - 1 ? 'border-b border-line' : ''} ${isMe ? 'bg-accent/10' : ''}`}
@@ -796,7 +795,7 @@ export default function LeagueDetail() {
                           </div>
                           {wl && <div className="text-[10px] text-dim mt-0.5">{wl}</div>}
                         </div>
-                        <span className="font-display text-[18px] text-text leading-none ml-2">{player._score ?? 0}</span>
+                        <span className="font-display text-[18px] text-text leading-none ml-2">{player.elo ?? 0}</span>
                       </div>
                     )
                   })}

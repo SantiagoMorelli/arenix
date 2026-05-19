@@ -102,17 +102,28 @@ export function applyH2HTieBreakers(rows, matches, options = {}) {
         if (diff !== 0) return diff
         
         // Exact equality across all performance metrics.
+        a._unresolvedTie = true
+        b._unresolvedTie = true
+
         // Resolve using the final deterministic tie-breaker mode.
         if (tieBreakerMode === 'seed') {
           const sa = seedMap[a.id] ?? Infinity
           const sb = seedMap[b.id] ?? Infinity
-          if (sa !== sb) return sa - sb
+          if (sa !== sb) {
+            a._resolvedExplicitly = true
+            b._resolvedExplicitly = true
+            return sa - sb
+          }
         }
         
         if (tieBreakerMode === 'draw') {
           const da = drawMap[a.id] ?? Infinity
           const db = drawMap[b.id] ?? Infinity
-          if (da !== db) return da - db
+          if (da !== db) {
+            a._resolvedExplicitly = true
+            b._resolvedExplicitly = true
+            return da - db
+          }
         }
         
         // Fallback: 'name' or 'id' to guarantee determinism

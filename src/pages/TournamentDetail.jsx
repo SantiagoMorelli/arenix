@@ -14,9 +14,10 @@ import {
   claimMatchScorer,
   deleteTournament,
   updateTieBreakerConfig,
+  processTournamentElo
 } from '../services/tournamentService'
 import { createNotification, createNotificationsForLeagueMembers } from '../services/notificationService'
-import { buildKnockout } from '../lib/tournament'
+import { buildKnockout, buildFinalOnly } from '../lib/tournament'
 import { resolveScoringLevel } from '../lib/scoring'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
 import { PillTabs } from '../components/ui-new'
@@ -45,6 +46,7 @@ export default function TournamentDetail() {
   const scoringLevel = resolveScoringLevel(tournament, league)
 
   const isGuest = !session
+  const isLocked = tournament?.elo_processed
 
   // ── Overlay state ──────────────────────────────────────────────────────────
   const [showTournamentStats, setShowTournamentStats] = useState(
@@ -54,6 +56,7 @@ export default function TournamentDetail() {
 
   // ── Header / delete state ──────────────────────────────────────────────────
   const [deleting, setDeleting] = useState(false)
+  const [closingTournament, setClosingTournament] = useState(false)
 
   // ── Start-match modal state ────────────────────────────────────────────────
   const [selectedMatch,   setSelectedMatch]   = useState(null)
@@ -223,14 +226,19 @@ export default function TournamentDetail() {
     }
   }
 
-  const handleGenerateKnockout = async () => {
+  const handleGenerateKnockout = async (rowsOrEvent) => {
     if (isGeneratingKnockout) return
     setIsGeneratingKnockout(true)
     // Flush any pending debounced save so the DB is up-to-date before we read it back
     clearTimeout(tbDebounceRef.current)
     try {
       await updateTieBreakerConfig(tid, tbOptions)
-      const knockout = buildKnockout(tournament.groups, tbOptions)
+      
+      const hasGroups = tournament.groups && tournament.groups.length > 0
+      const knockout = hasGroups
+        ? buildKnockout(tournament.groups, tbOptions)
+        : buildFinalOnly(Array.isArray(rowsOrEvent) ? rowsOrEvent : [])
+        
       await saveKnockoutRounds(tid, knockout.rounds)
       await updateTournamentPhase(tid, 'knockout')
       refetch()
@@ -243,14 +251,27 @@ export default function TournamentDetail() {
   }
 
   const handleDeleteTournament = async () => {
-    if (!window.confirm(`Delete "${tournament.name}"? This cannot be undone — all matches and team data will be lost.`)) return
-    setDeleting(true)
+    if (!window.confirm('Are you sure you want to delete this tournament? This cannot be undone.')) return
     try {
-      await deleteTournament(tid)
-      navigate(`/league/${id}`)
+      setDeleting(true)
+      await deleteTournament(tournament.id)
+      navigate('/')
     } catch (err) {
-      showError(err, 'Failed to delete tournament')
+      showError(err.message)
       setDeleting(false)
+    }
+  }
+
+  const handleCloseTournament = async () => {
+    if (!window.confirm('Are you sure you want to close this tournament? This will calculate Elo ratings and cannot be undone.')) return
+    try {
+      setClosingTournament(true)
+      await processTournamentElo(tournament.id)
+      await refetch()
+    } catch (err) {
+      showError(err.message)
+    } finally {
+      setClosingTournament(false)
     }
   }
 
@@ -277,7 +298,7 @@ export default function TournamentDetail() {
           tournament={tournament}
           leaguePlayers={leaguePlayers}
           scoringLevel={scoringLevel}
-          isAdmin={isAdmin && !isGuest}
+          isAdmin={isAdmin && !isGuest && !isLocked}
           leagueId={id}
           tournamentId={tid}
           navigate={navigate}
@@ -294,6 +315,8 @@ export default function TournamentDetail() {
         isAdmin={isAdmin && !isGuest}
         onDelete={handleDeleteTournament}
         deleting={deleting}
+        onCloseTournament={handleCloseTournament}
+        closingTournament={closingTournament}
       />
 
       {/* ── Tournament Complete Banner ── */}
@@ -331,7 +354,7 @@ export default function TournamentDetail() {
           <StandingsTab
             tournament={tournament}
             onGenerateKnockout={handleGenerateKnockout}
-            onMatchClick={m => setSelectedStatsMatch(m)}
+            onMatchClick={m => !isLocked && setSelectedStatsMatch(m)}
             canManage={canManage}
             players={leaguePlayers}
             tbOptions={tbOptions}
@@ -346,8 +369,8 @@ export default function TournamentDetail() {
           <MatchesTab
             tournament={tournament}
             onStartMatch={handleStartMatchClick}
-            onMatchClick={m => setSelectedStatsMatch(m)}
-            canScore={canScore}
+            onMatchClick={m => !isLocked && setSelectedStatsMatch(m)}
+            canScore={canScore && !isLocked}
             players={leaguePlayers}
             initialSubTab={location.state?.subTab}
           />

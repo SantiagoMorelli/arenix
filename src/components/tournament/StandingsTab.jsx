@@ -31,9 +31,51 @@ export default function StandingsTab({
     )
   }
 
+  const handleGenerateClick = () => {
+    let hasTie = false;
+    let tieDetails = [];
+
+    if (hasGroups) {
+      groups.forEach(g => {
+        const st = calcGroupStandings(g, teams, players, tbOptions);
+        const top3 = st.slice(0, 3);
+        const hasUnresolved = top3.some(t => t._unresolvedTie && !t._resolvedExplicitly);
+        if (hasUnresolved) {
+          hasTie = true;
+          tieDetails.push(g.name);
+        }
+      });
+    } else {
+      const rows = calcOverallStandings(teams, matches, players, tbOptions);
+      const top3 = rows.slice(0, 3);
+      const hasUnresolved = top3.some(t => t._unresolvedTie && !t._resolvedExplicitly);
+      if (hasUnresolved) {
+        hasTie = true;
+      }
+    }
+
+    if (hasTie) {
+      const msg = hasGroups 
+        ? `There are exact statistical ties affecting qualification in: ${tieDetails.join(', ')}.\n\nPlease select a Tie-Breaker Final Rule (Seed or Draw) and assign values to the tied teams before generating the knockout.`
+        : `There is an exact statistical tie affecting the final match.\n\nPlease select a Tie-Breaker Final Rule (Seed or Draw) and assign values to the tied teams before generating the final.`;
+      
+      window.alert(msg);
+      return;
+    }
+
+    if (hasGroups) {
+      onGenerateKnockout();
+    } else {
+      const rows = calcOverallStandings(teams, matches, players, tbOptions);
+      onGenerateKnockout(rows);
+    }
+  }
+
   // Free-play / round-robin (no groups)
   if (!hasGroups) {
     const rows = calcOverallStandings(teams, matches, players, tbOptions)
+    const allMatchesPlayed = matches && matches.length > 0 && matches.every(m => m.played)
+    
     return (
       <div className="px-4">
         {isAdmin && (
@@ -47,6 +89,30 @@ export default function StandingsTab({
           isAdmin={isAdmin}
           onRenameTeam={onRenameTeam}
         />
+
+        {/* Advance button — only for admins */}
+        {(phase === 'freeplay' || phase === 'setup' || phase === 'group') && canManage && (matches || []).length > 0 && (
+          <div className="mt-4 mb-6">
+            <button
+              onClick={handleGenerateClick}
+              disabled={!allMatchesPlayed || isGeneratingKnockout}
+              className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white border-0 transition-all ${
+                allMatchesPlayed && !isGeneratingKnockout
+                  ? 'bg-free cursor-pointer hover:opacity-90'
+                  : 'bg-surface border border-line text-dim cursor-not-allowed'
+              }`}
+            >
+              {isGeneratingKnockout
+                ? '⏳ Generating Final...'
+                : (allMatchesPlayed ? '⚡ Generate Final (1º vs 2º)' : '⏳ Complete all matches first')}
+            </button>
+          </div>
+        )}
+
+        {/* Knockout results if final was generated */}
+        {(phase === 'knockout' || phase === 'completed') && (
+          <KnockoutResults tournament={tournament} onMatchClick={onMatchClick} players={players} />
+        )}
       </div>
     )
   }
@@ -92,7 +158,7 @@ export default function StandingsTab({
       {phase === 'group' && canManage && (
         <div className="mt-2 mb-6">
           <button
-            onClick={onGenerateKnockout}
+            onClick={handleGenerateClick}
             disabled={!allGroupMatchesPlayed || isGeneratingKnockout}
             className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white border-0 transition-all ${
               allGroupMatchesPlayed && !isGeneratingKnockout

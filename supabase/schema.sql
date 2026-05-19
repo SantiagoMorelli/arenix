@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS public.players (
   wins       INTEGER NOT NULL DEFAULT 0,
   losses     INTEGER NOT NULL DEFAULT 0,
   points     INTEGER NOT NULL DEFAULT 0,
+  elo        INTEGER NOT NULL DEFAULT 1000,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -159,6 +160,7 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
   winner_team_id     UUID,
   tie_breaker_config JSONB NOT NULL DEFAULT '{"tieBreakerMode":"id","seedMap":{},"drawMap":{}}'::jsonb,
   scoring_config     JSONB,
+  elo_processed      BOOLEAN NOT NULL DEFAULT FALSE,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

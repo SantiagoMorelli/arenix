@@ -5,6 +5,7 @@ import { useLiveGame, FP_SAVE_KEY } from '../hooks/useLiveGame'
 import LiveScoreboard from '../components/LiveScoreboard'
 import { saveFreePlayGame, saveFreePlayTeamServeOrder } from '../services/freePlayService'
 import { useToast } from '../contexts/ToastContext'
+import { ChevronLeft } from 'lucide-react'
 
 const t = (key) => {
   const dict = {
@@ -17,14 +18,6 @@ const t = (key) => {
   return dict[key] || key
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-const Svg = ({ children, size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-)
-const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 // ─── Setup screen ─────────────────────────────────────────────────────────────
 function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
@@ -77,7 +70,7 @@ function MatchSetup({ live, teams, team1Id, team2Id, onBack }) {
           onClick={onBack}
           className="w-10 h-10 flex items-center justify-center bg-surface border border-line rounded-xl text-text"
         >
-          <BackIcon />
+          <ChevronLeft size={20} />
         </button>
         <h1 className="text-[20px] font-black text-accent uppercase tracking-widest m-0">
           Match Setup

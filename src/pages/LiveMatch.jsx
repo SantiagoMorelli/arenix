@@ -8,22 +8,11 @@ import { createNotificationsForLeagueMembers } from '../services/notificationSer
 import LiveScoreboard from '../components/LiveScoreboard'
 const QRImportModal = lazy(() => import('../components/QRImportModal'))
 import { useToast } from '../contexts/ToastContext'
+import { ChevronLeft } from 'lucide-react'
 
 function teamName(teams, id) {
   return teams.find(t => t.id === id)?.name || '?'
 }
-
-// ─── Inline icons ─────────────────────────────────────────────────────────────
-const Svg = ({ children, size = 20 }) => (
-  <svg
-    width={size} height={size} viewBox="0 0 24 24"
-    fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-  >
-    {children}
-  </svg>
-)
-const BackIcon = () => <Svg><polyline points="15 18 9 12 15 6" /></Svg>
 
 const REMINDER_KEY = 'bv_battery_reminder_seen'
 
@@ -79,7 +68,7 @@ function LiveMatchSetup({ live, tournament, onBack, onScanQR }) {
           onClick={onBack}
           className="w-10 h-10 flex items-center justify-center bg-surface border border-line rounded-xl text-text"
         >
-          <BackIcon />
+          <ChevronLeft size={20} />
         </button>
         <h1 className="text-[20px] font-black text-accent uppercase tracking-widest m-0">
           Match Setup

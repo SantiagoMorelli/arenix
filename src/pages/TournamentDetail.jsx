@@ -373,7 +373,7 @@ export default function TournamentDetail() {
           <StandingsTab
             tournament={tournament}
             onGenerateKnockout={handleGenerateKnockout}
-            onMatchClick={m => !isLocked && setSelectedStatsMatch(m)}
+            onMatchClick={m => setSelectedStatsMatch(m)}
             canManage={canManage}
             players={leaguePlayers}
             tbOptions={tbOptions}
@@ -388,7 +388,7 @@ export default function TournamentDetail() {
           <MatchesTab
             tournament={tournament}
             onStartMatch={handleStartMatchClick}
-            onMatchClick={m => !isLocked && setSelectedStatsMatch(m)}
+            onMatchClick={m => setSelectedStatsMatch(m)}
             canScore={canScore && !isLocked}
             players={leaguePlayers}
             initialSubTab={location.state?.subTab}

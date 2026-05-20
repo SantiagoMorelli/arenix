@@ -322,7 +322,7 @@ export default function LiveMatch() {
         state: { tab: 'matches', subTab: getReturnSubTab() },
       })
     }
-  })
+  }, [live.pendingEnd])
 
   const getQRPayload = () => {
     const s = loadSaved()

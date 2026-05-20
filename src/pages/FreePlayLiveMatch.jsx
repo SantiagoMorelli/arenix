@@ -320,7 +320,7 @@ export default function FreePlayLiveMatch() {
       showSuccess('Match cancelled')
       navigate(`/free-play/${id}`)
     }
-  })
+  }, [live.pendingEnd])
 
   // ── Save handler (called by GameStats inside LiveScoreboard) ─────────────
   // GameStats invokes onSaveResult(matchId, s1_sets, s2_sets, winnerTeamId, log, sets).

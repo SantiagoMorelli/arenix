@@ -82,7 +82,8 @@ cp .env.example .env
 # Add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 
 # 3. Set up the database
-# Run supabase/schema.sql in your Supabase SQL Editor
+# Fresh DB: run supabase/schema.sql in your Supabase SQL Editor
+# Existing DB: run files in supabase/migrations/ in order
 
 # 4. Start the dev server
 npm run dev

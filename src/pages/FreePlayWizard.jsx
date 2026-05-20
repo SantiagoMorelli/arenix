@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues } from '../services/leagueService'
 import { getLeaguePlayers } from '../services/playerService'
 import { AppBadge, AppButton } from '../components/ui-new'
-import { useToast } from '../components/ToastContext'
+import { useToast } from '../contexts/ToastContext'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (

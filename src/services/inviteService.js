@@ -129,7 +129,7 @@ export async function joinLeague(leagueId) {
  * Returns the new code.
  */
 export async function regenerateInviteCode(leagueId) {
-  const newCode = Math.random().toString(36).substring(2, 10).toUpperCase()
+  const newCode = crypto.getRandomValues(new Uint32Array(1))[0].toString(36).padStart(7, '0').slice(1, 9).toUpperCase()
 
   const { data, error } = await supabase
     .from('leagues')

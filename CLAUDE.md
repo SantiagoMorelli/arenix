@@ -28,7 +28,9 @@ duplicate token values into this file; they drift.
 src/
 ├── AppRouter.jsx                ← all routes
 ├── main.jsx                     ← entry
-├── contexts/AuthContext.jsx     ← Supabase auth context
+├── contexts/
+│   ├── AuthContext.jsx          ← Supabase auth context
+│   └── ToastContext.jsx         ← app-wide toast channel
 ├── layouts/
 │   ├── MainLayout.jsx           ← bottom nav + auth gate
 │   └── LeagueLayout.jsx         ← /league/:id/* shell
@@ -60,7 +62,11 @@ src/
 │   ├── LiveMatch.jsx                          ← orchestrator (see below)
 │   └── FreePlay{List,Wizard,Session,LiveMatch,Join}.jsx
 └── components/
-    ├── ui-new.jsx               ← shared primitives (Card, Btn, …) — REUSE
+    ├── ui-new.jsx               ← shared primitives (Card, Btn, AppSheet, ConfirmModal, …) — REUSE
+    ├── league/
+    │   └── SettingsTab.jsx      ← league settings tab
+    ├── tournament/              ← tournament tab components
+    ├── freeplay/                ← free play components
     ├── GameSetupScreen.jsx      ← LiveMatch: pre-match setup phase
     ├── LiveScoreboard.jsx, LiveScoreSection.jsx, ScoreBoard.jsx
     ├── PointButtons.jsx, PointLog.jsx, EditMatchModal.jsx
@@ -96,6 +102,7 @@ src/
 
 - **Services layer.** All Supabase calls live in `src/services/*.js`. Pages,
   components, and hooks must **not** call `supabase.from(...)` directly.
+  Exception: `AuthContext` and `lib/supabase.js` are infrastructure, not UI.
 - **Hooks wrap services.** Stateful flows like `useLiveGame` and `useFreePlay`
   consume services and expose UI-friendly state.
 - **Layouts.** `MainLayout` wraps authenticated screens with bottom nav;
@@ -105,21 +112,31 @@ src/
   (+ `PointButtons`, `PointLog`, `EditMatchModal`) → `GameStats`. When
   restyling, edit the sub-components, not the orchestrator.
 
+## Critical files — touch with care
+
+**`src/hooks/useLiveGame.js`** — corazón de la lógica de partido en vivo.
+Maneja serve rotation, scoring, undo y persistencia en localStorage (crash
+recovery). Está descompuesto en 4 sub-hooks con una dependencia circular
+resuelta con refs. Cambios aquí pueden corromper partidos en curso que tienen
+estado guardado en localStorage. Leer la arquitectura completa antes de
+modificar.
+
+**`src/hooks/useLocalStorage.js`** — primitiva de persistencia usada por
+`useLiveGame`. Cambios aquí afectan el crash recovery de todos los partidos.
+
 ## Rules
 
-- **Lucide React for all icons.** No inline SVGs, no other icon libraries.
-- **All Supabase calls go through `src/services/`.** Never import the client
-  directly into a page or component.
-- **Reuse `components/ui-new.jsx` primitives** (Card, Btn, Avatar, Badge,
-  Label, …) before creating new styled elements.
-- **Mobile-first (320–428px).** Dark mode is primary; light mode uses the
-  Tailwind `class` strategy.
-- **No test framework is configured.** Do not scaffold vitest/jest/RTL or
-  create test files unless explicitly asked.
-- **Restyle, don't rewire.** When changing visuals, keep `useState`,
-  `useEffect`, event handlers, and props intact.
+- **Lucide React for icons.** Prefer Lucide — use inline SVG only when the icon doesn't exist in Lucide.
+- **Pages and UI components must not call `supabase.from(...)` directly.** All DB reads/writes go through `src/services/`. Infrastructure files (`AuthContext`, `lib/supabase.js`) are the only exceptions.
+- **Reuse `components/ui-new.jsx` primitives** (AppCard, AppButton, AppSheet, ConfirmModal, …) before creating new styled elements.
+- **Mobile-first (320–428px).** Dark mode is primary; light mode uses the Tailwind `class` strategy.
+- **No test framework is configured.** Do not scaffold vitest/jest/RTL or create test files unless explicitly asked.
 - **Tailwind utilities only**, no inline styles.
-- For any visual decision, defer to `design_handoff_arenix/README.md`; 
+- **Contexts go in `src/contexts/`**, not in `components/`.
+- **Each tab is a separate component** in `src/components/league/` or `src/components/tournament/` — never embed a tab as a function inside a page file.
+- **Destructive actions require `ConfirmModal`** — never `window.confirm` or `window.alert`.
+- **Use `crypto.getRandomValues()`** for generating IDs and invite codes — never `Math.random()`.
+- For any visual decision, defer to `design_handoff_arenix/README.md`.
 ## Commands
 
 ```bash

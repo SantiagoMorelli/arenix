@@ -1,17 +1,100 @@
-# React + Vite
+# Arenix
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white&labelColor=20232a)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_v4-06B6D4?logo=tailwindcss&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8)
+![Vercel](https://img.shields.io/badge/deployed-Vercel-black?logo=vercel)
 
-Currently, two official plugins are available:
+**Beach volleyball tournament manager** — built for real use on the court, not as a demo.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**[→ Live demo](https://arenix-two.vercel.app/)**
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## What it does
 
-## Expanding the ESLint configuration
+Arenix lets you run beach volleyball leagues from your phone. You create a league, invite players, set up tournaments with group stages and knockouts, and score matches live — all without paper or spreadsheets.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# arenix
+It started as a tool I actually needed. It's now used by real players across multiple leagues.
+
+---
+
+## Features
+
+- **League management** — create leagues, invite members via QR code or link, manage roles (admin, scorer, viewer)
+- **Tournament setup** — group stage + knockout bracket generation, configurable team sizes and scoring rules
+- **Live scoring** — real-time scoreboard with serve rotation tracking, point log, and undo support
+- **Crash recovery** — match state persists in localStorage so a phone lock or accidental close never loses a game
+- **Free play mode** — casual sessions outside tournaments, with stats tracking
+- **ELO rankings** — player ratings calculated and updated after each tournament
+- **PWA** — installable on Android and iOS, works from the browser with no app store required
+
+---
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + Vite 8 + React Router 7 |
+| Styling | Tailwind CSS v4 (no PostCSS — via `@tailwindcss/vite`) |
+| Backend | Supabase (PostgreSQL + Auth + Realtime) |
+| Deployment | Vercel |
+
+---
+
+## Architecture
+
+The project follows a strict layered architecture to keep concerns separated:
+
+```
+src/
+├── services/     ← all Supabase reads/writes (single responsibility)
+├── hooks/        ← stateful flows that consume services
+├── pages/        ← route-level components, orchestration only
+├── components/   ← UI components, purely presentational
+├── contexts/     ← AuthContext, ToastContext
+└── lib/          ← supabase client, utilities, ranking math
+```
+
+**Key decisions:**
+
+**Services layer.** Every Supabase call lives in `src/services/`. Pages and components never touch the DB client directly. This means DB changes (schema, policies, table names) are isolated to one layer.
+
+**Hooks wrap services.** Complex flows like live scoring (`useLiveGame`) or free play sessions (`useFreePlay`) live in hooks that consume services and expose clean state to the UI. No business logic in components.
+
+**`useLiveGame` — crash recovery.** The live match hook is split into four focused sub-hooks (`Setup`, `Scoring`, `Undo`, `Persistence`). The `Persistence` sub-hook continuously syncs match state to localStorage so any interruption — phone lock, browser crash, accidental navigation — is fully recoverable when the user returns.
+
+**Row Level Security.** All authorization is enforced at the database level via Supabase RLS policies. Every table has policies that verify `auth.uid()` against league membership and role before allowing reads or writes. The frontend never trusts itself to be the last line of defense.
+
+---
+
+## Local setup
+
+```bash
+# 1. Clone and install
+git clone https://github.com/SantiagoMorelli/arenix.git
+cd arenix
+npm install
+
+# 2. Set up environment
+cp .env.example .env
+# Add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+
+# 3. Set up the database
+# Run supabase/schema.sql in your Supabase SQL Editor
+
+# 4. Start the dev server
+npm run dev
+```
+
+---
+
+## Scripts
+
+```bash
+npm run dev      # development server
+npm run build    # production build
+npm run preview  # preview the build locally
+npm run lint     # ESLint
+```

@@ -7,7 +7,7 @@ import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, 
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import LiveScoreboard from '../components/LiveScoreboard'
 const QRImportModal = lazy(() => import('../components/QRImportModal'))
-import { useToast } from '../components/ToastContext'
+import { useToast } from '../contexts/ToastContext'
 
 function teamName(teams, id) {
   return teams.find(t => t.id === id)?.name || '?'

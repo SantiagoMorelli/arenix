@@ -342,6 +342,60 @@ export function AppSheet({ open, onClose, title, icon, children }) {
   )
 }
 
+/* ─── ConfirmModal ────────────────────────────────────────────────────────── */
+/**
+ * Full-screen confirmation modal for destructive or important actions.
+ * Replaces window.confirm/window.alert so dialogs work in PWA standalone mode.
+ *
+ * Props:
+ *   open            boolean
+ *   title           string
+ *   message         string
+ *   confirmLabel    string   — button label (default: "Confirmar")
+ *   confirmVariant  string   — "error" for destructive, "accent" for neutral
+ *   onConfirm       fn       — called when the confirm button is tapped
+ *   onCancel        fn       — called when cancel or backdrop is tapped
+ */
+export function ConfirmModal({
+  open,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  confirmVariant = 'error',
+  onConfirm,
+  onCancel,
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-5">
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={onCancel}
+      />
+      <div className="relative z-[201] w-full max-w-sm bg-surface rounded-2xl border border-line shadow-[0_8px_40px_rgba(0,0,0,0.5)] p-5">
+        <div className="text-[16px] font-bold text-text leading-snug mb-2">{title}</div>
+        <div className="text-[13px] text-dim leading-relaxed mb-5">{message}</div>
+        <div className="flex gap-3">
+          <AppButton
+            variant="outline"
+            onClick={onCancel}
+            className="flex-1"
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            variant={confirmVariant}
+            onClick={onConfirm}
+            className="flex-1"
+          >
+            {confirmLabel}
+          </AppButton>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── IconButton ──────────────────────────────────────────────────────────── */
 /**
  * Props:

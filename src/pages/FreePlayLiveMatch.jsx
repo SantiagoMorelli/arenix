@@ -4,7 +4,7 @@ import { useFreePlay } from '../hooks/useFreePlay'
 import { useLiveGame, FP_SAVE_KEY } from '../hooks/useLiveGame'
 import LiveScoreboard from '../components/LiveScoreboard'
 import { saveFreePlayGame, saveFreePlayTeamServeOrder } from '../services/freePlayService'
-import { useToast } from '../components/ToastContext'
+import { useToast } from '../contexts/ToastContext'
 
 const t = (key) => {
   const dict = {

@@ -112,7 +112,7 @@ function PlayerDetailSheet({ player, onClose, onSave, onLink, onUnlink, onRemove
   const isLinked = !!player.userId
 
   function handleSave() {
-    onSave({ name: draft.name, nickname: draft.nickname, sex: draft.gender, level: draft.level })
+    onSave({ name: draft.name, nickname: draft.nickname, sex: draft.gender || null, level: draft.level })
     setEditing(false)
   }
 

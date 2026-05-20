@@ -7,7 +7,7 @@ import { createTournament, updateTournamentScoringConfig } from '../services/tou
 import { addPlayer } from '../services/playerService'
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
-import { useToast } from '../components/ToastContext'
+import { useToast } from '../contexts/ToastContext'
 import AddPlayerSheet from '../components/AddPlayerSheet'
 import ScoringLevelSelect from '../components/ScoringLevelSelect'
 

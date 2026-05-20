@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { ChevronLeft, Clipboard } from 'lucide-react'
 import GameStats from '../GameStats'
 import { buildMatchCoachExport } from '../../lib/matchStatsExport'
-import { useToast } from '../ToastContext'
+import { useToast } from '../../contexts/ToastContext'
 import { normalizeErrorType } from '../stats/pointTypes'
 
 const STATS_T = {

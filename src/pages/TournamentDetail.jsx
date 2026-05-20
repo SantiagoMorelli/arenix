@@ -20,8 +20,8 @@ import { createNotification, createNotificationsForLeagueMembers } from '../serv
 import { buildKnockout, buildFinalOnly } from '../lib/tournament'
 import { resolveScoringLevel } from '../lib/scoring'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
-import { PillTabs } from '../components/ui-new'
-import { useToast } from '../components/ToastContext'
+import { PillTabs, ConfirmModal } from '../components/ui-new'
+import { useToast } from '../contexts/ToastContext'
 import TournamentHeader from '../components/tournament/TournamentHeader'
 import StandingsTab from '../components/tournament/StandingsTab'
 import MatchesTab from '../components/tournament/MatchesTab'
@@ -57,6 +57,7 @@ export default function TournamentDetail() {
   // ── Header / delete state ──────────────────────────────────────────────────
   const [deleting, setDeleting] = useState(false)
   const [closingTournament, setClosingTournament] = useState(false)
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmLabel: 'Confirm', confirmVariant: 'error', onConfirm: null })
 
   // ── Start-match modal state ────────────────────────────────────────────────
   const [selectedMatch,   setSelectedMatch]   = useState(null)
@@ -250,29 +251,47 @@ export default function TournamentDetail() {
     }
   }
 
-  const handleDeleteTournament = async () => {
-    if (!window.confirm('Are you sure you want to delete this tournament? This cannot be undone.')) return
-    try {
-      setDeleting(true)
-      await deleteTournament(tournament.id)
-      navigate('/')
-    } catch (err) {
-      showError(err.message)
-      setDeleting(false)
-    }
+  const handleDeleteTournament = () => {
+    setConfirmModal({
+      open: true,
+      title: 'Delete tournament?',
+      message: 'This cannot be undone. All match results and standings will be permanently lost.',
+      confirmLabel: 'Delete',
+      confirmVariant: 'error',
+      onConfirm: async () => {
+        setConfirmModal(m => ({ ...m, open: false }))
+        try {
+          setDeleting(true)
+          await deleteTournament(tournament.id)
+          navigate('/')
+        } catch (err) {
+          showError(err.message)
+          setDeleting(false)
+        }
+      },
+    })
   }
 
-  const handleCloseTournament = async () => {
-    if (!window.confirm('Are you sure you want to close this tournament? This will calculate Elo ratings and cannot be undone.')) return
-    try {
-      setClosingTournament(true)
-      await processTournamentElo(tournament.id)
-      await refetch()
-    } catch (err) {
-      showError(err.message)
-    } finally {
-      setClosingTournament(false)
-    }
+  const handleCloseTournament = () => {
+    setConfirmModal({
+      open: true,
+      title: 'Close tournament?',
+      message: 'This will calculate Elo ratings for all players and cannot be undone.',
+      confirmLabel: 'Close & Calculate Elo',
+      confirmVariant: 'accent',
+      onConfirm: async () => {
+        setConfirmModal(m => ({ ...m, open: false }))
+        try {
+          setClosingTournament(true)
+          await processTournamentElo(tournament.id)
+          await refetch()
+        } catch (err) {
+          showError(err.message)
+        } finally {
+          setClosingTournament(false)
+        }
+      },
+    })
   }
 
   return (
@@ -411,6 +430,17 @@ export default function TournamentDetail() {
           }}
         />
       )}
+
+      {/* ── Confirm Modal ── */}
+      <ConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        confirmVariant={confirmModal.confirmVariant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(m => ({ ...m, open: false }))}
+      />
 
     </div>
   )

@@ -4,7 +4,7 @@ import { teamName } from '../../lib/tournament'
 import GameStats from '../GameStats'
 import EditMatchModal from '../EditMatchModal'
 import { buildMatchCoachExport } from '../../lib/matchStatsExport'
-import { useToast } from '../ToastContext'
+import { useToast } from '../../contexts/ToastContext'
 import { normalizeErrorType } from '../stats/pointTypes'
 
 // Static translation dict for GameStats

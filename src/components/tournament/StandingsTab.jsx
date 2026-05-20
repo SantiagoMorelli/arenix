@@ -2,6 +2,7 @@ import { calcGroupStandings, calcOverallStandings } from '../../lib/tournament'
 import StandingsTable from './StandingsTable'
 import KnockoutResults from './KnockoutResults'
 import TieBreakerControls from '../standings/TieBreakerControls'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function StandingsTab({
   tournament,
@@ -16,6 +17,7 @@ export default function StandingsTab({
   onRenameTeam,
   isGeneratingKnockout = false,
 }) {
+  const { showToast } = useToast()
   const { phase, groups, teams, matches } = tournament
   const hasGroups = (groups || []).length > 0
 
@@ -55,11 +57,11 @@ export default function StandingsTab({
     }
 
     if (hasTie) {
-      const msg = hasGroups 
-        ? `There are exact statistical ties affecting qualification in: ${tieDetails.join(', ')}.\n\nPlease select a Tie-Breaker Final Rule (Seed or Draw) and assign values to the tied teams before generating the knockout.`
-        : `There is an exact statistical tie affecting the final match.\n\nPlease select a Tie-Breaker Final Rule (Seed or Draw) and assign values to the tied teams before generating the final.`;
-      
-      window.alert(msg);
+      const title = hasGroups
+        ? `Tie in: ${tieDetails.join(', ')}`
+        : 'Exact tie detected'
+      const body = 'Set a Tie-Breaker rule (Seed or Draw) and assign values to tied teams before generating.'
+      showToast({ variant: 'info', title, body })
       return;
     }
 

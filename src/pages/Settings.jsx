@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SectionLabel } from '../components/ui-new'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../components/ToastContext'
+import { useToast } from '../contexts/ToastContext'
 import { updatePassword } from '../services/authService'
 import {
   listAllProfiles,

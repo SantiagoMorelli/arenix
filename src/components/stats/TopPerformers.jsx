@@ -1,28 +1,23 @@
-import { Flame, Target, TrendingUp, X } from "lucide-react";
+import { Flame, Target, X, Zap, Shield, Hand } from "lucide-react";
 import { AppCard } from "../ui-new";
 import ExpandableStatCard from "./ExpandableStatCard";
-import {
-  calcClutchPoints, calcPeakWindow,
-} from "../../lib/matchStats";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
 import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
 
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
- *   collapsed = original row (avatar + name + chip stats)
- *   expanded  = clutch · peak window · head-to-head · cumulative sparkline
- *
- * Props:
- *   pointLog       array
- *   s1, s2         team stat blobs
- *   t1Ids, t2Ids   string[]
- *   mvp            { pid } | null
- *   getPlayer      fn(id)
- *   getTeam        fn(id)
- *   team1Id        string
- *   team2Id        string
+ *   collapsed = avatar + name + relative bar + secondary icons + PTS big + ERR
+ *   expanded  = contribution bars · clutch · peak · error breakdown
  */
+
+const STAT_TYPES = [
+  { key: "ace",   label: "ACE", Icon: Target, textCls: "text-success",  bgCls: "bg-success/80"  },
+  { key: "spike", label: "SPK", Icon: Zap,    textCls: "text-accent",   bgCls: "bg-accent/80"   },
+  { key: "block", label: "BLK", Icon: Shield, textCls: "text-free",     bgCls: "bg-free/80"     },
+  { key: "tip",   label: "TIP", Icon: Hand,   textCls: "text-dim",      bgCls: "bg-dim/60"      },
+];
+
 export default function TopPerformers({
   pointLog, s1, s2, t1Ids, t2Ids, mvp, getPlayer, getTeam, team1Id, team2Id,
   helpMode = false,
@@ -33,10 +28,11 @@ export default function TopPerformers({
   const renderTeamSection = (ids, stat, isTeam1) => {
     if (ids.length === 0) return null;
     const teamColor = isTeam1 ? "text-accent" : "text-free";
+    const maxPts = Math.max(...ids.map(id => stat.playerPts[id] || 0), 1);
 
     return (
       <>
-        <div className={`text-[9px] font-bold ${teamColor} uppercase tracking-wide mb-0.5 mt-2 first:mt-0 pl-[37px]`}>
+        <div className={`text-[9px] font-bold ${teamColor} uppercase tracking-wide mb-0.5 mt-2 first:mt-0 pl-[42px]`}>
           {tName(isTeam1 ? team1Id : team2Id)}
         </div>
         {ids.map(pid => (
@@ -45,16 +41,16 @@ export default function TopPerformers({
             ariaLabel={`Show stats for ${firstName(pid)}`}
             chevronColor={isTeam1 ? "text-accent/60" : "text-free/60"}
             className="border-b border-line last:border-b-0"
-            header={renderRow(pid, stat, isTeam1, mvp?.pid === pid, firstName)}
+            header={renderRow(pid, stat, isTeam1, mvp?.pid === pid, firstName, maxPts)}
           >
             <PerformerDetail
               pid={pid}
-              isTeam1={isTeam1}
               pointLog={pointLog}
+              byType={stat.playerByType[pid] || {}}
+              errors={stat.playerErrors[pid] || 0}
             />
           </ExpandableStatCard>
         ))}
-        {stat.unattributed > 0 && renderUnattributedRow(stat.unattributed)}
       </>
     );
   };
@@ -64,115 +60,124 @@ export default function TopPerformers({
       <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.topPerformers}>
         Top performers
       </SectionLabelWithHelp>
-
-      <div className="flex items-center gap-2.5 pb-1.5 mb-0.5">
-        <div className="w-7 flex-shrink-0" />
-        <div className="w-[64px] flex-shrink-0" />
-        <div className="flex items-center gap-[6px] flex-1 flex-wrap">
-          {["PTS","ACE","SPK","BLK","TIP","ERR"].map(h => (
-            <span key={h} className={`text-[8px] font-bold uppercase tracking-wide w-[26px] text-center ${h === "ERR" ? "text-error/60" : "text-dim/60"}`}>{h}</span>
-          ))}
-        </div>
-      </div>
-
       {renderTeamSection(t1Ids, s1, true)}
       {renderTeamSection(t2Ids, s2, false)}
     </AppCard>
   );
 }
 
-function renderRow(pid, stat, isTeam1, isMVP, firstName) {
-  const pts  = stat.playerPts[pid] || 0;
-  const bt   = stat.playerByType[pid] || {};
-  const err  = stat.playerErrors[pid] || 0;
-  const initials = firstName(pid).slice(0, 2).toUpperCase();
+// ── Row ────────────────────────────────────────────────────────────────────
+
+function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
+  const pts = stat.playerPts[pid] || 0;
+  const bt  = stat.playerByType[pid] || {};
+  const err = stat.playerErrors[pid] || 0;
+
+  const barPct    = maxPts > 0 ? Math.round((pts / maxPts) * 100) : 0;
+  const initials  = firstName(pid).slice(0, 2).toUpperCase();
   const avatarBg  = isTeam1 ? "bg-accent/20 text-accent" : "bg-free/20 text-free";
+  const ringCls   = isTeam1 ? "ring-accent/30" : "ring-free/30";
   const teamColor = isTeam1 ? "text-accent" : "text-free";
+  const barFill   = isTeam1 ? "bg-accent/50" : "bg-free/50";
+
+  const secondary = STAT_TYPES
+    .map(s => ({ ...s, value: bt[s.key] || 0 }))
+    .filter(s => s.value > 0);
 
   return (
     <div className="flex items-center gap-2.5 py-2.5">
-      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${avatarBg}`}>
+      {/* Avatar */}
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ring-1 ${ringCls} ${avatarBg}`}>
         {initials}
       </div>
-      <div className="flex items-center gap-1 min-w-0 w-[64px] flex-shrink-0">
-        <span className="text-[12px] font-semibold text-text truncate">{firstName(pid)}</span>
-        {isMVP && <Flame size={12} className={teamColor} />}
+
+      {/* Name + bar + secondary stats */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-[12px] font-semibold text-text truncate">{firstName(pid)}</span>
+          {isMVP && <Flame size={11} className={teamColor} />}
+        </div>
+        <div className="h-[3px] bg-alt rounded-full mb-1.5 overflow-hidden">
+          <div className={`h-full rounded-full ${barFill}`} style={{ width: `${barPct}%` }} />
+        </div>
+        {secondary.length > 0 && (
+          <div className="flex items-center gap-2">
+            {secondary.map(s => (
+              <span key={s.key} className={`flex items-center gap-0.5 ${s.textCls}`}>
+                <s.Icon size={9} />
+                <span className="text-[10px] font-semibold">{s.value}</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="flex items-center gap-[6px] flex-1 min-w-0 flex-wrap">
-        <StatChip value={pts} bold color="text-text" />
-        <StatChip value={bt.ace   || 0} />
-        <StatChip value={bt.spike || 0} />
-        <StatChip value={bt.block || 0} />
-        <StatChip value={bt.tip   || 0} />
-        <StatChip value={err} color={err > 0 ? "text-error" : "text-dim"} />
+
+      {/* PTS — dominant */}
+      <div className="flex-shrink-0 text-right min-w-[30px]">
+        <div className={`font-display text-[22px] leading-none ${teamColor}`}>{pts}</div>
+        <div className="text-[8px] text-dim uppercase tracking-wide">pts</div>
       </div>
+
+      {/* ERR — only when non-zero */}
+      {err > 0 && (
+        <div className="flex-shrink-0 text-right min-w-[24px]">
+          <div className="font-display text-[18px] leading-none text-error">{err}</div>
+          <div className="text-[8px] text-dim uppercase tracking-wide">err</div>
+        </div>
+      )}
     </div>
   );
 }
 
-function renderUnattributedRow(count) {
-  return (
-    <div className="flex items-center gap-2.5 py-2 border-b border-line last:border-b-0 opacity-50">
-      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold bg-line text-dim">—</div>
-      <div className="w-[64px] flex-shrink-0 text-[11px] text-dim italic">Rival errors</div>
-      <div className="flex items-center gap-[6px] flex-1 min-w-0">
-        <span className="text-[12px] font-bold text-dim w-[26px] text-center">{count}</span>
-        {["ace","spk","blk","tip","err"].map(k => (
-          <span key={k} className="text-[11px] text-dim/40 w-[26px] text-center">—</span>
-        ))}
-      </div>
-    </div>
-  );
-}
+// ── Expanded detail ────────────────────────────────────────────────────────
 
-function StatChip({ value, bold, color = "text-dim" }) {
-  return (
-    <div className="flex flex-col items-center w-[26px]">
-      <span className={`text-[11px] ${bold ? "font-bold text-text" : `font-semibold ${color}`}`}>{value}</span>
-    </div>
-  );
-}
-
-// ── Detail panel ───────────────────────────────────────────────────────────
-
-function PerformerDetail({ pid, isTeam1, pointLog }) {
-  const clutch = calcClutchPoints(pid, pointLog);
-  const peak = calcPeakWindow(pid, pointLog, 5);
-  const accent = isTeam1 ? "text-accent" : "text-free";
-
+function PerformerDetail({ pid, pointLog, byType, errors }) {
   const playerErrorLog = pointLog.filter(e => e.errorPlayerId === pid);
-  const totalErrors = playerErrorLog.length;
   const byErrorType = {};
   playerErrorLog.forEach(e => {
     const sub = normalizeErrorType(e.errorType);
     byErrorType[sub] = (byErrorType[sub] || 0) + 1;
   });
 
-  return (
-    <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2">
-      <div className="grid grid-cols-2 gap-2 mb-2.5">
-        <DetailStat
-          icon={<Target size={11} />}
-          label="Clutch points"
-          value={clutch}
-          hint="margin ≤ 2"
-          accent={accent}
-        />
-        <DetailStat
-          icon={<TrendingUp size={11} />}
-          label="Peak window"
-          value={peak.count > 0 ? peak.count : "—"}
-          hint={peak.count > 0 ? `pts ${peak.start}–${peak.end}` : "no streak"}
-          accent={accent}
-        />
-      </div>
+  const contribBars = [
+    ...STAT_TYPES.map(s => ({ ...s, value: byType[s.key] || 0 })),
+    { label: "ERR", Icon: X, textCls: "text-error", bgCls: "bg-error/80", value: errors },
+  ].filter(d => d.value > 0);
 
-      {totalErrors > 0 && (
+  const maxContrib = Math.max(...contribBars.map(d => d.value), 1);
+  const hasTypedErrors = ERROR_SUBTYPES.some(s => s.id !== "untyped" && byErrorType[s.id]);
+
+  return (
+    <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2 space-y-2.5">
+
+      {/* Contribution bars */}
+      {contribBars.length > 0 && (
+        <div>
+          <div className="text-[8px] font-bold text-dim uppercase tracking-wide mb-2">Contribution</div>
+          <div className="space-y-1.5">
+            {contribBars.map(b => (
+              <div key={b.label} className="flex items-center gap-2">
+                <b.Icon size={9} className={`flex-shrink-0 ${b.textCls}`} />
+                <span className={`text-[8px] font-bold uppercase tracking-wide w-6 flex-shrink-0 ${b.textCls}`}>{b.label}</span>
+                <div className="flex-1 h-[5px] bg-alt rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${b.bgCls}`}
+                    style={{ width: `${(b.value / maxContrib) * 100}%` }}
+                  />
+                </div>
+                <span className={`text-[11px] font-bold w-4 text-right flex-shrink-0 ${b.textCls}`}>{b.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Error breakdown — only when typed errors exist */}
+      {errors > 0 && hasTypedErrors && (
         <div className="bg-alt rounded-[8px] px-2.5 py-2">
           <div className="flex items-center gap-1 mb-1.5">
             <X size={10} className="text-error flex-shrink-0" />
-            <span className="text-[8px] font-bold text-dim uppercase tracking-wide flex-1">Errors</span>
-            <span className="text-[10px] font-bold text-error">{totalErrors}</span>
+            <span className="text-[8px] font-bold text-dim uppercase tracking-wide flex-1">Error breakdown</span>
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {ERROR_SUBTYPES
@@ -199,15 +204,3 @@ function PerformerDetail({ pid, isTeam1, pointLog }) {
   );
 }
 
-function DetailStat({ icon, label, value, hint, accent }) {
-  return (
-    <div className="bg-alt rounded-[8px] px-2 py-1.5">
-      <div className="flex items-center gap-1 text-dim mb-0.5">
-        <span className="text-dim">{icon}</span>
-        <span className="text-[8px] font-bold uppercase tracking-wide truncate">{label}</span>
-      </div>
-      <div className={`font-display text-[20px] leading-none ${accent}`}>{value}</div>
-      {hint && <div className="text-[9px] text-dim mt-0.5">{hint}</div>}
-    </div>
-  );
-}

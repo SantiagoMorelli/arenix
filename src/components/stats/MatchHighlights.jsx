@@ -5,7 +5,7 @@ import {
 import { AppCard } from "../ui-new";
 import { formatDuration } from "../../lib/utils";
 import {
-  calcLeadMoments, calcLeadChangeList, calcMvpMoments, calcRunnerUp,
+  calcLeadMoments, calcLeadChangeList, calcMvpMoments,
 } from "../../lib/matchStats";
 import { POINT_TYPE_BY_ID } from "./pointTypes";
 import { SectionLabelWithHelp } from "./StatInfo";
@@ -106,13 +106,7 @@ export default function MatchHighlights({
                 net={mvp.net}
                 isTeam1={mvpIsTeam1}
                 pointLog={pointLog}
-                teamPlayerStats={teamPlayerStats}
-                allPlayerIds={allPlayerIds}
-                t1Ids={t1Ids}
                 firstName={firstName}
-                tName={tName}
-                team1Id={team1Id}
-                team2Id={team2Id}
                 fmt={fmt}
                 selectedPointId={selectedPointId}
                 onPointSelect={onPointSelect}
@@ -170,58 +164,15 @@ function Tile({ selected, onClick, disabled, icon, primary, primaryClass, second
 // scoring/error moments they had during the match.
 
 function MvpDetail({
-  pid, net, isTeam1, pointLog, teamPlayerStats, allPlayerIds, t1Ids,
-  firstName, tName, team1Id, team2Id, fmt,
+  pid, net, isTeam1, pointLog,
+  firstName, fmt,
   selectedPointId, onPointSelect,
 }) {
   const moments = calcMvpMoments(pid, pointLog);
-  const runnerUp = calcRunnerUp(allPlayerIds, teamPlayerStats[1], teamPlayerStats[2], t1Ids, pid);
   const accent = isTeam1 ? "text-accent" : "text-free";
-  const teamName = tName(isTeam1 ? team1Id : team2Id);
-
-  const advantage = runnerUp ? net - runnerUp.net : null;
-  const runnerIsTeam1 = runnerUp ? t1Ids.includes(runnerUp.pid) : false;
-  const runnerAccent = runnerIsTeam1 ? "text-accent" : "text-free";
 
   return (
     <div className="space-y-2.5">
-      {/* Why MVP — vs runner-up comparison */}
-      {runnerUp && (
-        <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5">
-          <div className="text-[8px] font-bold text-dim uppercase tracking-wide mb-1.5">
-            Why MVP
-          </div>
-          <div className="flex items-stretch gap-2">
-            <div className="flex-1 text-center">
-              <div className={`font-display text-[24px] leading-none ${accent}`}>
-                {net > 0 ? "+" : ""}{net}
-              </div>
-              <div className={`text-[11px] font-bold ${accent} truncate mt-0.5`}>{firstName(pid)}</div>
-              <div className="text-[8px] text-dim uppercase mt-0.5 truncate">{teamName}</div>
-            </div>
-            <div className="flex flex-col items-center justify-center text-dim">
-              <ArrowRight size={14} />
-              {advantage != null && (
-                <div className="text-[9px] font-bold text-text mt-0.5">
-                  {advantage >= 0 ? "+" : ""}{advantage}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 text-center opacity-80">
-              <div className="font-display text-[24px] leading-none text-text">
-                {runnerUp.net > 0 ? "+" : ""}{runnerUp.net}
-              </div>
-              <div className={`text-[11px] font-bold ${runnerAccent} truncate mt-0.5`}>{firstName(runnerUp.pid)}</div>
-              <div className="text-[8px] text-dim uppercase mt-0.5">Runner-up</div>
-            </div>
-          </div>
-          {advantage != null && advantage > 0 && (
-            <div className="mt-1.5 text-center text-[10px] text-dim italic">
-              Beat runner-up by <span className={`${accent} font-bold not-italic`}>+{advantage}</span> net pts
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Key moments — list of scored/errored points (tappable → highlight in flow) */}
       {moments.length > 0 && (
@@ -263,7 +214,7 @@ function MvpDetail({
         </div>
       )}
 
-      {moments.length === 0 && !runnerUp && (
+      {moments.length === 0 && (
         <div className="text-[11px] text-dim italic text-center py-2">No moments to show.</div>
       )}
     </div>

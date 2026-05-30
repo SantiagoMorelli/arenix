@@ -404,29 +404,30 @@ export default function LiveMatch() {
     try {
       await supabaseSaveMatchResult(matchId, finalScore1, finalScore2, winnerTeamId, mergedLog, sets)
 
-      // Bracket advancement + tournament-finished notification are fire-and-forget:
-      // the match result is already committed to Supabase above, so we navigate
-      // away immediately without waiting for these background operations.
       if (tournament?.knockout) {
-        advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
-          .then(() => {
-            const isFinal = tournament.knockout.rounds.some(
-              r => r.id === 'final' && r.matches.some(m => m.id === matchId)
-            )
-            if (isFinal) {
-              const match = tournament.knockout.rounds.find(r => r.id === 'final').matches.find(m => m.id === matchId)
-              const runnerUpId = match.team1 === winnerTeamId ? match.team2 : match.team1
-              return completeTournament(tid, winnerTeamId, runnerUpId)
-                .then(() => createNotificationsForLeagueMembers(
-                  id,
-                  'tournament_finished',
-                  '🏆 Tournament finished!',
-                  `${tournament.name} has ended`,
-                  { leagueId: id, tournamentId: tid },
-                ))
-            }
-          })
-          .catch(err => console.error('Background bracket/tournament update failed:', err))
+        const isFinal = tournament.knockout.rounds.some(
+          r => r.id === 'final' && r.matches.some(m => m.id === matchId)
+        )
+
+        if (isFinal) {
+          // Bracket advancement and tournament completion must be awaited for the
+          // final so the status is committed before we navigate back to the podium.
+          await advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
+          const match = tournament.knockout.rounds.find(r => r.id === 'final').matches.find(m => m.id === matchId)
+          const runnerUpId = match.team1 === winnerTeamId ? match.team2 : match.team1
+          await completeTournament(tid, winnerTeamId, runnerUpId)
+          createNotificationsForLeagueMembers(
+            id,
+            'tournament_finished',
+            '🏆 Tournament finished!',
+            `${tournament.name} has ended`,
+            { leagueId: id, tournamentId: tid },
+          ).catch(err => console.error('Failed to send tournament-finished notifications:', err))
+        } else {
+          // For non-final matches, bracket advancement is fire-and-forget.
+          advanceKnockoutAfterMatch(matchId, winnerTeamId, tournament.knockout)
+            .catch(err => console.error('Background bracket advancement failed:', err))
+        }
       }
     } catch (err) {
       console.error('Failed to save match result:', err)

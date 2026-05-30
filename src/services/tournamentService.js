@@ -235,6 +235,45 @@ export async function advanceKnockoutAfterMatch(playedMatchId, winnerId, knockou
 }
 
 /**
+ * Queries Supabase for the played final match and calls completeTournament if needed.
+ * Safe to call even when local tournament state is stale or knockout is undefined.
+ * Returns true if the tournament was completed, false if it was already completed or no final found.
+ */
+export async function ensureTournamentCompleted(tournamentId) {
+  const { data: t } = await supabase
+    .from('tournaments')
+    .select('status')
+    .eq('id', tournamentId)
+    .single()
+
+  if (t?.status === 'completed') return false
+
+  const { data: rounds } = await supabase
+    .from('knockout_rounds')
+    .select('id')
+    .eq('tournament_id', tournamentId)
+    .eq('round_key', 'final')
+    .limit(1)
+
+  if (!rounds?.length) return false
+
+  const { data: match } = await supabase
+    .from('matches')
+    .select('team1_id, team2_id, winner_id')
+    .eq('knockout_round_id', rounds[0].id)
+    .eq('played', true)
+    .not('winner_id', 'is', null)
+    .limit(1)
+    .single()
+
+  if (!match) return false
+
+  const runnerUpId = match.team1_id === match.winner_id ? match.team2_id : match.team1_id
+  await completeTournament(tournamentId, match.winner_id, runnerUpId)
+  return true
+}
+
+/**
  * Marks a tournament as completed and sets the winner.
  */
 export async function completeTournament(tournamentId, winnerTeamId, runnerUpTeamId) {

@@ -2,8 +2,14 @@ import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import StatusBadge from './StatusBadge'
 
-function TournamentMenu({ tournament, onDelete, deleting, onCloseTournament, isEloProcessed, closingTournament }) {
+function TournamentMenu({ tournament, onDelete, deleting, onCloseTournament, isEloProcessed, isCompleted, closingTournament }) {
   const [open, setOpen] = useState(false)
+  const fullyDone = isEloProcessed && isCompleted
+  const needsRecovery = isEloProcessed && !isCompleted
+  const closeLabel = closingTournament ? 'Closing…'
+    : fullyDone ? 'Elo Processed'
+    : needsRecovery ? 'Complete tournament'
+    : 'Close tournament'
   return (
     <div className="relative flex-shrink-0">
       <button
@@ -18,12 +24,12 @@ function TournamentMenu({ tournament, onDelete, deleting, onCloseTournament, isE
           <div className="absolute right-0 top-10 z-50 bg-surface border border-line rounded-xl shadow-lg overflow-hidden min-w-[180px]">
             <button
               onClick={() => { setOpen(false); onCloseTournament() }}
-              disabled={isEloProcessed || closingTournament}
+              disabled={fullyDone || closingTournament}
               className={`w-full px-4 py-3 text-left text-[13px] font-semibold hover:bg-alt cursor-pointer border-0 bg-transparent flex items-center gap-2 ${
-                isEloProcessed ? 'text-dim opacity-50 cursor-not-allowed' : 'text-accent'
+                fullyDone ? 'text-dim opacity-50 cursor-not-allowed' : 'text-accent'
               }`}
             >
-              🔒 {closingTournament ? 'Closing…' : (isEloProcessed ? 'Elo Processed' : 'Close tournament')}
+              🔒 {closeLabel}
             </button>
             
             {isEloProcessed && tournament?.elo_log && (
@@ -81,6 +87,7 @@ export default function TournamentHeader({ tournament, league, onBack, isAdmin, 
           deleting={deleting} 
           onCloseTournament={onCloseTournament}
           isEloProcessed={tournament.elo_processed}
+          isCompleted={tournament.status === 'completed'}
           closingTournament={closingTournament}
         />
       )}

@@ -9,6 +9,7 @@ import {
   updateTournamentPhase,
   advanceKnockoutAfterMatch,
   completeTournament,
+  ensureTournamentCompleted,
   renameTeam,
   fetchMatchScorer,
   claimMatchScorer,
@@ -283,15 +284,10 @@ export default function TournamentDetail() {
         setConfirmModal(m => ({ ...m, open: false }))
         try {
           setClosingTournament(true)
-          if (tournament.status !== 'completed' && tournament.knockout) {
-            const finalRound = tournament.knockout.rounds.find(r => r.id === 'final')
-            const finalMatch = finalRound?.matches?.[0]
-            if (finalMatch?.played && finalMatch.winner) {
-              const runnerUpId = finalMatch.team1 === finalMatch.winner ? finalMatch.team2 : finalMatch.team1
-              await completeTournament(tournament.id, finalMatch.winner, runnerUpId)
-            }
+          await ensureTournamentCompleted(tournament.id)
+          if (!tournament.elo_processed) {
+            await processTournamentElo(tournament.id)
           }
-          await processTournamentElo(tournament.id)
           await refetch()
         } catch (err) {
           showError(err.message)

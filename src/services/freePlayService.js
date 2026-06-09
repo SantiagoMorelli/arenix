@@ -113,6 +113,20 @@ export async function createFreePlay(name, leagueId = null) {
   return data
 }
 
+// Account links for free-play players that came from a league roster.
+// Lets the stats screen recognize the logged-in viewer ("How you played").
+// Errors are swallowed: guests and RLS-blocked reads just yield no links.
+async function fetchLinkedUserIds(playerRows) {
+  const leaguePlayerIds = [...new Set((playerRows || []).map(p => p.league_player_id).filter(Boolean))]
+  if (leaguePlayerIds.length === 0) return {}
+  const { data, error } = await supabase
+    .from('players')
+    .select('id, user_id')
+    .in('id', leaguePlayerIds)
+  if (error || !data) return {}
+  return Object.fromEntries(data.map(r => [r.id, r.user_id]))
+}
+
 export async function getFreePlay(id) {
   const [fpRes, playersRes, teamsRes, gamesRes] = await Promise.all([
     supabase.from('free_plays').select('*').eq('id', id).single(),
@@ -122,6 +136,8 @@ export async function getFreePlay(id) {
   ])
 
   if (fpRes.error) throw fpRes.error
+
+  const userIdByLeaguePlayer = await fetchLinkedUserIds(playersRes.data)
 
   return {
     ...fpRes.data,
@@ -134,6 +150,7 @@ export async function getFreePlay(id) {
       id:               p.id,
       name:             p.name,
       leaguePlayerId:   p.league_player_id,
+      userId:           userIdByLeaguePlayer[p.league_player_id] ?? null,
       isGuest:          p.is_guest,
       createdAt:        p.created_at,
     })),
@@ -182,12 +199,15 @@ export async function getFreePlayByInviteCode(code) {
     supabase.from('free_play_games').select('*').eq('free_play_id', fp.id).order('created_at', { ascending: true }),
   ])
 
+  const userIdByLeaguePlayer = await fetchLinkedUserIds(playersRes.data)
+
   return {
     ...fp,
     players: (playersRes.data || []).map(p => ({
       id:             p.id,
       name:           p.name,
       leaguePlayerId: p.league_player_id,
+      userId:         userIdByLeaguePlayer[p.league_player_id] ?? null,
       isGuest:        p.is_guest,
       createdAt:      p.created_at,
     })),

@@ -21,6 +21,17 @@ const Item = ({ title, children }) => (
 );
 
 export const EXPLANATIONS = {
+  matchStory: (
+    <>
+      A plain-English summary of the match, generated automatically from the
+      point-by-point log. It picks the few things that mattered most — how
+      close the game was, big runs, who carried the scoring, and what to
+      improve next time — so you don't need to read the numbers below to
+      understand how you played. If you played in this match, the wording
+      is addressed to you and a "How you played" card shows your own numbers.
+    </>
+  ),
+
   matchFlow: (
     <>
       The row of tiny colored dots is the <span className="font-bold text-text not-italic">Score Momentum Strip</span>.

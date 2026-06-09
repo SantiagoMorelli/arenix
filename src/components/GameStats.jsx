@@ -7,8 +7,11 @@ import { AppCard, AppButton, PillTabs } from "./ui-new";
 import {
   calcLeadStats, calcDynamics, calcMVP,
 } from "../lib/matchStats";
+import { buildMatchStory } from "../lib/matchInsights";
+import { useAuth } from "../contexts/AuthContext";
 import { POINT_TYPES, ERROR_SUBTYPES, ERROR_SUBTYPE_BY_ID, normalizeErrorType } from "./stats/pointTypes";
 import MatchFlow from "./stats/MatchFlow";
+import MatchStory from "./stats/MatchStory";
 import MatchHighlights from "./stats/MatchHighlights";
 import TopPerformers from "./stats/TopPerformers";
 import ServeBreakdown from "./stats/ServeBreakdown";
@@ -111,6 +114,20 @@ const GameStats = ({
   const mvp = scoringLevel >= 2 ? calcMVP(allIds, s1, s2, t1Ids) : null;
   const leadStats = calcLeadStats(pointLog);
   const dynStats  = calcDynamics(pointLog);
+
+  const { session } = useAuth();
+  const authUserId = session?.user?.id ?? null;
+  const viewerPlayerId = authUserId
+    ? (players.find(p => p.userId === authUserId && allIds.includes(p.id))?.id ?? null)
+    : null;
+  const story = buildMatchStory({
+    pointLog, sets,
+    winnerTeam: derivedWinnerTeam,
+    s1, s2, t1Ids, t2Ids,
+    team1Name: tName(team1Id),
+    team2Name: tName(team2Id),
+    firstName, viewerPlayerId,
+  });
 
   const renderStatBar = (pt, v1, v2) => {
     const total = (v1 || 0) + (v2 || 0) || 1;
@@ -267,6 +284,8 @@ const GameStats = ({
               helpMode={helpMode}
             />
           </div>
+
+          {story && <MatchStory story={story} helpMode={helpMode} />}
 
           <MatchHighlights
             pointLog={pointLog}

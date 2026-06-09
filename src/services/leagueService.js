@@ -166,16 +166,18 @@ export async function createLeague({ name, location = '', visibility = 'public',
 
   if (error) throw error
 
-  // Add creator as admin with full permissions
+  // Role + permissions are assigned by the on_league_created DB trigger (primary).
+  // The upserts below are a client-side safety net for environments where the
+  // trigger hasn't been deployed yet — ON CONFLICT DO NOTHING makes them idempotent.
   await Promise.all([
-    supabase.from('league_member_roles').insert({
-      league_id: league.id,
-      user_id:   user.id,
-      role:      'admin',
-    }),
-    supabase.from('league_member_permissions').insert(
+    supabase.from('league_member_roles').upsert(
+      { league_id: league.id, user_id: user.id, role: 'admin' },
+      { onConflict: 'league_id,user_id,role' }
+    ),
+    supabase.from('league_member_permissions').upsert(
       ['manage_league', 'create_tournament', 'invite_players', 'score_match', 'edit_profile']
-        .map(permission => ({ league_id: league.id, user_id: user.id, permission }))
+        .map(permission => ({ league_id: league.id, user_id: user.id, permission })),
+      { onConflict: 'league_id,user_id,permission' }
     ),
   ])
 

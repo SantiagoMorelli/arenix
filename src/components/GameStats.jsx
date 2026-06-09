@@ -191,52 +191,68 @@ const GameStats = ({
       {tab === "overview" && (
         <>
           {/* Winner banner */}
-          <div className={`${winnerGradient} ${winnerBorder} border rounded-[14px] px-4 py-4 mb-3 text-center`}>
-            <div className="flex justify-center mb-1.5">
-              <Trophy size={32} className={winnerColor} />
+          <div className={`${winnerGradient} ${winnerBorder} border rounded-[14px] px-4 py-4 mb-3`}>
+            {/* Trophy */}
+            <div className="flex justify-center mb-3">
+              <Trophy size={28} className={winnerColor} />
             </div>
-            <div className={`text-[10px] font-bold uppercase tracking-[0.5px] mb-1 ${winnerColor}`}>
-              Winner
-            </div>
-            <div className={`font-display text-[30px] leading-none mb-1 ${winnerColor}`}>
-              {tName(winnerIsTeam1 ? team1Id : team2Id)}
-            </div>
-            <div className="text-[12px] text-dim mb-3">
-              {teamPlayerIds(winnerIsTeam1 ? team1Id : team2Id)
-                .map(pid => firstName(pid))
-                .join(" · ")}
-            </div>
-            {sets.length === 1 ? (
-              <div className="flex gap-3 items-center justify-center mb-1">
-                <span className={`font-display leading-none ${winnerIsTeam1 ? "text-[44px] text-accent" : "text-[36px] text-accent/70"}`}>{sets[0].s1}</span>
-                <span className="text-[18px] text-dim">–</span>
-                <span className={`font-display leading-none ${!winnerIsTeam1 ? "text-[44px] text-free" : "text-[36px] text-free/70"}`}>{sets[0].s2}</span>
+
+            {/* Two-column score */}
+            <div className="flex items-center gap-0.5">
+              {/* Team 1 */}
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-1 min-h-[18px]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-accent">
+                    {tName(team1Id)}
+                  </span>
+                  {winnerIsTeam1 && (
+                    <span className="text-[9px] font-bold bg-accent text-bg px-1.5 py-0.5 rounded-[4px] leading-none">WIN</span>
+                  )}
+                </div>
+                <div className={`font-display text-[48px] leading-none ${winnerIsTeam1 ? "text-accent" : "text-accent/50"}`}>
+                  {sets.length === 1 ? sets[0].s1 : t1Sets}
+                </div>
+                <div className="text-[10px] text-dim mt-1.5">
+                  {teamPlayerIds(team1Id).map(pid => firstName(pid)).join(" · ")}
+                </div>
               </div>
-            ) : (
-              <>
-                <div className="flex justify-center gap-4 mb-3">
-                  <div className="text-center">
-                    <div className="text-[11px] text-dim mb-1">Sets</div>
-                    <div className="flex gap-1.5 items-center">
-                      <span className={`font-display text-[28px] leading-none ${winnerIsTeam1 ? "text-accent" : "text-accent/60"}`}>{t1Sets}</span>
-                      <span className="text-[12px] text-dim">-</span>
-                      <span className={`font-display text-[28px] leading-none ${!winnerIsTeam1 ? "text-free" : "text-free/60"}`}>{t2Sets}</span>
+
+              {/* Divider */}
+              <div className="text-[20px] text-dim/40 flex-shrink-0 pb-6">—</div>
+
+              {/* Team 2 */}
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-1 min-h-[18px]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-free">
+                    {tName(team2Id)}
+                  </span>
+                  {!winnerIsTeam1 && (
+                    <span className="text-[9px] font-bold bg-free text-bg px-1.5 py-0.5 rounded-[4px] leading-none">WIN</span>
+                  )}
+                </div>
+                <div className={`font-display text-[48px] leading-none ${!winnerIsTeam1 ? "text-free" : "text-free/50"}`}>
+                  {sets.length === 1 ? sets[0].s2 : t2Sets}
+                </div>
+                <div className="text-[10px] text-dim mt-1.5">
+                  {teamPlayerIds(team2Id).map(pid => firstName(pid)).join(" · ")}
+                </div>
+              </div>
+            </div>
+
+            {/* Multi-set breakdown */}
+            {sets.length > 1 && (
+              <div className="flex justify-center gap-1.5 mt-3">
+                {sets.map((s, i) => (
+                  <div key={i} className="bg-bg rounded-[8px] px-2.5 py-[5px] text-center">
+                    <div className="text-[9px] text-dim mb-1">Set {i + 1}</div>
+                    <div className="flex gap-[3px] items-center justify-center">
+                      <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-accent/60"}`}>{s.s1}</span>
+                      <span className="text-[9px] text-dim">-</span>
+                      <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-free/60"}`}>{s.s2}</span>
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-center gap-1.5">
-                  {sets.map((s, i) => (
-                    <div key={i} className="bg-bg rounded-[8px] px-2.5 py-[5px] text-center">
-                      <div className="text-[9px] text-dim mb-1">Set {i + 1}</div>
-                      <div className="flex gap-[3px] items-center justify-center">
-                        <span className={`text-[13px] font-bold ${s.winner === 1 ? "text-accent" : "text-accent/60"}`}>{s.s1}</span>
-                        <span className="text-[9px] text-dim">-</span>
-                        <span className={`text-[13px] font-bold ${s.winner === 2 ? "text-free" : "text-free/60"}`}>{s.s2}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
+                ))}
+              </div>
             )}
 
             <MatchFlow

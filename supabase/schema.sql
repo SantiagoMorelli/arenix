@@ -31,6 +31,31 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Automatically grants the league owner admin role + full permissions
+-- the moment a league row is created, making it impossible to end up
+-- with a league that has no admin regardless of client-side failures.
+CREATE OR REPLACE FUNCTION public.handle_league_created()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.league_member_roles (league_id, user_id, role)
+  VALUES (NEW.id, NEW.owner_id, 'admin')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.league_member_permissions (league_id, user_id, permission)
+  SELECT NEW.id, NEW.owner_id, unnest(ARRAY[
+    'manage_league','create_tournament','invite_players','score_match','edit_profile'
+  ])
+  ON CONFLICT DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_league_created ON public.leagues;
+CREATE TRIGGER on_league_created
+  AFTER INSERT ON public.leagues
+  FOR EACH ROW EXECUTE FUNCTION public.handle_league_created();
+
 -- ──────────────────────────────────────────────────────────────
 -- leagues
 -- ──────────────────────────────────────────────────────────────

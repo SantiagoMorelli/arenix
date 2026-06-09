@@ -3,12 +3,12 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { Volleyball, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { POINT_TYPE_BY_ID } from "./pointTypes";
+import { Volleyball } from "lucide-react";
+import { POINT_TYPE_BY_ID, ERROR_SUBTYPE_BY_ID, normalizeErrorType } from "./pointTypes";
 import { HelpInlineButton, InfoPanel } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
 
-const PANEL_W  = 172;
+const PANEL_W  = 148;
 const PANEL_H  = 120;
 const GAP      = 10;
 
@@ -202,10 +202,12 @@ function PointDetailPanel({ point, getTeam, firstName, team1Id, team2Id, setsCou
   const bgCls     = isTeam1 ? "bg-accent/10" : "bg-free/10";
   const borderCls = isTeam1 ? "border-accent/25" : "border-free/25";
 
-  const ptType   = POINT_TYPE_BY_ID[point.pointType];
-  const PtIcon   = ptType?.icon || Volleyball;
-  const isError  = point.pointType === "error";
-  const player   = isError ? point.errorPlayerId : point.scoringPlayerId;
+  const ptType    = POINT_TYPE_BY_ID[point.pointType];
+  const PtIcon    = ptType?.icon || Volleyball;
+  const isError   = point.pointType === "error";
+  const player    = isError ? point.errorPlayerId : point.scoringPlayerId;
+  const errSubtype = isError ? ERROR_SUBTYPE_BY_ID[normalizeErrorType(point.errorType)] : null;
+  const ErrIcon    = errSubtype?.id !== "untyped" ? errSubtype?.icon : null;
   const srvTeam1 = point.serverTeam === 1;
 
   return (
@@ -230,15 +232,16 @@ function PointDetailPanel({ point, getTeam, firstName, team1Id, team2Id, setsCou
         {/* Row 2: type pill + player */}
         <div className="flex items-center gap-1.5 mb-1.5">
           <div className={`inline-flex items-center gap-0.5 ${bgCls} rounded-[5px] px-1.5 py-0.5 flex-shrink-0`}>
-            <PtIcon size={9} className={textCls} />
-            <span className={`text-[9px] font-bold ${textCls}`}>{ptType?.label || "Point"}</span>
+            <PtIcon size={9} className={isError ? "text-error" : textCls} />
+            {ErrIcon && <ErrIcon size={9} className="text-error" />}
+            <span className={`text-[9px] font-bold ${isError ? "text-error" : textCls}`}>
+              {isError ? (ErrIcon ? errSubtype.label : "Error") : (ptType?.label || "Point")}
+            </span>
           </div>
           {player && (
-            <span className="flex items-center gap-1 text-[10px] text-text min-w-0">
-              {isError
-                ? <AlertTriangle size={9} className="text-error flex-shrink-0" />
-                : <CheckCircle2 size={9} className={`${textCls} flex-shrink-0`} />}
-              <span className="truncate">{firstName(player)}</span>
+            <span className="flex items-center gap-1 text-[10px] text-text truncate min-w-0">
+              <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 ${isTeam1 ? "bg-accent" : "bg-free"}`} />
+              {firstName(player)}
             </span>
           )}
         </div>

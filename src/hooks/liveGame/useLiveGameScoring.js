@@ -153,6 +153,26 @@ export function useLiveGameScoring({
     });
   };
 
+  // ── lastSlotFor ───────────────────────────────────────────────────────────
+  // Returns the rotation-array index of the last slot a team actually served
+  // from in the current set. Used by the non-first-serve branch so the forward
+  // search starts from where the team left off, not from the global serveIndex
+  // (which can be pointing at the other team's slot after a serve change).
+  const lastSlotFor = (teamNum) => {
+    const currentSetNum = sets.length + 1;
+    for (let j = log.length - 1; j >= 0; j--) {
+      const entry = log[j];
+      if (entry.setNum === currentSetNum && entry.serverTeam === teamNum) {
+        const idx = serveRotation.findIndex(
+          r => r.team === teamNum && r.playerId === entry.serverPlayerId
+        );
+        if (idx >= 0) return idx;
+        break;
+      }
+    }
+    return serveIndex; // fallback (isFirstServe=false guarantees a log entry exists)
+  };
+
   // ── getNextServer (prediction for UI) ──────────────────────────────────────
   const getNextServer = (teamNum) => {
     if (currentServer.team === teamNum) {
@@ -178,8 +198,9 @@ export function useLiveGameScoring({
         }
       }
     } else {
+      const searchFrom = lastSlotFor(teamNum);
       for (let i = 1; i <= rot.length; i++) {
-        const candidate = (serveIndex + i) % rot.length;
+        const candidate = (searchFrom + i) % rot.length;
         if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
       }
     }
@@ -213,8 +234,9 @@ export function useLiveGameScoring({
           }
         }
       } else {
+        const searchFrom = lastSlotFor(teamNum);
         for (let i = 1; i <= rot.length; i++) {
-          const candidate = (serveIndex + i) % rot.length;
+          const candidate = (searchFrom + i) % rot.length;
           if (rot[candidate].team === teamNum) { newServeIndex = candidate; break; }
         }
       }

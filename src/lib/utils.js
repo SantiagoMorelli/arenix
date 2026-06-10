@@ -11,6 +11,18 @@ export const LEVELS = [
 export const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
 
 /**
+ * Deterministic avatar background colour for a player, derived from a seed
+ * (player id or name). Returns a style object — oklch() values can't be
+ * expressed as static Tailwind utilities.
+ */
+export function playerAvatarStyle(seed) {
+  let h = 0
+  const str = String(seed)
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff
+  return { backgroundColor: `oklch(0.38 0.13 ${h % 360})` }
+}
+
+/**
  * Circle Method for Round-Robin scheduling to maximize rest between matches.
  * Generates matches round by round (e.g. 1v2, 3v4) to naturally interleave games.
  */

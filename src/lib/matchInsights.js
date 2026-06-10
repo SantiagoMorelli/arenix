@@ -56,30 +56,26 @@ function maxDeficit(slice, tn) {
   return { deficit, at };
 }
 
-export function buildMatchStory({
-  pointLog, sets, winnerTeam, s1, s2, t1Ids, t2Ids,
-  team1Name, team2Name, firstName, viewerPlayerId,
+/**
+ * Hero "result framing" line of the Match Story (comeback / nail-biter /
+ * comfortable / solid), viewer-aware. Used standalone by the lightweight
+ * post-match screen; buildMatchStory composes it with the insight list.
+ *
+ * Returns { framing, winner, viewerTeam, viewerWon } or null for empty logs.
+ */
+export function buildResultFraming({
+  pointLog, sets, winnerTeam, t1Ids, t2Ids, team1Name, team2Name, viewerPlayerId,
 }) {
   if (!pointLog || pointLog.length === 0 || !sets || sets.length === 0) return null;
 
-  const hasPointTypes  = pointLog.some(e => e.pointType);
-  const hasAttribution = pointLog.some(e => e.scoringPlayerId);
-  const hasServeInfo   = pointLog.some(e => e.serverPlayerId);
-
   const winner = deriveWinner(sets, winnerTeam);
-  const loser  = winner === 1 ? 2 : 1;
-  const other  = tn => (tn === 1 ? 2 : 1);
 
   const viewerTeam = viewerPlayerId
     ? (t1Ids.includes(viewerPlayerId) ? 1 : t2Ids.includes(viewerPlayerId) ? 2 : null)
     : null;
   const viewerWon = viewerTeam ? viewerTeam === winner : null;
 
-  const names    = { 1: team1Name || "Team 1", 2: team2Name || "Team 2" };
-  const who      = tn => (viewerTeam === tn ? "Your team" : names[tn]);
-  const whoLower = tn => (viewerTeam === tn ? "your team" : names[tn]);
-  const teamTone = tn => (tn === 1 ? "accent" : "free");
-  const stat     = tn => (tn === 1 ? s1 : s2);
+  const names = { 1: team1Name || "Team 1", 2: team2Name || "Team 2" };
 
   const decidingSet   = sets[sets.length - 1];
   const decidingSlice = sliceForSet(pointLog, sets.length, sets.length);
@@ -88,7 +84,6 @@ export function buildMatchStory({
   const lScore = winner === 1 ? decidingSet.s2 : decidingSet.s1;
   const lead   = calcLeadStats(pointLog);
 
-  // ── R1: result framing (hero) ─────────────────────────────────────────────
   const { deficit: winnerDeficit, at: deficitAt } = maxDeficit(decidingSlice, winner);
   const deficitScore = deficitAt
     ? (winner === 1 ? `${deficitAt.t1}–${deficitAt.t2}` : `${deficitAt.t2}–${deficitAt.t1}`)
@@ -178,11 +173,45 @@ export function buildMatchStory({
   const framing = {
     id: framingId,
     icon: viewerTeam && !viewerWon ? "heart" : fc.icon,
-    tone: viewerTeam ? (viewerWon ? "success" : "error") : teamTone(winner),
+    tone: viewerTeam ? (viewerWon ? "success" : "error") : (winner === 1 ? "accent" : "free"),
     headline: fCopy.headline,
     detail: fCopy.detail,
     scoreline,
   };
+
+  return { framing, winner, viewerTeam, viewerWon };
+}
+
+export function buildMatchStory({
+  pointLog, sets, winnerTeam, s1, s2, t1Ids, t2Ids,
+  team1Name, team2Name, firstName, viewerPlayerId,
+}) {
+  const result = buildResultFraming({
+    pointLog, sets, winnerTeam, t1Ids, t2Ids, team1Name, team2Name, viewerPlayerId,
+  });
+  if (!result) return null;
+  const { framing, winner, viewerTeam, viewerWon } = result;
+  const framingId = framing.id;
+
+  const hasPointTypes  = pointLog.some(e => e.pointType);
+  const hasAttribution = pointLog.some(e => e.scoringPlayerId);
+  const hasServeInfo   = pointLog.some(e => e.serverPlayerId);
+
+  const loser = winner === 1 ? 2 : 1;
+  const other = tn => (tn === 1 ? 2 : 1);
+
+  const names    = { 1: team1Name || "Team 1", 2: team2Name || "Team 2" };
+  const who      = tn => (viewerTeam === tn ? "Your team" : names[tn]);
+  const whoLower = tn => (viewerTeam === tn ? "your team" : names[tn]);
+  const teamTone = tn => (tn === 1 ? "accent" : "free");
+  const stat     = tn => (tn === 1 ? s1 : s2);
+
+  const decidingSet   = sets[sets.length - 1];
+  const decidingSlice = sliceForSet(pointLog, sets.length, sets.length);
+  const wScore = winner === 1 ? decidingSet.s1 : decidingSet.s2;
+  const lScore = winner === 1 ? decidingSet.s2 : decidingSet.s1;
+  const finalScore = `${wScore}–${lScore}`;
+  const lead = calcLeadStats(pointLog);
 
   // ── R2–R12: insight rules ─────────────────────────────────────────────────
   const fired = [];

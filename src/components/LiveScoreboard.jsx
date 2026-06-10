@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { Target, Zap, Shield, Hand, X, Volleyball, HelpCircle, User } from 'lucide-react'
-import GameStats from './GameStats'
+import MatchFinishedScreen from './MatchFinishedScreen'
 import { ERROR_SUBTYPES } from '../hooks/liveGame/pointTypes'
 const QRExportModal = lazy(() => import('./QRExportModal'))
 import { useBattery } from '../hooks/useBattery'
@@ -267,7 +267,7 @@ export default function LiveScoreboard({
     )
   }
 
-  // ── Game over — show GameStats ───────────────────────────────────────────
+  // ── Game over — minimal save screen (full stats live on the match card) ──
   const setWins1 = live.sets.filter(s => s.winner === 1).length
   const setWins2 = live.sets.filter(s => s.winner === 2).length
 
@@ -275,7 +275,7 @@ export default function LiveScoreboard({
     return (
       <div className="screen bg-bg text-text">
         <main className="screen__body p-4">
-          <GameStats
+          <MatchFinishedScreen
             winner={live.winner}
             team1Id={live.team1Id}
             team2Id={live.team2Id}
@@ -288,13 +288,11 @@ export default function LiveScoreboard({
             onSaveResult={onSaveResult}
             activeTourMatchId={activeMatchId}
             isSaving={isSaving}
-            t={(k) => k}
             hasHistory={live.history.length > 0}
             onRequestUndo={live.requestUndo}
             pendingUndo={live.pendingUndo}
             onConfirmUndo={live.confirmUndo}
             onCancelUndo={live.cancelUndo}
-            scoringLevel={live.scoringLevel}
           />
         </main>
       </div>
@@ -303,7 +301,6 @@ export default function LiveScoreboard({
 
   // ── In-game scoreboard ───────────────────────────────────────────────────
   const currentSrv = live.currentServer
-  const rot = live.serveRotation
 
   // Team 1 = always orange (accent), Team 2 = always blue (free), regardless of side.
   // The scoring team's color stays lit until the other team scores.

@@ -135,7 +135,7 @@ export default function StandingsTab({
               </div>
               {isAdmin && tbOptions.tieBreakerMode !== 'id' && (
                 <div className="text-[10px] text-dim font-semibold uppercase">
-                  TB: {tbOptions.tieBreakerMode}
+                  Tie-break: by {tbOptions.tieBreakerMode}
                 </div>
               )}
             </div>

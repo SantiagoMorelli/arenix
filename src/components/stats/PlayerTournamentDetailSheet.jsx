@@ -144,6 +144,9 @@ export default function PlayerTournamentDetailSheet({
               <div className="text-[10px] font-bold text-dim uppercase tracking-[0.5px] mt-1">Aces</div>
             </div>
           </div>
+          <div className="text-[10px] text-dim text-center mt-2">
+            Win rate = points your team won on this player's serves
+          </div>
         </>
       )}
     </AppSheet>

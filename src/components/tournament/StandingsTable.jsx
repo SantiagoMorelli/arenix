@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pencil } from 'lucide-react'
+import StandingsLegend from '../stats/StandingsLegend'
 
 export default function StandingsTable({ rows, teams, leaguePlayers, currentUserId, isAdmin, onRenameTeam }) {
   const [editingTeamId, setEditingTeamId] = useState(null)
@@ -119,6 +120,7 @@ export default function StandingsTable({ rows, teams, leaguePlayers, currentUser
           </div>
         )
       })}
+      {rows.length > 0 && <StandingsLegend />}
     </div>
   )
 }

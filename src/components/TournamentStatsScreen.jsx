@@ -8,7 +8,12 @@ import { calcOverallStandings } from '../lib/standings'
 import { getAllMatches } from '../lib/tournament'
 import { resolveScoringLevel } from '../lib/scoring'
 import { computePlayerStats, rankPlayersByStat, TOURNAMENT_RANKING_MIN_LEVELS } from '../lib/tournamentStats'
-import { AppBadge, AppCard, SectionLabel } from './ui-new'
+import { AppBadge, AppCard } from './ui-new'
+import { HelpToggle, SectionLabelWithHelp, HelpDiscoveryHint } from './stats/StatInfo'
+import { EXPLANATIONS } from './stats/explanations'
+import { AWARD_TAGLINES } from './stats/awardCopy'
+import StandingsLegend from './stats/StandingsLegend'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import TieBreakerControls from './standings/TieBreakerControls'
 import AwardRankingSheet from './stats/AwardRankingSheet'
 import MatchBreakdownSheet from './stats/MatchBreakdownSheet'
@@ -22,14 +27,21 @@ import { buildTournamentCoachExport } from '../lib/tournamentStatsExport'
 // players that don't meet the qualifier (e.g. "Most Efficient Server" needs
 // at least 10 serves before its win-rate is meaningful).
 const TOURNAMENT_AWARDS = [
-  { id: 'top-scorer',      title: 'Top Scorer',          Icon: Trophy, statKey: 'points',      valueLabel: 'pts'    },
-  { id: 'ace-king',        title: 'Ace King',            Icon: Target, statKey: 'aces',        valueLabel: 'aces'   },
-  { id: 'spike-machine',   title: 'Spike Machine',       Icon: Zap,    statKey: 'spikes',      valueLabel: 'spikes' },
-  { id: 'block-master',    title: 'Block Master',        Icon: Shield, statKey: 'blocks',      valueLabel: 'blocks' },
-  { id: 'tip-master',      title: 'Tip Master',          Icon: Hand,   statKey: 'tips',        valueLabel: 'tips'   },
+  { id: 'top-scorer',      title: 'Top Scorer',          Icon: Trophy, statKey: 'points',      valueLabel: 'pts',
+    tagline: AWARD_TAGLINES['top-scorer'] },
+  { id: 'ace-king',        title: 'Ace King',            Icon: Target, statKey: 'aces',        valueLabel: 'aces',
+    tagline: AWARD_TAGLINES['ace-king'] },
+  { id: 'spike-machine',   title: 'Spike Machine',       Icon: Zap,    statKey: 'spikes',      valueLabel: 'spikes',
+    tagline: AWARD_TAGLINES['spike-machine'] },
+  { id: 'block-master',    title: 'Block Master',        Icon: Shield, statKey: 'blocks',      valueLabel: 'blocks',
+    tagline: AWARD_TAGLINES['block-master'] },
+  { id: 'tip-master',      title: 'Tip Master',          Icon: Hand,   statKey: 'tips',        valueLabel: 'tips',
+    tagline: AWARD_TAGLINES['tip-master'] },
   { id: 'efficient-server',title: 'Most Efficient Server', Icon: Send, statKey: 'serveWinPct', valueLabel: '%',
+    tagline: AWARD_TAGLINES['efficient-server'],
     minThreshold: 10, gateKey: 'serves', secondaryKey: 'serves', secondaryLabel: 'serves' },
-  { id: 'glass-cannon',    title: 'Glass Cannon',        Icon: Bomb,   statKey: 'errors',      valueLabel: 'errors', funny: true },
+  { id: 'glass-cannon',    title: 'Glass Cannon',        Icon: Bomb,   statKey: 'errors',      valueLabel: 'errors', funny: true,
+    tagline: AWARD_TAGLINES['glass-cannon'] },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -179,7 +191,7 @@ function Podium({ tournament, leaguePlayers }) {
 }
 
 function AwardCard(props) {
-  const { Icon, title, playerName, value, valueLabel, funny = false, onClick } = props
+  const { Icon, title, tagline, playerName, value, valueLabel, funny = false, onClick } = props
   const accentText = funny ? 'text-error' : 'text-accent'
   return (
     <AppCard
@@ -195,6 +207,7 @@ function AwardCard(props) {
       <div className={`text-[10px] font-bold uppercase tracking-[0.5px] ${accentText}`}>
         {title}
       </div>
+      {tagline && <div className="text-[9px] text-dim leading-snug">{tagline}</div>}
       <div className="text-[14px] font-bold text-text leading-tight">{playerName}</div>
       <div className={`text-[12px] font-semibold ${funny ? 'text-error/70' : 'text-dim'}`}>
         {value} {valueLabel}
@@ -234,6 +247,7 @@ function Awards({ playerStats, leaguePlayers, scoringLevel, onSelectAward }) {
             key={award.id}
             Icon={award.Icon}
             title={award.title}
+            tagline={award.tagline}
             playerName={winner.name}
             value={winner.value}
             valueLabel={award.valueLabel}
@@ -263,7 +277,7 @@ function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = fals
           </div>
           <div className="flex items-center">
             {isAdmin && tbOptions?.tieBreakerMode !== 'id' && (
-              <span className="mr-3 text-[10px] font-bold text-dim uppercase">TB: {tbOptions?.tieBreakerMode}</span>
+              <span className="mr-3 text-[10px] font-bold text-dim uppercase">Tie-break: by {tbOptions?.tieBreakerMode}</span>
             )}
             <span className="w-6 text-center text-[10px] font-bold text-dim">W</span>
             <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
@@ -297,6 +311,7 @@ function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = fals
             </button>
           )
         })}
+        {rows.length > 0 && <StandingsLegend />}
       </div>
       <div className="text-[11px] text-dim text-center mt-3">
         Tap a team to see player stats
@@ -415,6 +430,8 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
   }
 
   const [activeSheet, setActiveSheet] = useState(null)
+  const [helpMode, setHelpMode] = useState(false)
+  const [helpHintSeen, setHelpHintSeen] = useLocalStorage('arenix-help-hint-seen', false)
   const closeSheet = () => setActiveSheet(null)
 
   const playerNameOf = (pid) => {
@@ -450,16 +467,21 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
             </button>
           </div>
         </div>
+        <HelpToggle on={helpMode} onChange={(val) => { setHelpMode(val); setHelpHintSeen(true) }} />
         <Trophy size={20} className="text-accent" />
       </div>
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto pb-8">
 
+        <div className="px-4 pt-3 -mb-3">
+          <HelpDiscoveryHint show={!helpHintSeen} onDismiss={() => setHelpHintSeen(true)} />
+        </div>
+
         {/* Podium */}
         <div className="pt-5 pb-4">
           <div className="px-4 mb-4">
-            <SectionLabel>Podium</SectionLabel>
+            <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.podium}>Podium</SectionLabelWithHelp>
           </div>
           <Podium tournament={tournament} leaguePlayers={leaguePlayers} />
         </div>
@@ -471,7 +493,7 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
             {/* Awards */}
             <div className="mb-5">
               <div className="px-4 mb-3">
-                <SectionLabel>Player Awards</SectionLabel>
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.playerAwards}>Player Awards</SectionLabelWithHelp>
               </div>
               <Awards
                 playerStats={playerStats}
@@ -487,8 +509,8 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
 
         {/* Final Standings */}
         <div className="mb-5">
-          <div className="px-4 mb-3 flex items-center justify-between">
-            <SectionLabel>Final Standings</SectionLabel>
+          <div className="px-4 mb-3">
+            <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.finalStandings}>Final Standings</SectionLabelWithHelp>
           </div>
           <div className="px-4 mb-3">
             {isAdmin && <TieBreakerControls teams={tournament.teams} value={effectiveTbOptions} onChange={effectiveOnTbOptionsChange} accent="accent" />}
@@ -507,7 +529,7 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
         {/* Match Records */}
         <div className="mb-2">
           <div className="px-4 mb-3">
-            <SectionLabel>Match Records</SectionLabel>
+            <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.matchRecords}>Match Records</SectionLabelWithHelp>
           </div>
           <MatchRecords
             records={records}
@@ -523,6 +545,7 @@ export default function TournamentStatsScreen({ tournament, league, leaguePlayer
         open={activeSheet?.kind === 'award'}
         onClose={closeSheet}
         title={activeSheet?.payload?.award?.title}
+        tagline={activeSheet?.payload?.award?.tagline}
         Icon={activeSheet?.payload?.award?.Icon}
         funny={activeSheet?.payload?.award?.funny}
         valueLabel={activeSheet?.payload?.award?.valueLabel}

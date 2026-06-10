@@ -12,10 +12,10 @@ import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
  */
 
 const STAT_TYPES = [
-  { key: "ace",   label: "ACE", Icon: Target, textCls: "text-success",  bgCls: "bg-success/80"  },
-  { key: "spike", label: "SPK", Icon: Zap,    textCls: "text-accent",   bgCls: "bg-accent/80"   },
-  { key: "block", label: "BLK", Icon: Shield, textCls: "text-free",     bgCls: "bg-free/80"     },
-  { key: "tip",   label: "TIP", Icon: Hand,   textCls: "text-dim",      bgCls: "bg-dim/60"      },
+  { key: "ace",   label: "Ace",   Icon: Target, textCls: "text-success",  bgCls: "bg-success/80"  },
+  { key: "spike", label: "Spike", Icon: Zap,    textCls: "text-accent",   bgCls: "bg-accent/80"   },
+  { key: "block", label: "Block", Icon: Shield, textCls: "text-free",     bgCls: "bg-free/80"     },
+  { key: "tip",   label: "Tip",   Icon: Hand,   textCls: "text-dim",      bgCls: "bg-dim/60"      },
 ];
 
 export default function TopPerformers({
@@ -141,7 +141,7 @@ function PerformerDetail({ pid, pointLog, byType, errors }) {
 
   const contribBars = [
     ...STAT_TYPES.map(s => ({ ...s, value: byType[s.key] || 0 })),
-    { label: "ERR", Icon: X, textCls: "text-error", bgCls: "bg-error/80", value: errors },
+    { label: "Error", Icon: X, textCls: "text-error", bgCls: "bg-error/80", value: errors },
   ].filter(d => d.value > 0);
 
   const maxContrib = Math.max(...contribBars.map(d => d.value), 1);
@@ -158,7 +158,7 @@ function PerformerDetail({ pid, pointLog, byType, errors }) {
             {contribBars.map(b => (
               <div key={b.label} className="flex items-center gap-2">
                 <b.Icon size={9} className={`flex-shrink-0 ${b.textCls}`} />
-                <span className={`text-[8px] font-bold uppercase tracking-wide w-6 flex-shrink-0 ${b.textCls}`}>{b.label}</span>
+                <span className={`text-[8px] font-bold uppercase tracking-wide w-9 flex-shrink-0 ${b.textCls}`}>{b.label}</span>
                 <div className="flex-1 h-[5px] bg-alt rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${b.bgCls}`}

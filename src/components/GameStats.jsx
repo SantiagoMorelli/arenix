@@ -17,9 +17,10 @@ import TopPerformers from "./stats/TopPerformers";
 import ServeBreakdown from "./stats/ServeBreakdown";
 import MatchDynamics from "./stats/MatchDynamics";
 import {
-  HelpToggle, SectionLabelWithHelp, HelpInlineButton, InfoPanel,
+  HelpToggle, SectionLabelWithHelp, HelpInlineButton, InfoPanel, HelpDiscoveryHint,
 } from "./stats/StatInfo";
 import { EXPLANATIONS } from "./stats/explanations";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 
 const GameStats = ({
   winner,
@@ -43,6 +44,7 @@ const GameStats = ({
   const [helpMode, setHelpMode] = useState(false);
   const [pointTypesHelpOpen, setPointTypesHelpOpen] = useState(false);
   const [historyHelpOpen, setHistoryHelpOpen] = useState(false);
+  const [helpHintSeen, setHelpHintSeen] = useLocalStorage("arenix-help-hint-seen", false);
 
   const getTeam   = id => teams.find(tm => tm.id === id);
   const getPlayer = id => {
@@ -198,12 +200,15 @@ const GameStats = ({
         )}
         <HelpToggle on={helpMode} onChange={(val) => {
           setHelpMode(val);
+          setHelpHintSeen(true);
           if (!val) {
             setPointTypesHelpOpen(false);
             setHistoryHelpOpen(false);
           }
         }} />
       </div>
+
+      <HelpDiscoveryHint show={!helpHintSeen} onDismiss={() => setHelpHintSeen(true)} />
 
       {tab === "overview" && (
         <>
@@ -407,6 +412,9 @@ const GameStats = ({
               <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveEfficiency}>
                 Serve efficiency
               </SectionLabelWithHelp>
+              <div className="text-[10px] text-dim mb-2 -mt-1">
+                Share of each team's points won on their own serve — above 50% means stronger when serving
+              </div>
               <div className="flex gap-2">
                 {[
                   { tn: 1, st: s1, tid: team1Id, isTeam1: true  },
@@ -424,11 +432,11 @@ const GameStats = ({
                       <div className="flex justify-around">
                         <div>
                           <div className="text-[14px] font-bold text-text">{st.whileServing}</div>
-                          <div className="text-[8px] text-dim uppercase">serving</div>
+                          <div className="text-[8px] text-dim uppercase">won serving</div>
                         </div>
                         <div>
                           <div className="text-[14px] font-bold text-text">{st.whileReceiving}</div>
-                          <div className="text-[8px] text-dim uppercase">receiving</div>
+                          <div className="text-[8px] text-dim uppercase">won receiving</div>
                         </div>
                       </div>
                     </div>
@@ -481,7 +489,10 @@ const GameStats = ({
       {tab === "history" && (
         <AppCard className="p-0 overflow-hidden mb-3">
           <div className="px-3.5 py-2.5 bg-alt text-[12px] font-bold text-accent tracking-wide uppercase flex items-center justify-between gap-2">
-            <span>History</span>
+            <span className="flex items-baseline gap-2">
+              History
+              <span className="text-[9px] font-semibold text-dim normal-case tracking-normal">newest first</span>
+            </span>
             <HelpInlineButton
               helpMode={helpMode}
               open={historyHelpOpen}
@@ -492,6 +503,25 @@ const GameStats = ({
             <InfoPanel open={helpMode && historyHelpOpen}>
               {EXPLANATIONS.history}
             </InfoPanel>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 border-b border-line text-[9px] text-dim">
+            {POINT_TYPES.filter(pt => pt.id !== "error").map(pt => {
+              const Icon = pt.icon;
+              return (
+                <span key={pt.id} className="flex items-center gap-1">
+                  <Icon size={10} className="flex-shrink-0" />
+                  {pt.label}
+                </span>
+              );
+            })}
+            <span className="flex items-center gap-1 text-error">
+              <X size={10} className="flex-shrink-0" />
+              Error
+            </span>
+            <span className="flex items-center gap-1">
+              <Volleyball size={10} className="flex-shrink-0" />
+              = who served
+            </span>
           </div>
           {[...log].reverse().map((entry) => {
             if (!entry.team) return (

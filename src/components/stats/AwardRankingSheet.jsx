@@ -14,7 +14,7 @@ import { AppSheet } from '../ui-new'
  *   entries    Array<{ pid, name, value, secondary? }>  — pre-sorted desc
  */
 export default function AwardRankingSheet({
-  open, onClose, title, Icon, funny = false, valueLabel = '', secondaryLabel = '', entries = [],
+  open, onClose, title, tagline = '', Icon, funny = false, valueLabel = '', secondaryLabel = '', entries = [],
 }) {
   const accent = funny ? 'text-error' : 'text-accent'
   const accentBg = funny ? 'bg-error/15' : 'bg-accent/15'
@@ -30,6 +30,7 @@ export default function AwardRankingSheet({
         </div>
       ) : null}
     >
+      {tagline && <div className="text-[11px] text-dim -mt-1 mb-3">{tagline}</div>}
       {entries.length === 0 ? (
         <div className="text-[13px] text-dim text-center py-6">
           No qualifying players yet.

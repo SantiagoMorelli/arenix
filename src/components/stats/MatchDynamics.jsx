@@ -41,7 +41,7 @@ export default function MatchDynamics({
 
   const tiedSubtitle = dynStats.timesTied > 5
     ? "Neck & neck"
-    : dynStats.timesTied >= 2 ? "Some tension" : "Dominated";
+    : dynStats.timesTied >= 2 ? "Some tension" : "One-sided";
 
   const toggle = (key) => setOpen(o => o === key ? null : key);
 
@@ -79,7 +79,7 @@ export default function MatchDynamics({
           icon={<Activity size={16} className="text-dim mx-auto mb-1.5" />}
           primary={String(dynStats.closePoints)}
           primaryClass="text-text"
-          secondary="margin ≤ 2"
+          secondary="within 2 pts"
           label="Clutch points"
         />
       </div>
@@ -219,7 +219,7 @@ function ClutchDetail({ pointLog, tName, team1Id, team2Id, firstName, fmt }) {
   return (
     <div>
       <div className="text-[9px] text-dim uppercase tracking-wide mb-1.5">
-        {moments.length} close-margin {moments.length === 1 ? "point" : "points"} (≤ 2)
+        {moments.length} {moments.length === 1 ? "point" : "points"} played with the score within 2
       </div>
       <ul className="space-y-1">
         {moments.map((m, i) => {

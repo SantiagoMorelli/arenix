@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, X } from "lucide-react";
 
 /**
  * Help-mode primitives shared across the stats screen.
@@ -125,4 +125,30 @@ export function InfoPanel({ open, children }) {
 export function HelpInlineButton({ helpMode, open, onToggle }) {
   if (!helpMode) return null;
   return <HelpIconButton open={open} onClick={onToggle} />;
+}
+
+/**
+ * One-time discoverability nudge for the help toggle. Screens that own a
+ * <HelpToggle> render this right below it, gated by a shared
+ * `arenix-help-hint-seen` localStorage flag (via useLocalStorage) so the
+ * hint shows once, on whichever stats surface the user opens first.
+ */
+export function HelpDiscoveryHint({ show, onDismiss }) {
+  if (!show) return null;
+  return (
+    <div className="flex items-center gap-2 bg-alt/60 border border-line/60 rounded-[10px] px-3 py-2 mb-3 text-[11px] text-dim">
+      <HelpCircle size={13} className="flex-shrink-0" />
+      <span className="flex-1">
+        New to volleyball stats? Tap the <span className="font-bold text-text">?</span> above for plain-English explanations.
+      </span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-0 cursor-pointer bg-transparent text-dim hover:text-text"
+      >
+        <X size={12} />
+      </button>
+    </div>
+  );
 }

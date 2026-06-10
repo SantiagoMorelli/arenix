@@ -7,7 +7,12 @@ import { buildFreePlaySessionExport } from '../lib/freePlayStatsExport'
 import { useToast } from '../contexts/ToastContext'
 import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
 import { calcOverallStandings, calcPlayerStandings } from '../lib/standings'
-import { AppCard, PillTabs, SectionLabel } from './ui-new'
+import { AppCard, PillTabs } from './ui-new'
+import { HelpToggle, SectionLabelWithHelp, HelpDiscoveryHint } from './stats/StatInfo'
+import { EXPLANATIONS } from './stats/explanations'
+import { AWARD_TAGLINES } from './stats/awardCopy'
+import StandingsLegend from './stats/StandingsLegend'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import TieBreakerControls from './standings/TieBreakerControls'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -200,7 +205,7 @@ function Podium({ rows, session }) {
 
 // ─── Award card ───────────────────────────────────────────────────────────────
 function AwardCard(props) {
-  const { Icon, title, playerName, value, valueLabel, funny = false } = props
+  const { Icon, title, tagline, playerName, value, valueLabel, funny = false } = props
   const accentText = funny ? 'text-error' : 'text-free'
   return (
     <AppCard
@@ -212,6 +217,7 @@ function AwardCard(props) {
       <div className={`text-[10px] font-bold uppercase tracking-[0.5px] ${accentText}`}>
         {title}
       </div>
+      {tagline && <div className="text-[9px] text-dim leading-snug">{tagline}</div>}
       <div className="text-[14px] font-bold text-text leading-tight">{playerName}</div>
       <div className={`text-[12px] font-semibold ${funny ? 'text-error/70' : 'text-dim'}`}>
         {value} {valueLabel}
@@ -238,11 +244,11 @@ function Awards({ playerStats, session }) {
   const glassCan  = best('errors')
 
   const awards = [
-    topScorer && { Icon: Trophy, title: 'Top Scorer',     pid: topScorer.pid, value: topScorer.value, label: 'pts',    funny: false },
-    aceKing   && { Icon: Target, title: 'Ace King',       pid: aceKing.pid,   value: aceKing.value,   label: 'aces',   funny: false },
-    spikeMach && { Icon: Zap,    title: 'Spike Machine',  pid: spikeMach.pid, value: spikeMach.value, label: 'spikes', funny: false },
-    blockMast && { Icon: Shield, title: 'Block Master',   pid: blockMast.pid, value: blockMast.value, label: 'blocks', funny: false },
-    glassCan  && { Icon: Bomb,   title: 'Glass Cannon',   pid: glassCan.pid,  value: glassCan.value,  label: 'errors', funny: true  },
+    topScorer && { Icon: Trophy, title: 'Top Scorer',     tagline: AWARD_TAGLINES['top-scorer'],    pid: topScorer.pid, value: topScorer.value, label: 'pts',    funny: false },
+    aceKing   && { Icon: Target, title: 'Ace King',       tagline: AWARD_TAGLINES['ace-king'],      pid: aceKing.pid,   value: aceKing.value,   label: 'aces',   funny: false },
+    spikeMach && { Icon: Zap,    title: 'Spike Machine',  tagline: AWARD_TAGLINES['spike-machine'], pid: spikeMach.pid, value: spikeMach.value, label: 'spikes', funny: false },
+    blockMast && { Icon: Shield, title: 'Block Master',   tagline: AWARD_TAGLINES['block-master'],  pid: blockMast.pid, value: blockMast.value, label: 'blocks', funny: false },
+    glassCan  && { Icon: Bomb,   title: 'Glass Cannon',   tagline: AWARD_TAGLINES['glass-cannon'],  pid: glassCan.pid,  value: glassCan.value,  label: 'errors', funny: true  },
   ].filter(Boolean)
 
   if (!awards.length) {
@@ -261,6 +267,7 @@ function Awards({ playerStats, session }) {
             key={a.title}
             Icon={a.Icon}
             title={a.title}
+            tagline={a.tagline}
             playerName={playerName(a.pid)}
             value={a.value}
             valueLabel={a.label}
@@ -322,6 +329,7 @@ function StandingsSection({ rows }) {
             <span className="w-8 text-center text-[13px] font-bold text-free">{row.pts}</span>
           </div>
         ))}
+        <StandingsLegend />
       </div>
     </div>
   )
@@ -494,10 +502,10 @@ function PlayerRankingsSection({ ranking }) {
               <span className="w-6 text-center text-[10px] font-bold text-dim">L</span>
               <span className="w-10 text-center text-[10px] font-bold text-dim">WIN%</span>
               <span className="w-7 text-center text-[10px] font-bold text-dim">Pts</span>
-              <span className="w-6 text-center text-[10px] font-bold text-dim">A</span>
-              <span className="w-6 text-center text-[10px] font-bold text-dim">S</span>
-              <span className="w-6 text-center text-[10px] font-bold text-dim">B</span>
-              <span className="w-6 text-center text-[10px] font-bold text-error">E</span>
+              <span className="w-10 text-center text-[10px] font-bold text-dim">Aces</span>
+              <span className="w-10 text-center text-[10px] font-bold text-dim">Spikes</span>
+              <span className="w-10 text-center text-[10px] font-bold text-dim">Blocks</span>
+              <span className="w-10 text-center text-[10px] font-bold text-error">Errors</span>
             </div>
           </div>
         </div>
@@ -522,17 +530,17 @@ function PlayerRankingsSection({ ranking }) {
                 <span className="w-6 text-center text-[13px] font-semibold text-error">{row.losses}</span>
                 <span className="w-10 text-center text-[13px] font-semibold text-text">{Math.round(row.winPct * 100)}%</span>
                 <span className="w-7 text-center text-[13px] font-semibold text-text">{row.points}</span>
-                <span className="w-6 text-center text-[13px] font-semibold text-text">{row.aces}</span>
-                <span className="w-6 text-center text-[13px] font-semibold text-text">{row.spikes}</span>
-                <span className="w-6 text-center text-[13px] font-semibold text-text">{row.blocks}</span>
-                <span className="w-6 text-center text-[13px] font-semibold text-error">{row.errors}</span>
+                <span className="w-10 text-center text-[13px] font-semibold text-text">{row.aces}</span>
+                <span className="w-10 text-center text-[13px] font-semibold text-text">{row.spikes}</span>
+                <span className="w-10 text-center text-[13px] font-semibold text-text">{row.blocks}</span>
+                <span className="w-10 text-center text-[13px] font-semibold text-error">{row.errors}</span>
               </div>
             </div>
           </div>
         ))}
       </div>
       <div className="text-[11px] text-dim text-center mt-3">
-        A=Aces · S=Spikes · B=Blocks · E=Errors · Pts=Points scored
+        Swipe the table sideways to see all stats · Pts = points scored in live-tracked matches
       </div>
     </div>
   )
@@ -542,6 +550,8 @@ function PlayerRankingsSection({ ranking }) {
 export default function FreePlayStatsScreen({ session, onClose }) {
   const [tab, setTab] = useState('teams')
   const [tbOptions] = useState({ tieBreakerMode: 'id', seedMap: {}, drawMap: {} })
+  const [helpMode, setHelpMode] = useState(false)
+  const [helpHintSeen, setHelpHintSeen] = useLocalStorage('arenix-help-hint-seen', false)
   const { addToast } = useToast()
 
   const allMatches = useMemo(() => getAllSessionMatches(session), [session])
@@ -609,6 +619,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
             <Clipboard size={10} />
             Copy AI
           </button>
+          <HelpToggle on={helpMode} onChange={(val) => { setHelpMode(val); setHelpHintSeen(true) }} />
           <Trophy size={20} className="text-free" />
         </div>
       </div>
@@ -626,13 +637,17 @@ export default function FreePlayStatsScreen({ session, onClose }) {
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto pb-8">
 
+        <div className="px-4 pt-3 -mb-3">
+          <HelpDiscoveryHint show={!helpHintSeen} onDismiss={() => setHelpHintSeen(true)} />
+        </div>
+
         {/* ── Teams tab ── */}
         {tab === 'teams' && (
           <>
             {/* Podium */}
             <div className="pt-5 pb-4">
               <div className="px-4 mb-4">
-                <SectionLabel>Podium</SectionLabel>
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.podium}>Podium</SectionLabelWithHelp>
               </div>
               <Podium rows={standings} session={session} />
             </div>
@@ -641,8 +656,8 @@ export default function FreePlayStatsScreen({ session, onClose }) {
 
             {/* Final Standings */}
             <div className="mb-5">
-              <div className="px-4 mb-3 flex items-center justify-between">
-                <SectionLabel>Final Standings</SectionLabel>
+              <div className="px-4 mb-3">
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.finalStandings}>Final Standings</SectionLabelWithHelp>
               </div>
               <StandingsSection rows={standings} />
             </div>
@@ -652,7 +667,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
             {/* Match Records */}
             <div className="mb-2">
               <div className="px-4 mb-3">
-                <SectionLabel>Match Records</SectionLabel>
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.matchRecords}>Match Records</SectionLabelWithHelp>
               </div>
               <MatchRecords records={records} session={session} />
             </div>
@@ -665,7 +680,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
             {/* Player Podium */}
             <div className="pt-5 pb-4">
               <div className="px-4 mb-4">
-                <SectionLabel>Podium</SectionLabel>
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.playerPodium}>Podium</SectionLabelWithHelp>
               </div>
               <PlayerPodium ranking={playerRanking} />
             </div>
@@ -675,7 +690,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
             {/* Player Awards */}
             <div className="mb-5">
               <div className="px-4 mb-3">
-                <SectionLabel>Player Awards</SectionLabel>
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.playerAwards}>Player Awards</SectionLabelWithHelp>
               </div>
               <Awards playerStats={playerStats} session={session} />
             </div>
@@ -685,7 +700,7 @@ export default function FreePlayStatsScreen({ session, onClose }) {
             {/* Player Rankings */}
             <div className="mb-2">
               <div className="px-4 mb-3">
-                <SectionLabel>Player Rankings</SectionLabel>
+                <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.playerRankings}>Player Rankings</SectionLabelWithHelp>
               </div>
               <PlayerRankingsSection ranking={playerRanking} />
             </div>

@@ -11,10 +11,10 @@ import { EXPLANATIONS } from "./explanations";
 
 // Hex values for Recharts fills — must match design token colors
 const OUTCOME = {
-  ace:  { fill: "#16a34a", dimFill: "#16a34a", label: "ACE",  textCls: "text-success"    },
+  ace:  { fill: "#16a34a", dimFill: "#16a34a", label: "Ace",  textCls: "text-success"    },
   won:  { fill: "#86efac", label: "Won rally",  textCls: "text-success/70"  },
   lost: { fill: "#fca5a5", label: "Lost rally", textCls: "text-error/70"    },
-  err:  { fill: "#dc2626", label: "ERR",        textCls: "text-error"       },
+  err:  { fill: "#dc2626", label: "Error",      textCls: "text-error"       },
 };
 
 /**
@@ -31,6 +31,11 @@ export default function ServeBreakdown({ pointLog, allIds, t1Ids, getPlayer, hel
       <SectionLabelWithHelp helpMode={helpMode} explanation={EXPLANATIONS.serveBreakdown}>
         Serve breakdown
       </SectionLabelWithHelp>
+      <div className="text-[10px] text-dim mb-2 -mt-1">
+        Win % = serves where the player's team won the point.{" "}
+        <span className="text-success font-semibold">Green 60%+</span>,{" "}
+        <span className="text-error font-semibold">red below 40%</span>.
+      </div>
       <div className="rounded-[10px] overflow-hidden border border-line">
         {allIds.map(pid => {
           const isTeam1 = t1Ids.includes(pid);
@@ -82,7 +87,7 @@ function PlayerServeRow({ sv, isTeam1, name }) {
       <div className="flex-1 min-w-0">
         <span className="text-[12px] font-semibold text-text truncate block mb-1">{name}</span>
         <div className="flex items-center gap-2.5">
-          <span className="text-[10px] text-dim">{sv.count} srv</span>
+          <span className="text-[10px] text-dim">{sv.count} serves</span>
           {sv.aces > 0 && (
             <span className="flex items-center gap-0.5 text-success text-[10px] font-semibold">
               <Target size={9} />{sv.aces}

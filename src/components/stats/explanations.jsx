@@ -218,6 +218,75 @@ export const EXPLANATIONS = {
     </div>
   ),
 
+  podium: (
+    <>
+      The top three teams of the event. The champion takes the tall center
+      step. In a tournament this comes from the final bracket; in free play
+      it follows the standings below.
+    </>
+  ),
+
+  playerAwards: (
+    <>
+      Fun titles for the statistical leaders, counted only from matches that
+      were scored live point-by-point. Each card shows who led the stat and
+      by how much, with a short line explaining what earned the award.
+    </>
+  ),
+
+  finalStandings: (
+    <div className="space-y-1.5">
+      <p>
+        Teams ranked top to bottom; the highlighted row is first place. The
+        columns:
+      </p>
+      <Item title="W / L">Matches won and lost.</Item>
+      <Item title="PF / PA">
+        Points scored (For) and conceded (Against) across all matches.
+      </Item>
+      <Item title="PD">
+        The difference, PF minus PA. Positive means the team outscored its
+        opponents overall.
+      </Item>
+      <Item title="PTS">
+        Table points used for the ranking — winning matches earns them, and
+        ties are broken by PD.
+      </Item>
+    </div>
+  ),
+
+  matchRecords: (
+    <>
+      Superlatives across every match played: the most lopsided win, the
+      highest combined score, the longest scoring streak, the biggest
+      comeback, the longest game and the longest rally.
+    </>
+  ),
+
+  playerPodium: (
+    <>
+      Players ranked individually, regardless of which team they played on.
+      Sorted by match wins, then win percentage, then points scored.
+    </>
+  ),
+
+  playerRankings: (
+    <div className="space-y-1.5">
+      <p>Every player's session totals. The columns:</p>
+      <Item title="W / L">Matches the player's team won and lost.</Item>
+      <Item title="WIN%">The share of their matches they won.</Item>
+      <Item title="Pts">
+        Points they personally scored in live-tracked matches.
+      </Item>
+      <Item title="Aces / Spikes / Blocks">How those points were scored.</Item>
+      <Item title="Errors">
+        <span className="text-error font-bold not-italic">Mistakes</span>{" "}
+        that gave the opponent a point — shown in red.
+      </Item>
+      <p>Swipe the table sideways to see every column.</p>
+    </div>
+  ),
+
   history: (
     <>
       A reverse-chronological log of every point in the match. Each row shows

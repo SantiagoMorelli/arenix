@@ -1,10 +1,8 @@
-import {
-  Trophy, Flame, Gift, Star, Zap, Target, Repeat, TrendingUp,
-  AlertTriangle, Sparkles, Flag, HeartCrack,
-} from "lucide-react";
+import { Trophy, Star } from "lucide-react";
 import { AppBadge } from "../ui-new";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
+import { ICONS, TONES } from "./storyTheme";
 
 /**
  * Plain-language match summary card. Renders the story object produced by
@@ -12,32 +10,9 @@ import { EXPLANATIONS } from "./explanations";
  * four insights, and — when the viewer played in the match — a personal
  * "How you played" card.
  *
- * Icon/tone values arrive as string keys so the engine stays React-free;
- * both maps below are static literals to keep Tailwind classes analyzable.
+ * Icon/tone values arrive as string keys (engine stays React-free) and are
+ * resolved through the shared maps in ./storyTheme.js.
  */
-
-const ICONS = {
-  trophy:   Trophy,
-  flame:    Flame,
-  gift:     Gift,
-  star:     Star,
-  zap:      Zap,
-  target:   Target,
-  repeat:   Repeat,
-  trendUp:  TrendingUp,
-  alert:    AlertTriangle,
-  sparkles: Sparkles,
-  flag:     Flag,
-  heart:    HeartCrack,
-};
-
-const TONES = {
-  success: { chip: "bg-success/15 text-success", card: "bg-gradient-to-br from-success/15 to-surface border-success/40", label: "success" },
-  error:   { chip: "bg-error/15 text-error",     card: "bg-gradient-to-br from-error/15 to-surface border-error/40",     label: "dim" },
-  accent:  { chip: "bg-accent/15 text-accent",   card: "bg-gradient-to-br from-accent/15 to-surface border-accent/40",   label: "accent" },
-  free:    { chip: "bg-free/15 text-free",       card: "bg-gradient-to-br from-free/15 to-surface border-free/40",       label: "free" },
-  dim:     { chip: "bg-alt text-dim",            card: "bg-gradient-to-br from-alt/60 to-surface border-line",           label: "dim" },
-};
 
 export default function MatchStory({ story, helpMode = false }) {
   if (!story) return null;

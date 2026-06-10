@@ -396,15 +396,16 @@ async function normalizeTournament(row) {
 
 function normalizeMatch(m) {
   return {
-    id:      m.id,
-    team1:   m.team1_id,
-    team2:   m.team2_id,
-    score1:  m.score1,
-    score2:  m.score2,
-    winner:  m.winner_id,
-    played:  m.played,
-    log:     m.log,
-    sets:    m.sets,
+    id:        m.id,
+    team1:     m.team1_id,
+    team2:     m.team2_id,
+    score1:    m.score1,
+    score2:    m.score2,
+    winner:    m.winner_id,
+    played:    m.played,
+    log:       m.log,
+    sets:      m.sets,
+    createdAt: m.created_at,
   }
 }
 

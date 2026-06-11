@@ -5,6 +5,7 @@ import {
   ChevronDown, Plus, Bell, Check,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import { getPublicLeagues, getMyLeagues, createLeague } from '../services/leagueService'
 import { joinLeague } from '../services/inviteService'
 import { getFreePlays } from '../services/freePlayService'
@@ -195,58 +196,67 @@ function PublicLeagueCard({ league, navigate, isJoined, canJoin, onJoin }) {
 
   return (
     <div className={`bg-surface border rounded-[14px] mb-2.5 overflow-hidden ${isJoined ? 'border-success/30' : 'border-line'}`}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen(o => !o)}
-        onKeyDown={e => e.key === 'Enter' && setOpen(o => !o)}
-        className="w-full text-left flex items-center gap-3 px-[14px] py-3 active:bg-alt/40 transition-colors cursor-pointer"
-      >
+      <div className="flex items-center pr-2">
+        {/* Identity zone — opens the league page */}
         <div
-          className="w-11 h-11 rounded-[12px] flex items-center justify-center text-white shrink-0"
-          style={{ background: `oklch(0.55 0.15 ${hue})` }}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate(`/league/${league.id}`)}
+          onKeyDown={e => e.key === 'Enter' && navigate(`/league/${league.id}`)}
+          className="flex-1 min-w-0 flex items-center gap-3 px-[14px] py-3 active:bg-alt/40 transition-colors cursor-pointer"
         >
-          <Trophy size={20} />
+          <div
+            className="w-11 h-11 rounded-[12px] flex items-center justify-center text-white shrink-0"
+            style={{ background: `oklch(0.55 0.15 ${hue})` }}
+          >
+            <Trophy size={20} />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[14px] font-bold text-text truncate">{league.name}</span>
+              <VerifiedBadge />
+              {isJoined ? (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-success bg-success/15 px-[6px] py-[3px] rounded-md tracking-[0.4px]">
+                  <Check size={8} />
+                  JOINED
+                </span>
+              ) : canJoin ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onJoin() }}
+                  className="inline-flex items-center gap-[3px] text-[9px] font-bold text-accent bg-accent/12 border border-accent/25 px-[6px] py-[3px] rounded-md tracking-[0.4px] active:opacity-70 transition-opacity"
+                >
+                  <span className="text-[11px] leading-none">+</span> JOIN
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-dim">
+              <MapPin size={11} className="shrink-0" />
+              <span>{league.city}</span>
+              <span>·</span>
+              <span>{league.playerCount} players</span>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[14px] font-bold text-text truncate">{league.name}</span>
-            <VerifiedBadge />
-            {isJoined ? (
-              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-success bg-success/15 px-[6px] py-[3px] rounded-md tracking-[0.4px]">
-                <Check size={8} />
-                JOINED
-              </span>
-            ) : canJoin ? (
-              <button
-                onClick={e => { e.stopPropagation(); onJoin() }}
-                className="inline-flex items-center gap-[3px] text-[9px] font-bold text-accent bg-accent/12 border border-accent/25 px-[6px] py-[3px] rounded-md tracking-[0.4px] active:opacity-70 transition-opacity"
-              >
-                <span className="text-[11px] leading-none">+</span> JOIN
-              </button>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-dim">
-            <MapPin size={11} className="shrink-0" />
-            <span>{league.city}</span>
-            <span>·</span>
-            <span>{league.playerCount} players</span>
-          </div>
-        </div>
-
-        {hasLive ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px] shrink-0">
-            <span className="dot-pulse w-[5px] h-[5px] rounded-full bg-success" />
-            LIVE
-          </span>
-        ) : (
+        {/* Toggle zone — expands/collapses the tournament list */}
+        <button
+          onClick={() => setOpen(o => !o)}
+          aria-label={open ? 'Hide tournaments' : 'Show tournaments'}
+          className="flex items-center gap-1.5 shrink-0 py-3 px-2 min-h-[44px] active:opacity-70 transition-opacity"
+        >
+          {hasLive && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px]">
+              <span className="dot-pulse w-[5px] h-[5px] rounded-full bg-success" />
+              LIVE
+            </span>
+          )}
           <ChevronDown
             size={16}
             className="text-dim shrink-0 transition-transform duration-150"
             style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
           />
-        )}
+        </button>
       </div>
 
       {open && (
@@ -680,6 +690,7 @@ function JoinConfirmModal({ league, onClose, onConfirm, joining }) {
 export default function Landing() {
   const navigate = useNavigate()
   const { session, profile, loading: authLoading, isSuperAdmin, canCreateLeague } = useAuth()
+  const { showError } = useToast()
   const isLoggedIn = !!session
 
   const [publicLeagues,    setPublicLeagues]    = useState([])
@@ -784,7 +795,7 @@ export default function Landing() {
       setJoinPending(null)
     } catch (err) {
       console.error('Join league failed:', err)
-      alert(err.message || 'Failed to join league. Please try again.')
+      showError(err, 'Failed to join league. Please try again.')
     } finally {
       setJoining(false)
     }

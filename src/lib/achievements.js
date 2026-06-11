@@ -84,8 +84,8 @@ export const ACHIEVEMENTS = [
     goal: 100, goalLabel: 'spikes',
     stat: (s) => V(s.strengths)?.byType?.spike || 0,
     icon: 'Swords', color: 'success',
-    unlocked: (s) => (s.byType?.spike || 0) >= 100,
-    progress: (s) => clamp01((s.byType?.spike || 0) / 100),
+    unlocked: (s) => (V(s.strengths)?.byType?.spike || 0) >= 100,
+    progress: (s) => clamp01((V(s.strengths)?.byType?.spike || 0) / 100),
   },
   {
     id: 'wall', category: 'skill', name: 'The wall',
@@ -94,8 +94,8 @@ export const ACHIEVEMENTS = [
     goal: 50, goalLabel: 'blocks',
     stat: (s) => V(s.strengths)?.byType?.block || 0,
     icon: 'Shield', color: 'success',
-    unlocked: (s) => (s.byType?.block || 0) >= 50,
-    progress: (s) => clamp01((s.byType?.block || 0) / 50),
+    unlocked: (s) => (V(s.strengths)?.byType?.block || 0) >= 50,
+    progress: (s) => clamp01((V(s.strengths)?.byType?.block || 0) / 50),
   },
   {
     id: 'sharpshooter', category: 'skill', name: 'Sharpshooter',

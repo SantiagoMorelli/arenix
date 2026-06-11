@@ -11,16 +11,13 @@ export const LEVELS = [
 export const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
 
 /**
- * Up to two initials for an avatar ("Ana Pérez" → "AP"), matching the
- * profile avatar treatment on the Landing page.
+ * Two-letter initials for an avatar, regardless of name shape:
+ * "Ana Pérez" → "AP", single-word "Ana" → "AN".
  */
 export function playerInitials(name) {
-  return String(name || '?')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(w => w[0].toUpperCase())
-    .join('') || '?'
+  const words = String(name || '').split(' ').filter(Boolean)
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+  return (words[0] || '?').slice(0, 2).toUpperCase()
 }
 
 /**

@@ -369,7 +369,27 @@ export function computeStrengths(annotated, leagueAverages, totalMatches = annot
 
 /* ─── Playstyle ───────────────────────────────────────────────────────────── */
 
-function computePlaystyleValue(annotated, strengths) {
+// Typical scoring-mix baselines. A style label is earned by being clearly
+// over-represented vs the baseline (dominance = your share / baseline),
+// otherwise the player stays an All-rounder.
+const STYLE_BASELINES = { spike: 0.40, ace: 0.14, block: 0.24, tip: 0.22 }
+const DOMINANCE_MARGIN = 1.3
+const MIN_SCORING_FOR_STYLE = 10
+const MIN_TYPE_COUNT = 4
+const STYLE_BY_TYPE = { spike: 'Aggressor', ace: 'Server', block: 'Defender', tip: 'Finesse' }
+const STYLE_TIE_ORDER = ['spike', 'ace', 'block', 'tip']
+
+// Trait thresholds — sample guards keep small samples from earning noisy badges.
+const TRAIT_CLUTCH_WIN_PCT = 0.6
+const TRAIT_CLUTCH_MIN_PLAYED = 20
+const TRAIT_COMEBACK_PER_MATCH = 1.5
+const TRAIT_RISK_SAFE = 0.2
+const TRAIT_RISK_GAMBLER = 0.4
+const TRAIT_RISK_MIN_ATTEMPTS = 25
+const TRAIT_WORKHORSE_SHARE = 0.55
+const TRAIT_METRONOME_CONSISTENCY = 0.85
+
+function computePlaystyleValue(annotated, strengths, pressure) {
   const total = strengths.totalScoring
   const share = total > 0
     ? {
@@ -380,10 +400,29 @@ function computePlaystyleValue(annotated, strengths) {
       }
     : { ace: 0, spike: 0, block: 0, tip: 0 }
 
+  const dominance = {}
+  for (const k of STYLE_TIE_ORDER) {
+    dominance[k] = total > 0 ? share[k] / STYLE_BASELINES[k] : 0
+  }
+
+  // Most over-represented shot wins; ties broken by raw count, then by
+  // the fixed STYLE_TIE_ORDER for determinism.
+  let top = STYLE_TIE_ORDER[0]
+  for (const k of STYLE_TIE_ORDER) {
+    if (
+      dominance[k] > dominance[top] ||
+      (dominance[k] === dominance[top] && strengths.byType[k] > strengths.byType[top])
+    ) top = k
+  }
+
   let label = 'All-rounder'
-  if (share.spike >= 0.45) label = 'Aggressor'
-  else if (share.ace >= 0.18) label = 'Server'
-  else if (share.block >= 0.25) label = 'Defender'
+  if (
+    total >= MIN_SCORING_FOR_STYLE &&
+    strengths.byType[top] >= MIN_TYPE_COUNT &&
+    dominance[top] >= DOMINANCE_MARGIN
+  ) {
+    label = STYLE_BY_TYPE[top]
+  }
 
   const attempts = strengths.totalScoring + strengths.totalErrors
   const riskProfile = attempts > 0 ? strengths.totalErrors / attempts : 0
@@ -414,18 +453,42 @@ function computePlaystyleValue(annotated, strengths) {
     consistency = Math.max(0, 1 - Math.sqrt(variance) * 2)
   }
 
+  const sampleSize = (annotated || []).length
+  const traits = []
+  if (pressure) {
+    if (
+      pressure.clutchPlayed >= TRAIT_CLUTCH_MIN_PLAYED &&
+      pressure.clutchWinPct >= TRAIT_CLUTCH_WIN_PCT
+    ) traits.push('clutch')
+    if (
+      sampleSize >= 5 &&
+      pressure.comebackPoints / sampleSize >= TRAIT_COMEBACK_PER_MATCH
+    ) traits.push('comebackKid')
+  }
+  if (attempts >= TRAIT_RISK_MIN_ATTEMPTS) {
+    if (riskProfile <= TRAIT_RISK_SAFE) traits.push('safeHands')
+    else if (riskProfile >= TRAIT_RISK_GAMBLER) traits.push('gambler')
+  }
+  const meanShare = consistencyByMatch.length > 0
+    ? consistencyByMatch.reduce((s, c) => s + c.share, 0) / consistencyByMatch.length
+    : 0
+  if (sampleSize >= 5 && meanShare >= TRAIT_WORKHORSE_SHARE) traits.push('workhorse')
+  if (sampleSize >= 6 && consistency >= TRAIT_METRONOME_CONSISTENCY) traits.push('metronome')
+
   return {
     label,
     share,
+    dominance,
+    traits,
     riskProfile,
     consistencyByMatch,
     consistency,
   }
 }
 
-export function computePlaystyle(annotated, strengths, totalMatches = annotated.length) {
+export function computePlaystyle(annotated, strengths, pressure = null, totalMatches = annotated.length) {
   const sampleSize = (annotated || []).length
-  return wrapStat(computePlaystyleValue(annotated, strengths), sampleSize, totalMatches, MIN_LEVEL_L3)
+  return wrapStat(computePlaystyleValue(annotated, strengths, pressure), sampleSize, totalMatches, MIN_LEVEL_L3)
 }
 
 /* ─── Tournament breakdown ────────────────────────────────────────────────── */
@@ -533,7 +596,7 @@ export function computeAllPlayerStats(annotated) {
   const serving = computeServingStats(l3Matches, totalMatches)
   const pressure = computePressureStats(l3Matches, totalMatches)
   const strengths = computeStrengths(l3Matches, null, totalMatches)
-  const playstyle = computePlaystyle(l3Matches, strengths.value, totalMatches)
+  const playstyle = computePlaystyle(l3Matches, strengths.value, pressure.value, totalMatches)
   const byTournament = computeByTournament(annotated)
   const streaks = computeWinStreak(l1Matches, totalMatches)
   const perMatchAverages = computePerMatchAverages(l2Matches, totalMatches)

@@ -4,14 +4,14 @@ import {
   Flame, TrendingUp, Percent, Sigma, Trophy, Crown,
   ArrowUp, ArrowDown, ChevronRight,
 } from 'lucide-react'
+import { SectionLabel } from '../ui-new'
+import { computeLeagueInsights, computeRankMovement } from '../../lib/leagueInsights'
+import { playerAvatarStyle, playerInitials } from '../../lib/utils'
+import EloSparkline from './EloSparkline'
+import PlayerStatsSheet from './PlayerStatsSheet'
 
 // Podium medal disc tints by rank (1-indexed)
 const MEDAL_BG = { 1: 'bg-accent', 2: 'bg-dim', 3: 'bg-[#b87333]' }
-import { SectionLabel } from '../ui-new'
-import { computeLeagueInsights, computeRankMovement } from '../../lib/leagueInsights'
-import { playerAvatarStyle } from '../../lib/utils'
-import EloSparkline from './EloSparkline'
-import PlayerStatsSheet from './PlayerStatsSheet'
 
 const HIGHLIGHT_ICONS = {
   onFire:       Flame,
@@ -179,7 +179,7 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
                     className={`${first ? 'w-14 h-14 text-[20px]' : 'w-11 h-11 text-[16px]'} rounded-[12px] flex items-center justify-center font-semibold text-white mb-1.5 ${isMe ? 'ring-2 ring-accent' : ''}`}
                     style={playerAvatarStyle(player.id || player.name)}
                   >
-                    {label[0]?.toUpperCase()}
+                    {playerInitials(label)}
                   </div>
                   <div className="flex items-center gap-1 max-w-full px-1">
                     <span className={`text-[12px] truncate ${isMe ? 'font-bold text-accent' : 'font-semibold text-text'}`}>
@@ -224,7 +224,7 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
                       className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0"
                       style={playerAvatarStyle(player.id || player.name)}
                     >
-                      {label[0]?.toUpperCase()}
+                      {playerInitials(label)}
                     </div>
                     <div className="flex-1 min-w-0 ml-2.5">
                       <div className="flex items-center gap-1.5">
@@ -294,7 +294,7 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
                       className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0"
                       style={playerAvatarStyle(row.playerId)}
                     >
-                      {row.name[0]?.toUpperCase()}
+                      {playerInitials(row.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] font-medium text-text truncate">{row.name}</div>

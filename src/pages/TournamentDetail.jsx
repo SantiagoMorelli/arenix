@@ -264,7 +264,7 @@ export default function TournamentDetail() {
         try {
           setDeleting(true)
           await deleteTournament(tournament.id)
-          navigate('/')
+          navigate(`/league/${id}`, { state: { tab: 'tournaments' } })
         } catch (err) {
           showError(err.message)
           setDeleting(false)
@@ -334,7 +334,7 @@ export default function TournamentDetail() {
       <TournamentHeader
         tournament={tournament}
         league={league}
-        onBack={() => navigate('/')}
+        onBack={() => navigate(`/league/${id}`)}
         isAdmin={isAdmin && !isGuest}
         onDelete={handleDeleteTournament}
         deleting={deleting}

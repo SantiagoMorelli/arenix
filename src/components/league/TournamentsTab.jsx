@@ -1,27 +1,43 @@
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus } from 'lucide-react'
-import { AppBadge } from '../ui-new'
+import { Trophy, Plus, ChevronRight } from 'lucide-react'
+import { SectionLabel } from '../ui-new'
 import { getTournamentPodium } from '../../lib/leagueInsights'
 
-function getTournamentStatus(t) {
-  if (t.status === 'completed') return { label: 'Completed', variant: 'dim' }
-  if (['group', 'knockout', 'freeplay'].includes(t.phase)) return { label: 'In Progress', variant: 'success' }
-  if (t.phase === 'setup') return { label: 'Setup', variant: 'accent' }
-  return { label: 'Active', variant: 'success' }
+// Medal disc tints by podium place
+const MEDAL = [
+  { key: 'first',  bg: 'bg-accent' },
+  { key: 'second', bg: 'bg-dim' },
+  { key: 'third',  bg: 'bg-[#b87333]/80' },
+]
+
+function isLive(t) {
+  return t.status !== 'completed' && ['group', 'knockout', 'freeplay'].includes(t.phase)
 }
 
 function getTournamentPlayerCount(t) {
   return new Set((t.teams || []).flatMap(team => team.players || [])).size
 }
 
+function tournamentMeta(t) {
+  const modeLabel  = t.teamSize ? `${t.teamSize} vs ${t.teamSize}` : 'Custom'
+  const teamsCount = (t.teams || []).length
+  return `${modeLabel} • ${teamsCount} teams • ${getTournamentPlayerCount(t)} players`
+}
+
 /**
- * Tournaments tab — full reverse-chronological list of league tournaments
- * with status badges and podiums for completed ones.
+ * Tournaments tab — status-grouped sections: live tournaments first in green,
+ * then upcoming (setup phase), then completed with a medal podium strip.
  */
 export default function TournamentsTab({ league, isAdmin, isGuest }) {
   const navigate    = useNavigate()
   const tournaments = [...(league.tournaments || [])].reverse()
   const canCreate   = isAdmin && !isGuest
+
+  const live      = tournaments.filter(isLive)
+  const upcoming  = tournaments.filter(t => t.status !== 'completed' && !isLive(t))
+  const completed = tournaments.filter(t => t.status === 'completed')
+
+  const goTo = (t) => navigate(`/league/${league.id}/tournament/${t.id}`)
 
   return (
     <>
@@ -37,43 +53,7 @@ export default function TournamentsTab({ league, isAdmin, isGuest }) {
         )}
       </div>
 
-      {tournaments.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {tournaments.map(t => {
-            const { label, variant } = getTournamentStatus(t)
-            const pCount             = getTournamentPlayerCount(t)
-            const podium             = getTournamentPodium(t, league?.players || [])
-            const modeLabel          = t.teamSize ? `${t.teamSize} vs ${t.teamSize}` : 'Custom'
-            const teamsCount         = (t.teams || []).length
-
-            return (
-              <div
-                key={t.id}
-                onClick={() => navigate(`/league/${league.id}/tournament/${t.id}`)}
-                className="bg-surface rounded-xl p-3.5 flex flex-col gap-2.5 border border-line cursor-pointer active:opacity-80 transition-opacity"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">
-                    <Trophy size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-text truncate">{t.name}</div>
-                    <div className="text-[11px] text-dim">{modeLabel} • {teamsCount} teams • {pCount} players</div>
-                  </div>
-                  <AppBadge text={label} variant={variant} />
-                </div>
-                {podium && (
-                  <div className="mt-1 pt-2.5 border-t border-line/50 flex flex-col gap-1.5 pl-12">
-                    {podium.first && <div className="text-[12px] text-text font-medium truncate">🥇 {podium.first}</div>}
-                    {podium.second && <div className="text-[12px] text-dim truncate">🥈 {podium.second}</div>}
-                    {podium.third && <div className="text-[12px] text-dim truncate">🥉 {podium.third}</div>}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ) : (
+      {tournaments.length === 0 && (
         <div className="text-[13px] text-dim text-center py-6">
           No tournaments yet{canCreate && ' — '}
           {canCreate && (
@@ -85,6 +65,107 @@ export default function TournamentsTab({ league, isAdmin, isGuest }) {
             </button>
           )}
         </div>
+      )}
+
+      {/* ════ Live now ════ */}
+      {live.length > 0 && (
+        <>
+          <SectionLabel color="success">Live now</SectionLabel>
+          <div className="flex flex-col gap-2 mb-4">
+            {live.map(t => (
+              <div
+                key={t.id}
+                onClick={() => goTo(t)}
+                className="bg-success/5 rounded-xl p-3.5 flex items-center gap-3 border border-success/40 cursor-pointer active:opacity-80 transition-opacity"
+              >
+                <div className="w-10 h-10 rounded-[10px] bg-success/15 flex items-center justify-center flex-shrink-0 text-success">
+                  <Trophy size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-bold text-text truncate">{t.name}</div>
+                  <div className="text-[11px] text-dim">{tournamentMeta(t)}</div>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 px-[9px] py-[5px] rounded-md tracking-[0.4px] flex-shrink-0">
+                  <span className="dot-pulse w-[5px] h-[5px] rounded-full bg-success" />
+                  LIVE
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ════ Upcoming ════ */}
+      {upcoming.length > 0 && (
+        <>
+          <SectionLabel color="accent">Upcoming</SectionLabel>
+          <div className="flex flex-col gap-2 mb-4">
+            {upcoming.map(t => (
+              <div
+                key={t.id}
+                onClick={() => goTo(t)}
+                className="bg-surface rounded-xl p-3.5 flex items-center gap-3 border border-line cursor-pointer active:opacity-80 transition-opacity"
+              >
+                <div className="w-10 h-10 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0 text-accent">
+                  <Trophy size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-bold text-text truncate">{t.name}</div>
+                  <div className="text-[11px] text-dim">{tournamentMeta(t)}</div>
+                </div>
+                <span className="text-[10px] font-bold text-accent bg-accent/10 px-[9px] py-[5px] rounded-md tracking-[0.4px] flex-shrink-0">
+                  SETUP
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ════ Completed ════ */}
+      {completed.length > 0 && (
+        <>
+          <SectionLabel>Completed</SectionLabel>
+          <div className="flex flex-col gap-2 mb-4">
+            {completed.map(t => {
+              const podium = getTournamentPodium(t, league?.players || [])
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => goTo(t)}
+                  className="bg-surface rounded-xl p-3.5 flex flex-col gap-2.5 border border-line cursor-pointer active:opacity-80 transition-opacity"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-[10px] bg-alt flex items-center justify-center flex-shrink-0 text-dim">
+                      <Trophy size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-bold text-text truncate">{t.name}</div>
+                      <div className="text-[11px] text-dim">{tournamentMeta(t)}</div>
+                    </div>
+                    <ChevronRight size={16} className="text-dim flex-shrink-0" />
+                  </div>
+                  {podium && (
+                    <div className="pt-2.5 border-t border-line/50 flex flex-col gap-1.5">
+                      {MEDAL.map(({ key, bg }, i) =>
+                        podium[key] ? (
+                          <div key={key} className="flex items-center gap-2 min-w-0">
+                            <span className={`w-[18px] h-[18px] rounded-full ${bg} text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0`}>
+                              {i + 1}
+                            </span>
+                            <span className={`text-[12px] truncate ${i === 0 ? 'text-text font-semibold' : 'text-dim'}`}>
+                              {podium[key]}
+                            </span>
+                          </div>
+                        ) : null
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </>
   )

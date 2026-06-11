@@ -12,18 +12,19 @@ import SettingsTab from '../components/league/SettingsTab'
 import LeagueHeaderMenu from '../components/league/LeagueHeaderMenu'
 import { createNotification } from '../services/notificationService'
 import { useToast } from '../contexts/ToastContext'
-import { ChevronLeft, BarChart2, Users, Trophy, Settings } from 'lucide-react'
+import { ChevronLeft, Home, Users, Trophy, Settings } from 'lucide-react'
 
-// Tabs visible to guests and non-admin members; admins also get Settings
+// Tabs visible to guests and non-admin members; admins also get Players + Settings
 const BASE_NAV_ITEMS = [
-  { id: 'rankings',    icon: <BarChart2 size={20} />, label: 'Rankings'    },
-  { id: 'players',     icon: <Users size={20} />,     label: 'Players'     },
-  { id: 'tournaments', icon: <Trophy size={20} />,    label: 'Tournaments' },
+  { id: 'home',        icon: <Home size={20} />,   label: 'Home'        },
+  { id: 'tournaments', icon: <Trophy size={20} />, label: 'Tournaments' },
 ]
 
 const ADMIN_NAV_ITEMS = [
-  ...BASE_NAV_ITEMS,
-  { id: 'settings', icon: <Settings size={20} />, label: 'Settings' },
+  { id: 'home',        icon: <Home size={20} />,     label: 'Home'        },
+  { id: 'players',     icon: <Users size={20} />,    label: 'Players'     },
+  { id: 'tournaments', icon: <Trophy size={20} />,   label: 'Tournaments' },
+  { id: 'settings',    icon: <Settings size={20} />, label: 'Settings'    },
 ]
 
 // ─── LeagueDetail page ────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ export default function LeagueDetail() {
   const navigate             = useNavigate()
   const { id }               = useParams()
   const location             = useLocation()
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'rankings')
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'home')
   const { showError }        = useToast()
 
   const { league, loading, error, refetch } = useLeague(id)
@@ -47,11 +48,11 @@ export default function LeagueDetail() {
     }
   }, [loading, error, league, isGuest, id, navigate])
 
-  // The settings tab is admin-only — non-admins (e.g. arriving via
-  // location.state or after a role change) fall back to rankings.
+  // Settings and Players tabs are admin-only — non-admins (e.g. arriving via
+  // location.state or a notification deep link) fall back to home.
   const effectiveTab =
-    activeTab === 'settings' && (roleLoading || !isAdmin || isGuest)
-      ? 'rankings'
+    ['settings', 'players'].includes(activeTab) && (roleLoading || !isAdmin || isGuest)
+      ? 'home'
       : activeTab
 
   // ── Player mutations ──────────────────────────────────────────────────────
@@ -181,7 +182,7 @@ export default function LeagueDetail() {
       <main className="screen__body">
         <div className="px-4 pb-6">
 
-          {effectiveTab === 'rankings' && (
+          {effectiveTab === 'home' && (
             <RankingsTab
               league={league}
               isGuest={isGuest}
@@ -189,10 +190,10 @@ export default function LeagueDetail() {
             />
           )}
 
-          {effectiveTab === 'players' && (
+          {effectiveTab === 'players' && !isGuest && isAdmin && (
             <LeaguePlayersTab
               league={league}
-              isAdmin={isGuest ? false : isAdmin}
+              isAdmin={isAdmin}
               onAdd={handleAddPlayer}
               onDelete={handleDeletePlayer}
               onUpdate={handleUpdatePlayer}

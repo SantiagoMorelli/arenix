@@ -4,6 +4,9 @@ import {
   Flame, TrendingUp, Percent, Sigma, Trophy, Crown,
   ArrowUp, ArrowDown, ChevronRight,
 } from 'lucide-react'
+
+// Podium medal disc tints by rank (1-indexed)
+const MEDAL_BG = { 1: 'bg-accent', 2: 'bg-dim', 3: 'bg-[#b87333]' }
 import { SectionLabel } from '../ui-new'
 import { computeLeagueInsights, computeRankMovement } from '../../lib/leagueInsights'
 import { playerAvatarStyle } from '../../lib/utils'
@@ -52,8 +55,36 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
 
   const { champions, highlights, feed } = insights
 
+  const liveTournaments = (league.tournaments || []).filter(
+    t => t.status !== 'completed' && ['group', 'knockout', 'freeplay'].includes(t.phase)
+  ).reverse()
+
   return (
     <>
+      {/* ════ Live tournament banner ════ */}
+      {liveTournaments.map(t => (
+        <div
+          key={t.id}
+          onClick={() => navigate(`/league/${league.id}/tournament/${t.id}`)}
+          className="flex items-center gap-3 bg-success/10 border border-success/30 rounded-[14px] px-3.5 py-3 mt-2 mb-3 cursor-pointer active:opacity-80 transition-opacity"
+        >
+          <div className="w-10 h-10 rounded-[10px] bg-success/15 flex items-center justify-center flex-shrink-0 text-success">
+            <Trophy size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="dot-pulse w-[6px] h-[6px] rounded-full bg-success" />
+              <span className="text-[10px] font-bold text-success uppercase tracking-[1.2px]">Live now</span>
+            </div>
+            <div className="text-[14px] font-bold text-text truncate">{t.name}</div>
+            <div className="text-[11px] text-dim">
+              {(t.teams || []).length} teams · {new Set((t.teams || []).flatMap(tm => tm.players || [])).size} players
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-success flex-shrink-0" />
+        </div>
+      ))}
+
       {/* ════ Your position hero ════ */}
       {myRank && (
         <div className="bg-gradient-to-br from-surface to-alt rounded-[14px] border border-line mt-2 mb-4 p-3.5">
@@ -126,47 +157,98 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
       <SectionLabel color="accent">Top Players</SectionLabel>
 
       {rankedPlayers.length > 0 ? (
-        <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-4">
-          {rankedPlayers.map((player, i, arr) => {
-            const isMe   = player.userId && player.userId === currentUserId
-            const label  = player.displayName || player.name
-            const streak = insights.streaks.get(player.id)
+        <>
+          {/* Top-3 podium (2nd – 1st – 3rd) */}
+          <div className="flex items-end gap-2 mb-2">
+            {[2, 1, 3].map(rank => {
+              const player = rankedPlayers[rank - 1]
+              if (!player) return <div key={rank} className="flex-1" />
+              const isMe    = player.userId && player.userId === currentUserId
+              const label   = player.displayName || player.name
+              const streak  = insights.streaks.get(player.id)
+              const first   = rank === 1
+              const heights = { 1: 'h-14', 2: 'h-9', 3: 'h-7' }
 
-            return (
-              <button
-                key={player.id}
-                onClick={() => setSheetPlayer(player)}
-                className={`w-full flex items-center px-3.5 py-[11px] cursor-pointer bg-transparent border-0 text-left active:opacity-80 transition-opacity ${i < arr.length - 1 ? 'border-b border-line' : ''} ${isMe ? 'bg-accent/10' : ''}`}
-              >
-                <span className={`font-display w-7 text-[18px] leading-none flex-shrink-0 ${i < 3 ? 'text-accent' : 'text-dim'}`}>
-                  {i + 1}
-                </span>
-                <div
-                  className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0"
-                  style={playerAvatarStyle(player.id || player.name)}
+              return (
+                <button
+                  key={player.id}
+                  onClick={() => setSheetPlayer(player)}
+                  className="flex-1 min-w-0 flex flex-col items-center bg-transparent border-0 p-0 cursor-pointer active:opacity-80 transition-opacity"
                 >
-                  {label[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0 ml-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-[13px] truncate ${isMe ? 'font-bold text-text' : 'font-medium text-text'}`}>
+                  <div
+                    className={`${first ? 'w-14 h-14 text-[20px]' : 'w-11 h-11 text-[16px]'} rounded-[12px] flex items-center justify-center font-semibold text-white mb-1.5 ${isMe ? 'ring-2 ring-accent' : ''}`}
+                    style={playerAvatarStyle(player.id || player.name)}
+                  >
+                    {label[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex items-center gap-1 max-w-full px-1">
+                    <span className={`text-[12px] truncate ${isMe ? 'font-bold text-accent' : 'font-semibold text-text'}`}>
                       {label}
                     </span>
-                    {isMe && <span className="text-[10px] font-bold text-accent flex-shrink-0">YOU</span>}
-                    {streak?.current >= 3 && (
-                      <span className="flex items-center gap-0.5 text-[10px] font-bold text-accent flex-shrink-0">
-                        <Flame size={11} />{streak.current}
-                      </span>
-                    )}
+                    {streak?.current >= 3 && <Flame size={11} className="text-accent flex-shrink-0" />}
                   </div>
-                  <div className="text-[10px] text-dim mt-0.5">{player.wins}W - {player.losses}L</div>
-                </div>
-                <span className="font-display text-[18px] text-text leading-none ml-2">{player.elo ?? 1000}</span>
-                <ChevronRight size={15} className="text-dim ml-1.5 flex-shrink-0" />
-              </button>
-            )
-          })}
-        </div>
+                  <span className={`font-display leading-none text-text ${first ? 'text-[22px]' : 'text-[17px]'} mt-0.5`}>
+                    {player.elo ?? 1000}
+                  </span>
+                  <span className="text-[10px] text-dim mb-1.5">{player.wins}W - {player.losses}L</span>
+                  <div
+                    className={`w-full ${heights[rank]} rounded-t-[10px] bg-gradient-to-b from-alt to-surface border border-b-0 border-line flex items-start justify-center`}
+                  >
+                    <span className={`w-5 h-5 rounded-full ${MEDAL_BG[rank]} text-white text-[11px] font-bold flex items-center justify-center mt-1.5`}>
+                      {rank}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Rank 4+ list */}
+          {rankedPlayers.length > 3 && (
+            <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-4">
+              {rankedPlayers.slice(3).map((player, i, arr) => {
+                const isMe   = player.userId && player.userId === currentUserId
+                const label  = player.displayName || player.name
+                const streak = insights.streaks.get(player.id)
+
+                return (
+                  <button
+                    key={player.id}
+                    onClick={() => setSheetPlayer(player)}
+                    className={`w-full flex items-center px-3.5 py-[11px] cursor-pointer bg-transparent border-0 text-left active:opacity-80 transition-opacity ${i < arr.length - 1 ? 'border-b border-line' : ''} ${isMe ? 'bg-accent/10' : ''}`}
+                  >
+                    <span className="font-display w-7 text-[18px] leading-none flex-shrink-0 text-dim">
+                      {i + 4}
+                    </span>
+                    <div
+                      className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0"
+                      style={playerAvatarStyle(player.id || player.name)}
+                    >
+                      {label[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0 ml-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[13px] truncate ${isMe ? 'font-bold text-text' : 'font-medium text-text'}`}>
+                          {label}
+                        </span>
+                        {isMe && <span className="text-[10px] font-bold text-accent flex-shrink-0">YOU</span>}
+                        {streak?.current >= 3 && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-accent flex-shrink-0">
+                            <Flame size={11} />{streak.current}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-dim mt-0.5">{player.wins}W - {player.losses}L</div>
+                    </div>
+                    <span className="font-display text-[18px] text-text leading-none ml-2">{player.elo ?? 1000}</span>
+                    <ChevronRight size={15} className="text-dim ml-1.5 flex-shrink-0" />
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {rankedPlayers.length <= 3 && <div className="mb-4" />}
+        </>
       ) : (
         <div className="text-[13px] text-dim text-center py-6 mb-4">No players yet</div>
       )}

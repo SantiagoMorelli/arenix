@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import {
   Swords, Zap, Shield, Layers, Feather, AlertTriangle, Activity,
   Target, TrendingUp, ShieldCheck, Dices, Flame, Timer,
 } from 'lucide-react'
+import { AppSheet } from '../../ui-new'
 
 const PCT = (n) => `${Math.round((n || 0) * 100)}%`
 
@@ -14,17 +16,44 @@ const STYLE_META = {
 }
 
 const TRAIT_META = {
-  clutch:      { label: 'Clutch',       icon: Target,      color: 'text-success', bg: 'bg-success/15' },
-  comebackKid: { label: 'Comeback Kid', icon: TrendingUp,  color: 'text-accent',  bg: 'bg-accent/15'  },
-  safeHands:   { label: 'Safe Hands',   icon: ShieldCheck, color: 'text-success', bg: 'bg-success/15' },
-  gambler:     { label: 'Gambler',      icon: Dices,       color: 'text-error',   bg: 'bg-error/15'   },
-  workhorse:   { label: 'Workhorse',    icon: Flame,       color: 'text-free',    bg: 'bg-free/15'    },
-  metronome:   { label: 'Metronome',    icon: Timer,       color: 'text-accent',  bg: 'bg-accent/15'  },
+  clutch: {
+    label: 'Clutch', icon: Target, color: 'text-success', bg: 'bg-success/15',
+    desc: 'Ice in the veins. When the set is on the line, you win the big points.',
+    how:  'Win 60%+ of the points you play in the final stretch of a set (20+ clutch points logged).',
+  },
+  comebackKid: {
+    label: 'Comeback Kid', icon: TrendingUp, color: 'text-accent', bg: 'bg-accent/15',
+    desc: 'Never out of it. You do your best scoring when your team is behind.',
+    how:  'Average 1.5+ comeback points per match, scored while trailing (5+ matches).',
+  },
+  safeHands: {
+    label: 'Safe Hands', icon: ShieldCheck, color: 'text-success', bg: 'bg-success/15',
+    desc: 'Mistakes? Barely. You almost never hand the other team free points.',
+    how:  'Keep your error rate at 20% or below across 25+ shot attempts.',
+  },
+  gambler: {
+    label: 'Gambler', icon: Dices, color: 'text-error', bg: 'bg-error/15',
+    desc: 'High risk, high reward. You go for the bold shot and live with the misses.',
+    how:  'An error rate of 40%+ across 25+ attempts — bold shot selection.',
+  },
+  workhorse: {
+    label: 'Workhorse', icon: Flame, color: 'text-free', bg: 'bg-free/15',
+    desc: 'The engine of the team. A huge share of the scoring runs through you.',
+    how:  'Score 55%+ of your team’s points on average (5+ matches).',
+  },
+  metronome: {
+    label: 'Metronome', icon: Timer, color: 'text-accent', bg: 'bg-accent/15',
+    desc: 'Same player, every match. Your scoring output barely wavers.',
+    how:  'Hold a consistency score of 0.85+ across 6+ matches.',
+  },
 }
 
 export default function PlaystylePanel({ stats }) {
+  const [openTrait, setOpenTrait] = useState(null)
   if (!stats || (stats.sampleSize || 0) < 3) return null
   const value = stats.value || {}
+  const openMeta = openTrait ? TRAIT_META[openTrait] : null
+  const OpenIcon = openMeta?.icon
 
   const meta = STYLE_META[value.label] || STYLE_META['All-rounder']
   const Icon = meta.icon
@@ -55,16 +84,40 @@ export default function PlaystylePanel({ stats }) {
             if (!t) return null
             const TIcon = t.icon
             return (
-              <span
+              <button
                 key={id}
-                className={`inline-flex items-center gap-1 ${t.bg} ${t.color} rounded-full px-2 py-1 text-[10px] font-semibold`}
+                type="button"
+                onClick={() => setOpenTrait(id)}
+                className={`inline-flex items-center gap-1 ${t.bg} ${t.color} rounded-full px-2 py-1 text-[10px] font-semibold border-0 cursor-pointer active:scale-95 transition-transform`}
               >
                 <TIcon size={11} /> {t.label}
-              </span>
+              </button>
             )
           })}
         </div>
       )}
+
+      {/* Trait detail sheet */}
+      <AppSheet
+        open={!!openMeta}
+        onClose={() => setOpenTrait(null)}
+        title={openMeta?.label}
+      >
+        {openMeta && (
+          <div className="pb-1">
+            <div className={`w-12 h-12 rounded-full ${openMeta.bg} flex items-center justify-center mx-auto mb-3`}>
+              <OpenIcon size={22} className={openMeta.color} />
+            </div>
+            <div className="text-[13px] text-text text-center leading-snug mb-4">
+              {openMeta.desc}
+            </div>
+            <div className="border-t border-line pt-3">
+              <div className="text-[10px] uppercase tracking-wide text-dim mb-1">How you earn it</div>
+              <div className="text-[12px] text-dim leading-snug">{openMeta.how}</div>
+            </div>
+          </div>
+        )}
+      </AppSheet>
 
       {/* Risk + consistency */}
       <div className="grid grid-cols-2 gap-2 mb-3">

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 /**
@@ -318,10 +319,12 @@ export function PageHeader({ title, onBack, rightSlot }) {
  */
 export function AppSheet({ open, onClose, title, icon, children }) {
   if (!open) return null
-  return (
+  // Portal to <body>: ancestors with overflow/transform (e.g. .screen__body's
+  // momentum scrolling) would otherwise clip the fixed overlay on iOS.
+  return createPortal(
     <div className="fixed inset-0 z-[150] flex items-end">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-[151] w-full bg-surface rounded-t-2xl px-4 pt-2 pb-8 max-h-[88vh] overflow-y-auto shadow-2xl">
+      <div className="relative z-[151] w-full bg-surface rounded-t-2xl px-4 pt-2 pb-[max(2rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto shadow-2xl">
         <div className="w-9 h-1 bg-line rounded-full mx-auto mb-3" />
         {(title || icon) && (
           <div className="flex items-center gap-2 mb-3">
@@ -338,7 +341,8 @@ export function AppSheet({ open, onClose, title, icon, children }) {
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -366,7 +370,7 @@ export function ConfirmModal({
   onCancel,
 }) {
   if (!open) return null
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-5">
       <div
         className="absolute inset-0 bg-black/60"
@@ -392,7 +396,8 @@ export function ConfirmModal({
           </AppButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

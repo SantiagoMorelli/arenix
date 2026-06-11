@@ -1,4 +1,7 @@
-import { Swords, Zap, Shield, Layers, AlertTriangle, Activity } from 'lucide-react'
+import {
+  Swords, Zap, Shield, Layers, Feather, AlertTriangle, Activity,
+  Target, TrendingUp, ShieldCheck, Dices, Flame, Timer,
+} from 'lucide-react'
 
 const PCT = (n) => `${Math.round((n || 0) * 100)}%`
 
@@ -6,7 +9,17 @@ const STYLE_META = {
   Aggressor:    { icon: Swords,   color: 'text-success', bar: 'bg-success', bg: 'bg-success/15', desc: 'High spike share — relies on power and finishing.' },
   Server:       { icon: Zap,      color: 'text-accent',  bar: 'bg-accent',  bg: 'bg-accent/15',  desc: 'Strong serving — wins points off the line.' },
   Defender:     { icon: Shield,   color: 'text-free',    bar: 'bg-free',    bg: 'bg-free/15',    desc: 'Wall-and-dig — converts defense into points.' },
+  Finesse:      { icon: Feather,  color: 'text-accent',  bar: 'bg-accent',  bg: 'bg-accent/15',  desc: 'Tip-dominant — wins with placement and touch.' },
   'All-rounder':{ icon: Layers,   color: 'text-text',    bar: 'bg-text',    bg: 'bg-alt',        desc: 'Balanced contribution across shot types.' },
+}
+
+const TRAIT_META = {
+  clutch:      { label: 'Clutch',       icon: Target,      color: 'text-success', bg: 'bg-success/15' },
+  comebackKid: { label: 'Comeback Kid', icon: TrendingUp,  color: 'text-accent',  bg: 'bg-accent/15'  },
+  safeHands:   { label: 'Safe Hands',   icon: ShieldCheck, color: 'text-success', bg: 'bg-success/15' },
+  gambler:     { label: 'Gambler',      icon: Dices,       color: 'text-error',   bg: 'bg-error/15'   },
+  workhorse:   { label: 'Workhorse',    icon: Flame,       color: 'text-free',    bg: 'bg-free/15'    },
+  metronome:   { label: 'Metronome',    icon: Timer,       color: 'text-accent',  bg: 'bg-accent/15'  },
 }
 
 export default function PlaystylePanel({ stats }) {
@@ -33,6 +46,25 @@ export default function PlaystylePanel({ stats }) {
           <div className="text-[10px] text-dim mt-0.5">{meta.desc}</div>
         </div>
       </div>
+
+      {/* Trait chips */}
+      {(value.traits?.length || 0) > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {value.traits.map((id) => {
+            const t = TRAIT_META[id]
+            if (!t) return null
+            const TIcon = t.icon
+            return (
+              <span
+                key={id}
+                className={`inline-flex items-center gap-1 ${t.bg} ${t.color} rounded-full px-2 py-1 text-[10px] font-semibold`}
+              >
+                <TIcon size={11} /> {t.label}
+              </span>
+            )
+          })}
+        </div>
+      )}
 
       {/* Risk + consistency */}
       <div className="grid grid-cols-2 gap-2 mb-3">

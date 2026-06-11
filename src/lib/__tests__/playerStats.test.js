@@ -173,6 +173,7 @@ describe('computePressureStats', () => {
   it('returns clutch / side-out / comeback stats for p1', () => {
     expect(computePressureStats(annotated).value).toMatchInlineSnapshot(`
       {
+        "clutchErrors": 2,
         "clutchLost": 3,
         "clutchPlayed": 7,
         "clutchWinPct": 0.5714285714285714,
@@ -181,6 +182,8 @@ describe('computePressureStats', () => {
         "decidingSetLosses": 0,
         "decidingSetWinPct": 0,
         "decidingSetWins": 0,
+        "fatigueErrors": 0,
+        "fatiguePlayed": 0,
         "receives": 5,
         "receivesWon": 3,
         "sideOutPct": 0.6,
@@ -264,7 +267,13 @@ describe('computePlaystyle', () => {
             "share": 0.42857142857142855,
           },
         ],
-        "label": "Server",
+        "dominance": {
+          "ace": 4.761904761904761,
+          "block": 0,
+          "spike": 0,
+          "tip": 1.5151515151515151,
+        },
+        "label": "All-rounder",
         "riskProfile": 0.4,
         "share": {
           "ace": 0.6666666666666666,
@@ -272,8 +281,100 @@ describe('computePlaystyle', () => {
           "spike": 0,
           "tip": 0.3333333333333333,
         },
+        "traits": [],
       }
     `)
+  })
+})
+
+describe('computePlaystyle — dominance classifier & traits', () => {
+  const mkStrengths = (byType, totalErrors = 0) => ({
+    byType,
+    totalScoring: Object.values(byType).reduce((s, v) => s + v, 0),
+    totalErrors,
+  })
+
+  // n matches where p1 scores `mine` of `team` total team points each match.
+  const mkAnnotated = (n, mine, team) => Array.from({ length: n }, (_, i) => ({
+    pid: 'p1',
+    playerTeamNum: 1,
+    match: {
+      id: `m-${i}`,
+      log: [
+        ...Array.from({ length: mine }, () => ({ team: 1, scoringPlayerId: 'p1' })),
+        ...Array.from({ length: team - mine }, () => ({ team: 1, scoringPlayerId: 'p2' })),
+      ],
+    },
+  }))
+
+  it('labels a tip-dominant player Finesse', () => {
+    const strengths = mkStrengths({ ace: 1, spike: 4, block: 1, tip: 6 })
+    expect(computePlaystyle(mkAnnotated(3, 4, 10), strengths).value.label).toBe('Finesse')
+  })
+
+  it('labels a spike-dominant player Aggressor past the dominance margin', () => {
+    const strengths = mkStrengths({ ace: 2, spike: 12, block: 3, tip: 3 })
+    expect(computePlaystyle(mkAnnotated(3, 4, 10), strengths).value.label).toBe('Aggressor')
+  })
+
+  it('stays All-rounder when no shot is sufficiently over-represented', () => {
+    // Shares sit close to the baselines — max dominance is spike at 1.125 < 1.3.
+    const strengths = mkStrengths({ ace: 2, spike: 9, block: 5, tip: 4 })
+    expect(computePlaystyle(mkAnnotated(3, 4, 10), strengths).value.label).toBe('All-rounder')
+  })
+
+  it('stays All-rounder below the scoring sample guard', () => {
+    const strengths = mkStrengths({ ace: 0, spike: 0, block: 0, tip: 5 })
+    expect(computePlaystyle(mkAnnotated(3, 4, 10), strengths).value.label).toBe('All-rounder')
+  })
+
+  it('awards clutch and comebackKid with sufficient pressure sample', () => {
+    const strengths = mkStrengths({ ace: 3, spike: 3, block: 3, tip: 3 })
+    const pressure = { clutchPlayed: 25, clutchWinPct: 0.7, comebackPoints: 10 }
+    const { traits } = computePlaystyle(mkAnnotated(5, 3, 10), strengths, pressure).value
+    expect(traits).toContain('clutch')
+    expect(traits).toContain('comebackKid')
+  })
+
+  it('withholds clutch traits below the sample guards', () => {
+    const strengths = mkStrengths({ ace: 3, spike: 3, block: 3, tip: 3 })
+    const pressure = { clutchPlayed: 10, clutchWinPct: 0.9, comebackPoints: 10 }
+    const { traits } = computePlaystyle(mkAnnotated(4, 3, 10), strengths, pressure).value
+    expect(traits).not.toContain('clutch')
+    expect(traits).not.toContain('comebackKid')
+  })
+
+  it('awards safeHands at low risk with enough attempts', () => {
+    const strengths = mkStrengths({ ace: 6, spike: 6, block: 6, tip: 6 }, 4) // 4/28 ≈ 14%
+    const { traits } = computePlaystyle(mkAnnotated(3, 4, 10), strengths).value
+    expect(traits).toContain('safeHands')
+    expect(traits).not.toContain('gambler')
+  })
+
+  it('awards gambler at high risk with enough attempts', () => {
+    const strengths = mkStrengths({ ace: 0, spike: 15, block: 0, tip: 0 }, 12) // 12/27 ≈ 44%
+    const { traits } = computePlaystyle(mkAnnotated(3, 4, 10), strengths).value
+    expect(traits).toContain('gambler')
+  })
+
+  it('withholds risk traits below the attempts guard', () => {
+    const strengths = mkStrengths({ ace: 4, spike: 4, block: 4, tip: 4 }, 1) // 17 attempts
+    const { traits } = computePlaystyle(mkAnnotated(3, 4, 10), strengths).value
+    expect(traits).not.toContain('safeHands')
+    expect(traits).not.toContain('gambler')
+  })
+
+  it('awards workhorse and metronome for a steady high scoring share', () => {
+    const strengths = mkStrengths({ ace: 3, spike: 3, block: 3, tip: 3 })
+    const { traits } = computePlaystyle(mkAnnotated(6, 6, 10), strengths).value
+    expect(traits).toContain('workhorse')
+    expect(traits).toContain('metronome')
+  })
+
+  it('withholds workhorse below the match sample guard', () => {
+    const strengths = mkStrengths({ ace: 3, spike: 3, block: 3, tip: 3 })
+    const { traits } = computePlaystyle(mkAnnotated(4, 6, 10), strengths).value
+    expect(traits).not.toContain('workhorse')
   })
 })
 

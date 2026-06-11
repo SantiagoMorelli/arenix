@@ -19,6 +19,15 @@ function errorTypeName(key) {
   return map[key] || key
 }
 
+const TRAIT_NAMES = {
+  clutch: 'Clutch',
+  comebackKid: 'Comeback Kid',
+  safeHands: 'Safe Hands',
+  gambler: 'Gambler',
+  workhorse: 'Workhorse',
+  metronome: 'Metronome',
+}
+
 function formatDate(d) {
   if (!d) return ''
   try {
@@ -127,6 +136,9 @@ export function buildCoachExport(profile, stats, recentMatches = []) {
   const ps = V(stats.playstyle) || {}
   lines.push('PLAYSTYLE')
   if (ps.label) lines.push(`  Profile: ${ps.label}`)
+  if (ps.traits?.length) {
+    lines.push(`  Traits: ${ps.traits.map(t => TRAIT_NAMES[t] || t).join(', ')}`)
+  }
   lines.push(`  Risk: errors are ${PCT_FMT(ps.riskProfile)} of total attempts`)
   if (Number.isFinite(ps.consistency)) {
     lines.push(

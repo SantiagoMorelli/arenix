@@ -57,11 +57,16 @@ export const PROFILE_EXPLANATIONS = {
 
   playstyle: (
     <>
-      Your playing profile based on shot distribution and risk patterns.
-      Aggressor = spike-heavy finisher. Server = wins off the serve.
-      Defender = converts defense into offense. All-rounder = balanced mix.
-      Risk shows how often you commit errors relative to your shot attempts;
-      Consistency (0–1) measures how stable your scoring share is match to match.
+      Your playing profile compares your shot mix to a typical player&rsquo;s — the
+      most over-represented shot defines your style. Aggressor = spike-heavy
+      finisher. Server = wins off the serve. Defender = converts defense into
+      offense. Finesse = tip-dominant, wins with placement and touch.
+      All-rounder = nothing stands out yet (or the sample is still small).
+      Trait badges highlight standout patterns — clutch scoring, comebacks,
+      risk appetite, and how much of your team&rsquo;s scoring you carry — and only
+      appear once you have enough matches behind them. Risk shows how often you
+      commit errors relative to your shot attempts; Consistency (0–1) measures
+      how stable your scoring share is match to match.
     </>
   ),
 

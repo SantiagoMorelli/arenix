@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AddPlayerSheet from './AddPlayerSheet'
+import { playerInitials } from '../lib/utils'
 
 // ── Avatar color ───────────────────────────────────────────────────────────────
 function avatarBg(seed) {
@@ -70,7 +71,7 @@ function Avatar({ player, size, dotBorder, showDot = true }) {
         className="flex items-center justify-center font-bold text-white"
         style={{ width: sz, height: sz, fontSize: isLarge ? 22 : 13, borderRadius: radius, backgroundColor: avatarBg(player.id || player.name) }}
       >
-        {label[0].toUpperCase()}
+        {playerInitials(label)}
       </div>
       {showDot && (
         <span
@@ -362,7 +363,7 @@ function LinkSheet({ player, members, onCancel, onConfirm }) {
               className={`flex items-center gap-3 px-3.5 py-3 min-h-[44px] cursor-pointer transition-colors ${selectedUserId === m.userId ? 'bg-free/10' : 'active:bg-alt/50'} ${i < arr.length - 1 ? 'border-b border-line' : ''}`}
             >
               <div className="w-8 h-8 rounded-lg bg-alt flex items-center justify-center text-[12px] font-bold text-text flex-shrink-0">
-                {(m.fullName || '?')[0].toUpperCase()}
+                {playerInitials(m.fullName)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-text truncate">{m.fullName || 'Unknown'}</div>

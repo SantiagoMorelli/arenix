@@ -11,6 +11,19 @@ export const LEVELS = [
 export const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
 
 /**
+ * Up to two initials for an avatar ("Ana Pérez" → "AP"), matching the
+ * profile avatar treatment on the Landing page.
+ */
+export function playerInitials(name) {
+  return String(name || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('') || '?'
+}
+
+/**
  * Deterministic avatar background colour for a player, derived from a seed
  * (player id or name). Returns a style object — oklch() values can't be
  * expressed as static Tailwind utilities.

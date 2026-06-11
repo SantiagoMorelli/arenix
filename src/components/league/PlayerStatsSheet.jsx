@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Flame } from 'lucide-react'
 import { AppSheet, AppBadge } from '../ui-new'
-import { playerAvatarStyle } from '../../lib/utils'
+import { playerAvatarStyle, playerInitials } from '../../lib/utils'
 import EloSparkline from './EloSparkline'
 
 const RECENT_MATCHES = 6
@@ -56,7 +56,7 @@ export default function PlayerStatsSheet({ open, onClose, player, league, insigh
           className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[14px] font-semibold text-white"
           style={playerAvatarStyle(player.id || player.name)}
         >
-          {label[0]?.toUpperCase()}
+          {playerInitials(label)}
         </div>
       }
     >

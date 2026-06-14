@@ -4,6 +4,7 @@ import {
   Target, TrendingUp, ShieldCheck, Dices, Flame, Timer,
 } from 'lucide-react'
 import { AppSheet } from '../../ui-new'
+import MeterTrack from '../../stats/MeterTrack'
 
 const PCT = (n) => `${Math.round((n || 0) * 100)}%`
 
@@ -61,6 +62,10 @@ export default function PlaystylePanel({ stats }) {
   // Per-match consistency mini-chart
   const matches = (value.consistencyByMatch || []).slice(-12) // last 12 matches
   const maxShare = Math.max(0.01, ...matches.map(m => m.share))
+  const avgShare = matches.length
+    ? matches.reduce((s, m) => s + m.share, 0) / matches.length
+    : 0
+  const peakShare = matches.length ? Math.max(...matches.map(m => m.share)) : 0
 
   return (
     <div>
@@ -119,37 +124,49 @@ export default function PlaystylePanel({ stats }) {
         )}
       </AppSheet>
 
-      {/* Risk + consistency */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-bg rounded-xl p-3 flex items-center gap-2">
-          <AlertTriangle size={14} className="text-error" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] text-dim uppercase tracking-wide">Risk</div>
-              <div className="font-display text-[18px] text-error leading-none">
-                {PCT(value.riskProfile)}
-              </div>
-            <div className="text-[9px] text-dim mt-0.5">errors / attempts</div>
-          </div>
-        </div>
-        <div className="bg-bg rounded-xl p-3 flex items-center gap-2">
-          <Activity size={14} className="text-success" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] text-dim uppercase tracking-wide">Consistency</div>
-              <div className="font-display text-[18px] text-success leading-none">
-                {(value.consistency || 0).toFixed(2)}
-              </div>
-            <div className="text-[9px] text-dim mt-0.5">1.0 = identical share</div>
-          </div>
-        </div>
+      {/* Risk + consistency gauges */}
+      <div className="space-y-2 mb-3">
+        <MeterTrack
+          title="Risk"
+          icon={<AlertTriangle size={11} className="text-error" />}
+          value={value.riskProfile}
+          valueText={PCT(value.riskProfile)}
+          leftLabel="Safe"
+          rightLabel="Gambler"
+          color="bg-text"
+          gradient
+        />
+        <MeterTrack
+          title="Consistency"
+          icon={<Activity size={11} className="text-success" />}
+          value={value.consistency}
+          valueText={(value.consistency || 0).toFixed(2)}
+          leftLabel="Streaky"
+          rightLabel="Metronome"
+          color="bg-success"
+        />
       </div>
 
       {/* Mini bar chart of recent matches */}
       {matches.length > 0 && (
         <div className="bg-bg rounded-xl p-3">
-          <div className="text-[10px] uppercase tracking-wide text-dim mb-2">
-            Scoring share (last {matches.length} matches)
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] uppercase tracking-wide text-dim">
+              Scoring share · last {matches.length}
+            </div>
+            <div className="text-[10px] text-dim">
+              avg <span className="text-text font-semibold">{PCT(avgShare)}</span>
+              {' · '}peak <span className="text-text font-semibold">{PCT(peakShare)}</span>
+            </div>
           </div>
-          <div className="flex items-end gap-1 h-[48px]">
+          {/* Bars share one reference frame with the average line */}
+          <div className="relative flex items-end gap-1 h-[52px]">
+            <div
+              className="absolute left-0 right-0 border-t border-dashed border-line z-10"
+              style={{ bottom: `${(avgShare / maxShare) * 100}%` }}
+            >
+              <span className="absolute -top-2.5 right-0 text-[8px] text-dim bg-bg px-1">avg</span>
+            </div>
             {matches.map((m, i) => (
               <div
                 key={i}
@@ -159,6 +176,15 @@ export default function PlaystylePanel({ stats }) {
               />
             ))}
           </div>
+          {/* Points-per-match labels, aligned under each bar */}
+          <div className="flex gap-1 mt-1">
+            {matches.map((m, i) => (
+              <span key={i} className="flex-1 text-center text-[8px] text-dim leading-none">
+                {m.points}
+              </span>
+            ))}
+          </div>
+          <div className="text-[9px] text-dim mt-1 text-center">points scored per match</div>
         </div>
       )}
       {stats.sampleSize < stats.totalMatches && (

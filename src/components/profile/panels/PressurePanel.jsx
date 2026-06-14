@@ -1,4 +1,6 @@
-import { Flame, Hourglass, Shield, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Hourglass, TrendingUp, AlertTriangle } from 'lucide-react'
+import StatRing from '../../stats/StatRing'
+import SplitBar from '../../stats/SplitBar'
 
 const PCT = (n) => `${Math.round((n || 0) * 100)}%`
 
@@ -19,6 +21,12 @@ function StatRow({ icon, label, value, sub, color = 'text-text' }) {
   )
 }
 
+function SectionTitle({ children }) {
+  return (
+    <div className="text-[10px] uppercase tracking-wide text-dim mb-2">{children}</div>
+  )
+}
+
 export default function PressurePanel({ stats }) {
   if (!stats || (stats.sampleSize || 0) < 3) return null
   const value = stats.value || {}
@@ -32,73 +40,76 @@ export default function PressurePanel({ stats }) {
 
   return (
     <div>
-      {/* Headline */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <Headline value={PCT(value.clutchWinPct)} label="Clutch win" colorClass="text-error" />
-        <Headline value={PCT(value.sideOutPct)} label="Side-out" colorClass="text-free" />
-        <Headline
-          value={`${value.decidingSetWins}-${value.decidingSetLosses}`}
-          label="Deciders"
-          colorClass="text-success"
+      {/* Big points — won vs lost when the set is on the line */}
+      <div className="bg-bg rounded-xl p-3 mb-3">
+        <div className="flex items-center justify-between mb-2.5">
+          <SectionTitle>Big points</SectionTitle>
+          <div className="font-display text-[20px] text-success leading-none">
+            {PCT(value.clutchWinPct)} <span className="text-[10px] text-dim font-sans">won</span>
+          </div>
+        </div>
+        <SplitBar
+          segments={[
+            { value: value.clutchWon || 0,  color: 'bg-success', label: 'Won' },
+            { value: value.clutchLost || 0, color: 'bg-error',   label: 'Lost' },
+          ]}
         />
+        <div className="text-[10px] text-dim mt-2">
+          {value.clutchPlayed} big points — the last few of a tight set & deciders
+        </div>
       </div>
 
+      {/* Receiving — how often you win the rally after the other team serves */}
+      <div className="bg-bg rounded-xl p-3 mb-3 flex items-center gap-4">
+        <StatRing
+          value={value.sideOutPct}
+          centerText={PCT(value.sideOutPct)}
+          label="Receive"
+          color="free"
+          size={84}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] text-text font-semibold mb-0.5">Rallies won on receive</div>
+          <div className="text-[11px] text-dim leading-snug">
+            You won <span className="text-text font-semibold">{value.receivesWon}</span> of{' '}
+            <span className="text-text font-semibold">{value.receives}</span> rallies when the
+            other team was serving. Winning these flips the serve to your side.
+          </div>
+        </div>
+      </div>
+
+      {/* Supporting facts, in plain English */}
       <StatRow
-        icon={<Flame size={14} />}
-        label="Clutch points"
-        value={`${value.clutchWon}W · ${value.clutchLost}L`}
-        sub={`${value.clutchPlayed} total · last 4 of a set or deciding sets`}
-        color="text-error"
+        icon={<TrendingUp size={14} />}
+        label="Points won while trailing"
+        value={value.comebackPoints}
+        sub="Scored when your team was down 2+"
+        color="text-accent"
       />
       <StatRow
         icon={<AlertTriangle size={14} />}
-        label="Clutch mistakes"
-        value={`${value.clutchErrors}`}
-        sub={`Errors made when margin <= 2`}
+        label="Mistakes under pressure"
+        value={value.clutchErrors}
+        sub="Errors made while the score was within 2"
         color="text-error"
       />
       <StatRow
         icon={<AlertTriangle size={14} className="text-dim" />}
-        label="Late-game errors"
-        value={`${value.fatigueErrors}`}
-        sub={`Errors made when score >= 15`}
+        label="Late-game mistakes"
+        value={value.fatigueErrors}
+        sub="Errors made once a set reached 15+"
         color="text-text"
       />
       <StatRow
-        icon={<Shield size={14} />}
-        label="Side-out conversion"
-        value={`${value.receivesWon}/${value.receives}`}
-        sub="Won rallies on receive"
-        color="text-free"
-      />
-      <StatRow
-        icon={<TrendingUp size={14} />}
-        label="Comeback contribution"
-        value={value.comebackPoints}
-        sub="Points scored while trailing 2+"
-        color="text-accent"
-      />
-      <StatRow
         icon={<Hourglass size={14} />}
-        label="Deciding sets"
+        label="Deciding-set record"
         value={`${value.decidingSetWins}-${value.decidingSetLosses}`}
-        sub={`${PCT(value.decidingSetWinPct)} won when it goes the distance`}
+        sub={`${PCT(value.decidingSetWinPct)} won when a match goes the distance`}
         color="text-success"
       />
       {stats.sampleSize < stats.totalMatches && (
         <div className="text-[10px] text-dim mt-2">based on {stats.sampleSize} of {stats.totalMatches} matches</div>
       )}
-    </div>
-  )
-}
-
-function Headline({ value, label, colorClass }) {
-  return (
-    <div className="bg-bg rounded-lg py-2 text-center">
-      <div className={`font-display leading-none ${colorClass}`} style={{ fontSize: 18 }}>
-        {value}
-      </div>
-      <div className="text-[9px] text-dim mt-1 uppercase tracking-wide">{label}</div>
     </div>
   )
 }

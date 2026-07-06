@@ -96,6 +96,12 @@ function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
     .map(s => ({ ...s, value: bt[s.key] || 0 }))
     .filter(s => s.value > 0);
 
+  // Net points (pts − errors) — same measure the MVP is picked by.
+  const net = pts - err;
+  const netCls = net > 0
+    ? "bg-success/15 text-success"
+    : net < 0 ? "bg-error/15 text-error" : "bg-alt text-dim";
+
   return (
     <div className="flex items-center gap-2.5 py-2.5">
       {/* Avatar */}
@@ -107,7 +113,10 @@ function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1 mb-1">
           <span className="text-[12px] font-semibold text-text truncate">{firstName(pid)}</span>
-          {isMVP && <Flame size={11} className={teamColor} />}
+          {isMVP && <Flame size={11} className={`flex-shrink-0 ${teamColor}`} />}
+          <span className={`flex-shrink-0 text-[9px] font-bold px-1 py-px rounded ${netCls}`}>
+            {net > 0 ? "+" : ""}{net} net
+          </span>
         </div>
         <div className="h-[3px] bg-alt rounded-full mb-1.5 overflow-hidden">
           <div className={`h-full rounded-full ${barFill}`} style={{ width: `${barPct}%` }} />

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
-  Flame, ArrowUpDown, Repeat, ArrowRight, CheckCircle2, AlertTriangle,
+  Flame, ArrowUpDown, Repeat, ArrowRight,
 } from "lucide-react";
 import { AppCard } from "../ui-new";
 import { formatDuration } from "../../lib/utils";
 import {
-  calcLeadMoments, calcLeadChangeList, calcMvpMoments,
+  calcLeadMoments, calcLeadChangeList,
 } from "../../lib/matchStats";
-import { POINT_TYPE_BY_ID } from "./pointTypes";
+import PlayerMoments from "./PlayerMoments";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
 
@@ -26,18 +26,18 @@ import { EXPLANATIONS } from "./explanations";
  *   mvp               { pid, net } | null
  *   leadStats         { maxLead, maxLeadTeam, changes }
  *   t1Ids             string[]
- *   allPlayerIds      string[]   — for runner-up calculation
  *   getPlayer         fn(id)
  *   getTeam           fn(id)
  *   team1Id           string
  *   team2Id           string
- *   teamPlayerStats   { 1: stat, 2: stat }
  *   selectedPointId   string|null  — currently-highlighted point in Match Flow
  *   onPointSelect     fn(id|null)  — request a Match Flow highlight
+ *   pressureTags      { [pointId]: tag } from calcPressureTags
  */
 export default function MatchHighlights({
-  pointLog, mvp, leadStats, t1Ids, allPlayerIds, getPlayer, getTeam, team1Id, team2Id,
-  teamPlayerStats, selectedPointId, onPointSelect, helpMode = false, scoringLevel = 3,
+  pointLog, mvp, leadStats, t1Ids, getPlayer, getTeam, team1Id, team2Id,
+  selectedPointId, onPointSelect, pressureTags,
+  helpMode = false, scoringLevel = 3,
 }) {
   const [open, setOpen] = useState(null); // "mvp" | "lead" | "changes" | null
   const tName = id => getTeam(id)?.name || "?";
@@ -101,15 +101,14 @@ export default function MatchHighlights({
         <div className="overflow-hidden min-h-0">
           <div className="pt-3">
             {open === "mvp" && mvp && (
-              <MvpDetail
+              <PlayerMoments
                 pid={mvp.pid}
-                net={mvp.net}
                 isTeam1={mvpIsTeam1}
                 pointLog={pointLog}
-                firstName={firstName}
                 fmt={fmt}
                 selectedPointId={selectedPointId}
                 onPointSelect={onPointSelect}
+                pressureTags={pressureTags}
               />
             )}
             {open === "lead" && (
@@ -155,69 +154,6 @@ function Tile({ selected, onClick, disabled, icon, primary, primaryClass, second
       {secondary && <div className="text-[10px] text-dim mt-0.5 truncate px-1">{secondary}</div>}
       <div className="text-[9px] text-dim uppercase mt-1">{label}</div>
     </button>
-  );
-}
-
-// ── MVP detail ─────────────────────────────────────────────────────────────
-// Differentiated from Top Performers (which shows aggregate stats): this view
-// tells the STORY of the MVP — vs the runner-up, plus the actual list of
-// scoring/error moments they had during the match.
-
-function MvpDetail({
-  pid, net, isTeam1, pointLog,
-  firstName, fmt,
-  selectedPointId, onPointSelect,
-}) {
-  const moments = calcMvpMoments(pid, pointLog);
-  const accent = isTeam1 ? "text-accent" : "text-free";
-
-  return (
-    <div className="space-y-2.5">
-
-      {/* Key moments — list of scored/errored points (tappable → highlight in flow) */}
-      {moments.length > 0 && (
-        <div>
-          <div className="text-[8px] font-bold text-dim uppercase tracking-wide mb-1.5 flex items-center justify-between">
-            <span>Key moments</span>
-            <span className="text-dim/60 font-normal normal-case">Tap to find</span>
-          </div>
-          <ul className="space-y-1">
-            {moments.map((m, i) => {
-              const isSelected = selectedPointId === m.id;
-              const isError = m.kind === "error";
-              const Icon = isError ? AlertTriangle : (POINT_TYPE_BY_ID[m.pointType]?.icon || CheckCircle2);
-              const tone = isError ? "text-error" : accent;
-              const ptLabel = isError ? "Error" : (POINT_TYPE_BY_ID[m.pointType]?.label || "Point");
-              return (
-                <li key={m.id}>
-                  <button
-                    type="button"
-                    onClick={() => onPointSelect?.(isSelected ? null : m.id)}
-                    aria-pressed={isSelected}
-                    className={`w-full flex items-center justify-between gap-2 text-[11px] px-2.5 py-1.5 rounded-[6px] border-0 cursor-pointer text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text ${isSelected ? "bg-text/10 ring-1 ring-text/40" : (i % 2 === 0 ? "bg-alt" : "bg-bg/40")}`}
-                  >
-                    <span className="text-dim font-mono text-[10px] w-10 flex-shrink-0">{fmt(m.timestamp) || "—"}</span>
-                    <span className="font-display text-[14px] leading-none flex-shrink-0">
-                      <span className="text-accent">{m.t1}</span>
-                      <span className="text-dim text-[10px] mx-0.5">–</span>
-                      <span className="text-free">{m.t2}</span>
-                    </span>
-                    <span className={`flex items-center gap-1 ${tone} font-bold text-[10px] uppercase tracking-wide truncate min-w-0 justify-end flex-1`}>
-                      <Icon size={10} className="flex-shrink-0" />
-                      <span className="truncate">{ptLabel}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      {moments.length === 0 && (
-        <div className="text-[11px] text-dim italic text-center py-2">No moments to show.</div>
-      )}
-    </div>
   );
 }
 

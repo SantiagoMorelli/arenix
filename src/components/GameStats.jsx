@@ -5,7 +5,7 @@ import {
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
 import { AppCard, AppButton, PillTabs } from "./ui-new";
 import {
-  calcLeadStats, calcDynamics, calcMVP,
+  calcLeadStats, calcDynamics, calcMVP, calcPressureTags,
 } from "../lib/matchStats";
 import { buildMatchStory } from "../lib/matchInsights";
 import { useAuth } from "../contexts/AuthContext";
@@ -116,6 +116,7 @@ const GameStats = ({
   const mvp = scoringLevel >= 2 ? calcMVP(allIds, s1, s2, t1Ids) : null;
   const leadStats = calcLeadStats(pointLog);
   const dynStats  = calcDynamics(pointLog);
+  const pressureTags = calcPressureTags(pointLog);
 
   const { session } = useAuth();
   const authUserId = session?.user?.id ?? null;
@@ -297,14 +298,13 @@ const GameStats = ({
             mvp={mvp}
             leadStats={leadStats}
             t1Ids={t1Ids}
-            allPlayerIds={allIds}
             getPlayer={getPlayer}
             getTeam={getTeam}
             team1Id={team1Id}
             team2Id={team2Id}
-            teamPlayerStats={{ 1: s1, 2: s2 }}
             selectedPointId={selectedPointId}
             onPointSelect={setSelectedPointId}
+            pressureTags={pressureTags}
             helpMode={helpMode}
             scoringLevel={scoringLevel}
           />
@@ -359,6 +359,9 @@ const GameStats = ({
               getTeam={getTeam}
               team1Id={team1Id}
               team2Id={team2Id}
+              selectedPointId={selectedPointId}
+              onPointSelect={setSelectedPointId}
+              pressureTags={pressureTags}
               helpMode={helpMode}
             />
           )}

@@ -1,6 +1,8 @@
 import { Flame, Target, X, Zap, Shield, Hand } from "lucide-react";
 import { AppCard } from "../ui-new";
+import { formatDuration } from "../../lib/utils";
 import ExpandableStatCard from "./ExpandableStatCard";
+import PlayerMoments from "./PlayerMoments";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
 import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
@@ -8,7 +10,8 @@ import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
  *   collapsed = avatar + name + relative bar + secondary icons + PTS big + ERR
- *   expanded  = contribution bars · clutch · peak · error breakdown
+ *   expanded  = key-moments timeline (every point scored/errored, tappable →
+ *               Match Flow highlight, with pressure badges) · error breakdown
  */
 
 const STAT_TYPES = [
@@ -20,10 +23,14 @@ const STAT_TYPES = [
 
 export default function TopPerformers({
   pointLog, s1, s2, t1Ids, t2Ids, mvp, getPlayer, getTeam, team1Id, team2Id,
+  selectedPointId, onPointSelect, pressureTags,
   helpMode = false,
 }) {
   const tName = id => getTeam(id)?.name || "?";
   const firstName = id => (getPlayer(id)?.name || "?").split(" ")[0];
+
+  const startTs = pointLog[0]?.timestamp;
+  const fmt = (ts) => (startTs && ts) ? formatDuration(ts - startTs) : null;
 
   const renderTeamSection = (ids, stat, isTeam1) => {
     if (ids.length === 0) return null;
@@ -46,8 +53,12 @@ export default function TopPerformers({
             <PerformerDetail
               pid={pid}
               pointLog={pointLog}
-              byType={stat.playerByType[pid] || {}}
+              isTeam1={isTeam1}
               errors={stat.playerErrors[pid] || 0}
+              fmt={fmt}
+              selectedPointId={selectedPointId}
+              onPointSelect={onPointSelect}
+              pressureTags={pressureTags}
             />
           </ExpandableStatCard>
         ))}
@@ -131,7 +142,10 @@ function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
 
 // ── Expanded detail ────────────────────────────────────────────────────────
 
-function PerformerDetail({ pid, pointLog, byType, errors }) {
+function PerformerDetail({
+  pid, pointLog, isTeam1, errors,
+  fmt, selectedPointId, onPointSelect, pressureTags,
+}) {
   const playerErrorLog = pointLog.filter(e => e.errorPlayerId === pid);
   const byErrorType = {};
   playerErrorLog.forEach(e => {
@@ -139,38 +153,21 @@ function PerformerDetail({ pid, pointLog, byType, errors }) {
     byErrorType[sub] = (byErrorType[sub] || 0) + 1;
   });
 
-  const contribBars = [
-    ...STAT_TYPES.map(s => ({ ...s, value: byType[s.key] || 0 })),
-    { label: "Error", Icon: X, textCls: "text-error", bgCls: "bg-error/80", value: errors },
-  ].filter(d => d.value > 0);
-
-  const maxContrib = Math.max(...contribBars.map(d => d.value), 1);
   const hasTypedErrors = ERROR_SUBTYPES.some(s => s.id !== "untyped" && byErrorType[s.id]);
 
   return (
     <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2 space-y-2.5">
 
-      {/* Contribution bars */}
-      {contribBars.length > 0 && (
-        <div>
-          <div className="text-[8px] font-bold text-dim uppercase tracking-wide mb-2">Contribution</div>
-          <div className="space-y-1.5">
-            {contribBars.map(b => (
-              <div key={b.label} className="flex items-center gap-2">
-                <b.Icon size={9} className={`flex-shrink-0 ${b.textCls}`} />
-                <span className={`text-[8px] font-bold uppercase tracking-wide w-9 flex-shrink-0 ${b.textCls}`}>{b.label}</span>
-                <div className="flex-1 h-[5px] bg-alt rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${b.bgCls}`}
-                    style={{ width: `${(b.value / maxContrib) * 100}%` }}
-                  />
-                </div>
-                <span className={`text-[11px] font-bold w-4 text-right flex-shrink-0 ${b.textCls}`}>{b.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Key moments — same story view as the MVP detail */}
+      <PlayerMoments
+        pid={pid}
+        pointLog={pointLog}
+        isTeam1={isTeam1}
+        fmt={fmt}
+        selectedPointId={selectedPointId}
+        onPointSelect={onPointSelect}
+        pressureTags={pressureTags}
+      />
 
       {/* Error breakdown — only when typed errors exist */}
       {errors > 0 && hasTypedErrors && (

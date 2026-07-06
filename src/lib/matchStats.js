@@ -239,12 +239,8 @@ export function calcContextualErrors(pid, pointLog) {
   let fatiguePlayed = 0;
 
   pointLog.forEach(e => {
-    // Clutch: Point margin <= 2
+    // Clutch: point margin <= 2
     if (Math.abs(e.t1 - e.t2) <= 2) {
-      if (e.team === (e.scoringPlayerId === pid ? e.team : (e.errorPlayerId === pid ? (e.team === 1 ? 2 : 1) : null))) {
-         // this point played by team of pid? wait, we don't have team of pid easily accessible here unless we know it.
-         // Let's rely on scoringPlayerId and errorPlayerId for pid
-      }
       if (e.scoringPlayerId === pid) clutchPlayed++;
       else if (e.errorPlayerId === pid) {
         clutchPlayed++;
@@ -252,16 +248,7 @@ export function calcContextualErrors(pid, pointLog) {
       }
     }
 
-    // Fatigue / Late Game: Score >= 15
-    const maxScoreBeforePoint = Math.max(
-      e.team === 1 ? e.t1 - 1 : e.t1,
-      e.team === 2 ? e.t2 - 1 : e.t2
-    ); // Approximate score before point based on current point
-    
-    // Better way to check if score >= 15 is looking at t1 and t2 (which is score AFTER point)
-    // we should look at score before point.
-    // Actually, `e.t1` and `e.t2` is the score *after* the point.
-    // Let's use `Math.max(e.t1, e.t2) >= 15`
+    // Fatigue / late game: score >= 15 (t1/t2 are the score AFTER the point)
     if (Math.max(e.t1, e.t2) >= 15) {
       if (e.scoringPlayerId === pid) fatiguePlayed++;
       else if (e.errorPlayerId === pid) {
@@ -338,11 +325,64 @@ export function calcClutchMoments(pointLog) {
 
 // Every point where `pid` either scored or made the error.
 // Returns entries with a `kind` flag: "scored" | "error".
-export function calcMvpMoments(pid, pointLog) {
+export function calcPlayerMoments(pid, pointLog) {
   const out = [];
   pointLog.forEach(e => {
     if (e.scoringPlayerId === pid) out.push({ ...e, kind: "scored" });
     else if (e.errorPlayerId === pid) out.push({ ...e, kind: "error" });
+  });
+  return out;
+}
+
+// Pressure context per point, inferred purely from the log (entries don't
+// carry pointsToWin). Returns { [pointId]: "match_point" | "set_point" |
+// "tied" | "clutch" } — one tag per point, priority in that order; points
+// with no pressure context are omitted.
+export function calcPressureTags(pointLog) {
+  if (pointLog.length === 0) return {};
+
+  // Final entry (score + winner) of each set.
+  const setFinal = {};
+  pointLog.forEach(e => { setFinal[e.setNum] = e; });
+
+  // Infer each set's target: exact when won by >2 points; a win-by-2 finish
+  // means the set ended at or past the target, and a 21-point set can't end
+  // at 16 or less (deuce of a 15-point set can).
+  const targetFor = {}, winnerOf = {};
+  Object.entries(setFinal).forEach(([sn, e]) => {
+    const w = Math.max(e.t1, e.t2), l = Math.min(e.t1, e.t2);
+    targetFor[sn] = w - l > 2 ? w : (w <= 16 ? 15 : 21);
+    winnerOf[sn] = e.t1 > e.t2 ? 1 : 2;
+  });
+
+  const setNums = Object.keys(winnerOf).map(Number);
+  const setsWonBy = { 1: 0, 2: 0 };
+  setNums.forEach(sn => { setsWonBy[winnerOf[sn]]++; });
+  const setsToWin = Math.max(setsWonBy[1], setsWonBy[2]);
+
+  const out = {};
+  pointLog.forEach(e => {
+    // Score BEFORE the point landed.
+    const b1 = e.team === 1 ? e.t1 - 1 : e.t1;
+    const b2 = e.team === 2 ? e.t2 - 1 : e.t2;
+    const T = targetFor[e.setNum] || 21;
+
+    // Team (if any) that was one point away from closing the set. Covers
+    // deuce naturally: at T-1 or beyond, any 1-point lead is a set point.
+    const spTeam = (b1 >= T - 1 && b1 - b2 >= 1) ? 1
+                 : (b2 >= T - 1 && b2 - b1 >= 1) ? 2
+                 : null;
+
+    if (spTeam) {
+      const prevWins = setNums.filter(sn => sn < e.setNum && winnerOf[sn] === spTeam).length;
+      out[e.id] = prevWins === setsToWin - 1 ? "match_point" : "set_point";
+    } else if (b1 === b2 && b1 > 0) {
+      out[e.id] = "tied";
+    } else if (Math.abs(b1 - b2) <= 2 && Math.max(b1, b2) >= T - 6) {
+      // Close margin late in the set (last ~6 points before the target);
+      // the late-game gate keeps early close scores from tagging as clutch.
+      out[e.id] = "clutch";
+    }
   });
   return out;
 }

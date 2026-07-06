@@ -82,7 +82,13 @@ export const EXPLANATIONS = {
       <p>
         The main player analysis section. Every player on both teams gets a
         row. The initials circle is color-coded to their team, and the flame
-        icon marks the MVP.
+        icon marks the MVP. The pill next to the name is{" "}
+        <span className="font-bold not-italic">net points</span> — points
+        scored minus errors caused, the same measure the MVP is picked by.{" "}
+        <span className="text-success font-bold not-italic">Green</span> means
+        the player added more than they gave away;{" "}
+        <span className="text-error font-bold not-italic">red</span> means
+        their errors outweighed their points.
       </p>
       <p className="font-bold text-text not-italic">The stat columns:</p>
       <Item title="PTS">

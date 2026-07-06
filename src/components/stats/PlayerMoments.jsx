@@ -50,11 +50,14 @@ export default function PlayerMoments({
         {moments.map((m, i) => {
           const isSelected = selectedPointId === m.id;
           const isError = m.kind === "error";
-          const Icon = isError ? AlertTriangle : (POINT_TYPE_BY_ID[m.pointType]?.icon || CheckCircle2);
           const tone = isError ? "text-error" : accent;
-          // Error rows: red tone + warning icon already say "error", so the
-          // label is just the action type ("Spike", "Serve", …).
+          // Error rows: the red tone already says "error", so both icon and
+          // label show just the action type ("Spike", "Serve", …). Untyped
+          // errors fall back to a plain warning.
           const errSub = isError ? normalizeErrorType(m.errorType) : null;
+          const Icon = isError
+            ? (errSub === "untyped" ? AlertTriangle : ERROR_SUBTYPE_BY_ID[errSub].icon)
+            : (POINT_TYPE_BY_ID[m.pointType]?.icon || CheckCircle2);
           const ptLabel = isError
             ? (errSub === "untyped" ? "Error" : ERROR_SUBTYPE_BY_ID[errSub].label)
             : (POINT_TYPE_BY_ID[m.pointType]?.label || "Point");

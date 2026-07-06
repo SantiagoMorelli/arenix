@@ -1,17 +1,17 @@
-import { Flame, Target, X, Zap, Shield, Hand } from "lucide-react";
+import { Flame, Target, Zap, Shield, Hand } from "lucide-react";
 import { AppCard } from "../ui-new";
 import { formatDuration } from "../../lib/utils";
 import ExpandableStatCard from "./ExpandableStatCard";
 import PlayerMoments from "./PlayerMoments";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
-import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
 
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
  *   collapsed = avatar + name + relative bar + secondary icons + PTS big + ERR
- *   expanded  = key-moments timeline (every point scored/errored, tappable →
- *               Match Flow highlight, with pressure badges) · error breakdown
+ *   expanded  = key-moments timeline (every point scored/errored with its
+ *               point/error type and pressure badge, tappable → Match Flow
+ *               highlight)
  */
 
 const STAT_TYPES = [
@@ -50,16 +50,17 @@ export default function TopPerformers({
             className="border-b border-line last:border-b-0"
             header={renderRow(pid, stat, isTeam1, mvp?.pid === pid, firstName, maxPts)}
           >
-            <PerformerDetail
-              pid={pid}
-              pointLog={pointLog}
-              isTeam1={isTeam1}
-              errors={stat.playerErrors[pid] || 0}
-              fmt={fmt}
-              selectedPointId={selectedPointId}
-              onPointSelect={onPointSelect}
-              pressureTags={pressureTags}
-            />
+            <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2">
+              <PlayerMoments
+                pid={pid}
+                pointLog={pointLog}
+                isTeam1={isTeam1}
+                fmt={fmt}
+                selectedPointId={selectedPointId}
+                onPointSelect={onPointSelect}
+                pressureTags={pressureTags}
+              />
+            </div>
           </ExpandableStatCard>
         ))}
       </>
@@ -140,64 +141,4 @@ function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
   );
 }
 
-// ── Expanded detail ────────────────────────────────────────────────────────
-
-function PerformerDetail({
-  pid, pointLog, isTeam1, errors,
-  fmt, selectedPointId, onPointSelect, pressureTags,
-}) {
-  const playerErrorLog = pointLog.filter(e => e.errorPlayerId === pid);
-  const byErrorType = {};
-  playerErrorLog.forEach(e => {
-    const sub = normalizeErrorType(e.errorType);
-    byErrorType[sub] = (byErrorType[sub] || 0) + 1;
-  });
-
-  const hasTypedErrors = ERROR_SUBTYPES.some(s => s.id !== "untyped" && byErrorType[s.id]);
-
-  return (
-    <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2 space-y-2.5">
-
-      {/* Key moments — same story view as the MVP detail */}
-      <PlayerMoments
-        pid={pid}
-        pointLog={pointLog}
-        isTeam1={isTeam1}
-        fmt={fmt}
-        selectedPointId={selectedPointId}
-        onPointSelect={onPointSelect}
-        pressureTags={pressureTags}
-      />
-
-      {/* Error breakdown — only when typed errors exist */}
-      {errors > 0 && hasTypedErrors && (
-        <div className="bg-alt rounded-[8px] px-2.5 py-2">
-          <div className="flex items-center gap-1 mb-1.5">
-            <X size={10} className="text-error flex-shrink-0" />
-            <span className="text-[8px] font-bold text-dim uppercase tracking-wide flex-1">Error breakdown</span>
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {ERROR_SUBTYPES
-              .filter(sub => sub.id !== "untyped" && byErrorType[sub.id])
-              .map(sub => {
-                const Icon = sub.icon;
-                return (
-                  <span key={sub.id} className="flex items-center gap-1">
-                    <Icon size={9} className="text-error/70 flex-shrink-0" />
-                    <span className="text-[9px] text-dim">{sub.label}</span>
-                    <span className="text-[10px] font-bold text-error">{byErrorType[sub.id]}</span>
-                  </span>
-                );
-              })}
-            {byErrorType.untyped > 0 && (
-              <span className="text-[9px] text-dim">
-                Untyped <span className="font-bold text-error">{byErrorType.untyped}</span>
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 

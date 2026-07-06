@@ -124,9 +124,10 @@ export const EXPLANATIONS = {
       </p>
       <p>
         Tap a player to expand their key moments: every point they scored or
-        errored, in order, with the running score. Icons mark points played
-        under pressure — match point, set point, tied score, or clutch (a
-        close score late in the set). Tap a moment to find it in Match Flow.
+        errored, in order, with the running score. Errors show the action
+        they came from (spike, serve, tip). Icons mark points played under
+        pressure — match point, set point, tied score, or clutch (a close
+        score late in the set). Tap a moment to find it in Match Flow.
       </p>
     </div>
   ),

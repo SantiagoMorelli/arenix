@@ -1,12 +1,13 @@
 import { CheckCircle2, AlertTriangle, Trophy, Flag, Equal, Swords } from "lucide-react";
 import { calcPlayerMoments } from "../../lib/matchStats";
-import { POINT_TYPE_BY_ID } from "./pointTypes";
+import { POINT_TYPE_BY_ID, ERROR_SUBTYPE_BY_ID, normalizeErrorType } from "./pointTypes";
 
 /**
  * "Key moments" timeline for one player: every point they scored or errored,
- * with timestamp, running score, point type, and a pressure badge for points
- * played under pressure (match/set point, tied score, clutch). Rows are
- * tappable → onPointSelect(pointId) highlights the point in Match Flow.
+ * with timestamp, running score, point type (errors carry their action type,
+ * e.g. "Spike error"), and a pressure badge for points played under pressure
+ * (match/set point, tied score, clutch). Rows are tappable →
+ * onPointSelect(pointId) highlights the point in Match Flow.
  *
  * Shared by MatchHighlights (MVP detail) and TopPerformers (expanded player).
  *
@@ -51,7 +52,10 @@ export default function PlayerMoments({
           const isError = m.kind === "error";
           const Icon = isError ? AlertTriangle : (POINT_TYPE_BY_ID[m.pointType]?.icon || CheckCircle2);
           const tone = isError ? "text-error" : accent;
-          const ptLabel = isError ? "Error" : (POINT_TYPE_BY_ID[m.pointType]?.label || "Point");
+          const errSub = isError ? normalizeErrorType(m.errorType) : null;
+          const ptLabel = isError
+            ? (errSub === "untyped" ? "Error" : `${ERROR_SUBTYPE_BY_ID[errSub].label} error`)
+            : (POINT_TYPE_BY_ID[m.pointType]?.label || "Point");
           const badge = PRESSURE_BADGES[pressureTags[m.id]];
           return (
             <li key={m.id}>

@@ -21,7 +21,8 @@ import {
   calcBestStreakRun,
   calcTiedMoments,
   calcClutchMoments,
-  calcMvpMoments,
+  calcPlayerMoments,
+  calcPressureTags,
   calcRunnerUp,
   calcServeStreaks,
   MIN_LEVEL,
@@ -377,10 +378,10 @@ describe('calcClutchMoments', () => {
   })
 })
 
-describe('calcMvpMoments', () => {
+describe('calcPlayerMoments', () => {
   it('returns scored and error moments for p1', () => {
     expect(
-      calcMvpMoments('p1', log).map(e => ({ pointNum: e.pointNum, kind: e.kind }))
+      calcPlayerMoments('p1', log).map(e => ({ pointNum: e.pointNum, kind: e.kind }))
     ).toMatchInlineSnapshot(`
       [
         {
@@ -405,6 +406,45 @@ describe('calcMvpMoments', () => {
         },
       ]
     `)
+  })
+})
+
+describe('calcPressureTags', () => {
+  it('returns an empty map for an empty log', () => {
+    expect(calcPressureTags([])).toEqual({})
+  })
+
+  it('tags tied, clutch, set point and match point from score context', () => {
+    // Sparse two-set log (team1 wins 21-18, then 23-21 in deuce). Each entry
+    // is tagged independently from its score-before-the-point; the last entry
+    // per set fixes that set's target and winner.
+    const sparseLog = [
+      { id: 'a', team: 1, t1: 10, t2: 10, setNum: 1 }, // before 9-10: no pressure
+      { id: 'b', team: 1, t1: 5,  t2: 4,  setNum: 1 }, // before 4-4: tied
+      { id: 'c', team: 2, t1: 19, t2: 18, setNum: 1 }, // before 19-17: clutch
+      { id: 'd', team: 1, t1: 21, t2: 18, setNum: 1 }, // before 20-18: set point
+      { id: 'e', team: 1, t1: 20, t2: 20, setNum: 2 }, // before 19-20: set point (team2)
+      { id: 'f', team: 1, t1: 23, t2: 21, setNum: 2 }, // before 22-21 in deuce: match point
+    ]
+    expect(calcPressureTags(sparseLog)).toEqual({
+      b: 'tied',
+      c: 'clutch',
+      d: 'set_point',
+      e: 'set_point',
+      f: 'match_point',
+    })
+  })
+
+  it('infers a 15-point target for a deciding-set final score', () => {
+    const decider = [
+      { id: 'w1', team: 1, t1: 21, t2: 10, setNum: 1 }, // team1 takes set 1
+      { id: 'w2', team: 2, t1: 12, t2: 21, setNum: 2 }, // team2 takes set 2
+      { id: 'x',  team: 1, t1: 14, t2: 12, setNum: 3 }, // before 13-12: clutch (close and late at T=15)
+      { id: 'y',  team: 1, t1: 15, t2: 13, setNum: 3 }, // before 14-13: match point at T=15
+    ]
+    const tags = calcPressureTags(decider)
+    expect(tags.x).toBe('clutch')
+    expect(tags.y).toBe('match_point')
   })
 })
 

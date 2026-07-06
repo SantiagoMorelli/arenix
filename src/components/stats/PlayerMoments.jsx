@@ -52,9 +52,11 @@ export default function PlayerMoments({
           const isError = m.kind === "error";
           const Icon = isError ? AlertTriangle : (POINT_TYPE_BY_ID[m.pointType]?.icon || CheckCircle2);
           const tone = isError ? "text-error" : accent;
+          // Error rows: red tone + warning icon already say "error", so the
+          // label is just the action type ("Spike", "Serve", …).
           const errSub = isError ? normalizeErrorType(m.errorType) : null;
           const ptLabel = isError
-            ? (errSub === "untyped" ? "Error" : `${ERROR_SUBTYPE_BY_ID[errSub].label} error`)
+            ? (errSub === "untyped" ? "Error" : ERROR_SUBTYPE_BY_ID[errSub].label)
             : (POINT_TYPE_BY_ID[m.pointType]?.label || "Point");
           const badge = PRESSURE_BADGES[pressureTags[m.id]];
           return (

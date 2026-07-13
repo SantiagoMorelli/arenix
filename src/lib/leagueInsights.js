@@ -404,7 +404,7 @@ export function computeChampions(league) {
 
   const titles = players
     .map(p => ({ playerId: p.id, name: playerLabel(p), ...(counts.get(p.id) || { titles: 0, podiums: 0 }) }))
-    .filter(r => r.titles > 0 || r.podiums > 0)
+    .filter(r => r.titles > 0)
     .sort((a, b) => b.titles - a.titles || b.podiums - a.podiums)
 
   return { reigning, titles }

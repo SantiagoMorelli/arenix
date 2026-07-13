@@ -11,6 +11,7 @@ const BAR_DEFS = [
   { key: 'spikes', label: 'SPK', color: 'accent' },
   { key: 'blocks', label: 'BLK', color: 'free' },
   { key: 'aces',   label: 'ACE', color: 'success' },
+  { key: 'tips',   label: 'TIP', color: 'dim' },
   { key: 'serveWinPct', label: 'SRV', color: 'dim', suffix: '%' },
 ]
 

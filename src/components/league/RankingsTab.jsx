@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Flame, TrendingUp, Percent, Sigma, Trophy, Crown,
+  Flame, TrendingUp, Percent, Sigma, Trophy, Crown, Zap,
   ArrowUp, ArrowDown, ChevronRight,
 } from 'lucide-react'
 import { SectionLabel } from '../ui-new'
@@ -9,11 +9,14 @@ import { computeLeagueInsights, computeRankMovement } from '../../lib/leagueInsi
 import { playerAvatarStyle, playerInitials } from '../../lib/utils'
 import EloSparkline from './EloSparkline'
 import PlayerStatsSheet from './PlayerStatsSheet'
+import LeagueLeaders from './LeagueLeaders'
+import LeagueRecords from './LeagueRecords'
 
 // Podium medal disc tints by rank (1-indexed)
 const MEDAL_BG = { 1: 'bg-accent', 2: 'bg-dim', 3: 'bg-[#b87333]' }
 
 const HIGHLIGHT_ICONS = {
+  hotHand:      Zap,
   onFire:       Flame,
   bestWinPct:   Percent,
   mostImproved: TrendingUp,
@@ -253,6 +256,12 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
         <div className="text-[13px] text-dim text-center py-6 mb-4">No players yet</div>
       )}
 
+      {/* ════ League Leaders ════ */}
+      <LeagueLeaders
+        leaderStats={insights.leaderStats}
+        leaguePlayers={league.players || []}
+      />
+
       {/* ════ Hall of Fame ════ */}
       {champions.reigning && (
         <>
@@ -311,6 +320,16 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
           )}
         </>
       )}
+
+      {/* ════ League Records ════ */}
+      <LeagueRecords
+        records={insights.records}
+        league={league}
+        onSelectPlayer={pid => {
+          const p = rankedPlayers.find(pl => pl.id === pid)
+          if (p) setSheetPlayer(p)
+        }}
+      />
 
       {/* ════ Recent matches feed ════ */}
       <SectionLabel color="accent">Recent Matches</SectionLabel>

@@ -26,6 +26,7 @@ import { useToast } from '../contexts/ToastContext'
 import TournamentHeader from '../components/tournament/TournamentHeader'
 import StandingsTab from '../components/tournament/StandingsTab'
 import MatchesTab from '../components/tournament/MatchesTab'
+import StatsTab from '../components/tournament/StatsTab'
 import MatchStatsOverlay from '../components/tournament/MatchStatsOverlay'
 import StartMatchModal from '../components/tournament/StartMatchModal'
 import ScorerConflictModal from '../components/tournament/ScorerConflictModal'
@@ -366,6 +367,7 @@ export default function TournamentDetail() {
         items={[
           { id: 'standings', label: 'Standings' },
           { id: 'matches',   label: 'Matches'   },
+          ...(tournament.phase !== 'setup' ? [{ id: 'stats', label: 'Stats' }] : []),
         ]}
         active={activeTab}
         onChange={setActiveTab}
@@ -396,6 +398,13 @@ export default function TournamentDetail() {
             canScore={canScore && !isLocked}
             players={leaguePlayers}
             initialSubTab={location.state?.subTab}
+          />
+        )}
+        {activeTab === 'stats' && tournament.phase !== 'setup' && (
+          <StatsTab
+            tournament={tournament}
+            players={leaguePlayers}
+            scoringLevel={scoringLevel}
           />
         )}
       </main>

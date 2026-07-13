@@ -1,17 +1,13 @@
 import { useMemo, useState } from 'react'
-import {
-  ChevronLeft, Trophy, Medal, Target, Zap, Shield, Bomb, Hand, Send,
-  Dumbbell, Flame, RotateCcw, Clock, Volleyball, ChevronRight, Clipboard,
-} from 'lucide-react'
-import { formatDuration, getMatchDuration, getLongestRally } from '../lib/utils'
+import { ChevronLeft, Trophy, Medal, Clipboard } from 'lucide-react'
 import { calcOverallStandings } from '../lib/standings'
 import { getAllMatches } from '../lib/tournament'
 import { resolveScoringLevel } from '../lib/scoring'
-import { computePlayerStats, rankPlayersByStat, TOURNAMENT_RANKING_MIN_LEVELS } from '../lib/tournamentStats'
-import { AppBadge, AppCard } from './ui-new'
+import { computePlayerStats, computeMatchRecords } from '../lib/tournamentStats'
+import { AppBadge } from './ui-new'
 import { HelpToggle, SectionLabelWithHelp, HelpDiscoveryHint } from './stats/StatInfo'
 import { EXPLANATIONS } from './stats/explanations'
-import { AWARD_TAGLINES } from './stats/awardCopy'
+import { Awards, MatchRecords } from './stats/TournamentAwards'
 import StandingsLegend from './stats/StandingsLegend'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import TieBreakerControls from './standings/TieBreakerControls'
@@ -21,94 +17,6 @@ import TeamDetailSheet from './stats/TeamDetailSheet'
 import PlayerTournamentDetailSheet from './stats/PlayerTournamentDetailSheet'
 import { useToast } from '../contexts/ToastContext'
 import { buildTournamentCoachExport } from '../lib/tournamentStatsExport'
-
-// ─── Awards configuration ────────────────────────────────────────────────────
-// Add a new award by appending an entry. `gateKey` + `minThreshold` filter out
-// players that don't meet the qualifier (e.g. "Most Efficient Server" needs
-// at least 10 serves before its win-rate is meaningful).
-const TOURNAMENT_AWARDS = [
-  { id: 'top-scorer',      title: 'Top Scorer',          Icon: Trophy, statKey: 'points',      valueLabel: 'pts',
-    tagline: AWARD_TAGLINES['top-scorer'] },
-  { id: 'ace-king',        title: 'Ace King',            Icon: Target, statKey: 'aces',        valueLabel: 'aces',
-    tagline: AWARD_TAGLINES['ace-king'] },
-  { id: 'spike-machine',   title: 'Spike Machine',       Icon: Zap,    statKey: 'spikes',      valueLabel: 'spikes',
-    tagline: AWARD_TAGLINES['spike-machine'] },
-  { id: 'block-master',    title: 'Block Master',        Icon: Shield, statKey: 'blocks',      valueLabel: 'blocks',
-    tagline: AWARD_TAGLINES['block-master'] },
-  { id: 'tip-master',      title: 'Tip Master',          Icon: Hand,   statKey: 'tips',        valueLabel: 'tips',
-    tagline: AWARD_TAGLINES['tip-master'] },
-  { id: 'efficient-server',title: 'Most Efficient Server', Icon: Send, statKey: 'serveWinPct', valueLabel: '%',
-    tagline: AWARD_TAGLINES['efficient-server'],
-    minThreshold: 10, gateKey: 'serves', secondaryKey: 'serves', secondaryLabel: 'serves' },
-  { id: 'glass-cannon',    title: 'Glass Cannon',        Icon: Bomb,   statKey: 'errors',      valueLabel: 'errors', funny: true,
-    tagline: AWARD_TAGLINES['glass-cannon'] },
-]
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function computeMatchRecords(allMatches) {
-  const played = allMatches.filter(m => m.played && m.team1 && m.team2)
-  if (!played.length) return null
-
-  let mostDominant = null, dominance = -1
-  let highestScoring = null, highScore = -1
-  let longestStreak = null, streak = 0
-  let biggestComeback = null, maxComeback = 0
-
-  for (const m of played) {
-    const diff  = Math.abs(m.score1 - m.score2)
-    const total = m.score1 + m.score2
-
-    if (diff > dominance) { dominance = diff; mostDominant = m }
-    if (total > highScore) { highScore = total; highestScoring = m }
-
-    if (m.log?.length) {
-      for (const entry of m.log) {
-        if ((entry.streak || 0) > streak) { streak = entry.streak; longestStreak = { match: m, streak: entry.streak, team: entry.team } }
-      }
-
-      // Biggest comeback: per set, track max deficit overcome by winner
-      const setNums = [...new Set(m.log.map(e => e.setNum))]
-      for (const sn of setNums) {
-        const entries = m.log.filter(e => e.setNum === sn).sort((a, b) => a.pointNum - b.pointNum)
-        if (!entries.length) continue
-        const last = entries[entries.length - 1]
-        const setWinner = last.t1 > last.t2 ? 1 : 2
-
-        let maxDeficit = 0
-        for (const e of entries) {
-          const deficit = setWinner === 1 ? e.t2 - e.t1 : e.t1 - e.t2
-          if (deficit > maxDeficit) maxDeficit = deficit
-        }
-        if (maxDeficit > maxComeback) {
-          maxComeback = maxDeficit
-          biggestComeback = { match: m, team: setWinner === 1 ? m.team1 : m.team2, deficit: maxDeficit }
-        }
-      }
-    }
-  }
-
-  let longestGame = null, longestGameDuration = 0
-  let longestRallyRecord = null, longestRallyDuration = 0
-
-  for (const m of played) {
-    if (!m.log?.length) continue
-
-    const dur = getMatchDuration(m.log)
-    if (dur != null && dur > longestGameDuration) {
-      longestGameDuration = dur
-      longestGame = { match: m, duration: dur }
-    }
-
-    const rally = getLongestRally(m.log)
-    if (rally != null && rally > longestRallyDuration) {
-      longestRallyDuration = rally
-      longestRallyRecord = { match: m, duration: rally }
-    }
-  }
-
-  return { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback, longestGame, longestRally: longestRallyRecord }
-}
 
 // ─── Medal tint per podium rank ───────────────────────────────────────────────
 const MEDAL_COLOR = {
@@ -190,79 +98,6 @@ function Podium({ tournament, leaguePlayers }) {
   )
 }
 
-function AwardCard(props) {
-  const { Icon, title, tagline, playerName, value, valueLabel, funny = false, onClick } = props
-  const accentText = funny ? 'text-error' : 'text-accent'
-  return (
-    <AppCard
-      className={`rounded-2xl p-4 flex flex-col gap-1.5 cursor-pointer active:opacity-80 transition-opacity ${
-        funny ? 'bg-error/10 border-error/30' : ''
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex items-center justify-between">
-        <Icon size={22} className={accentText} />
-        <ChevronRight size={14} className="text-dim" />
-      </div>
-      <div className={`text-[10px] font-bold uppercase tracking-[0.5px] ${accentText}`}>
-        {title}
-      </div>
-      {tagline && <div className="text-[9px] text-dim leading-snug">{tagline}</div>}
-      <div className="text-[14px] font-bold text-text leading-tight">{playerName}</div>
-      <div className={`text-[12px] font-semibold ${funny ? 'text-error/70' : 'text-dim'}`}>
-        {value} {valueLabel}
-      </div>
-    </AppCard>
-  )
-}
-
-function Awards({ playerStats, leaguePlayers, scoringLevel, onSelectAward }) {
-  const cards = TOURNAMENT_AWARDS.map(award => {
-    const minLevel = TOURNAMENT_RANKING_MIN_LEVELS[award.statKey] ?? 3
-    if (scoringLevel < minLevel) return null
-    const ranked = rankPlayersByStat(playerStats, award.statKey, {
-      leaguePlayers,
-      minThreshold: award.minThreshold || 0,
-      gateKey: award.gateKey,
-      secondaryKey: award.secondaryKey,
-    })
-    if (!ranked.length) return null
-    const winner = ranked[0]
-    return { award, winner, ranked }
-  }).filter(Boolean)
-
-  if (!cards.length) {
-      return (
-        <div className="px-4 text-[13px] text-dim text-center py-4">
-          No live match stats recorded
-        </div>
-      )
-  }
-
-  return (
-    <div className="px-4">
-      <div className="grid grid-cols-2 gap-3">
-        {cards.map(({ award, winner, ranked }) => (
-          <AwardCard
-            key={award.id}
-            Icon={award.Icon}
-            title={award.title}
-            tagline={award.tagline}
-            playerName={winner.name}
-            value={winner.value}
-            valueLabel={award.valueLabel}
-            funny={!!award.funny}
-            onClick={() => onSelectAward({ award, ranked })}
-          />
-        ))}
-      </div>
-      <div className="text-[11px] text-dim text-center mt-3">
-        Tap an award to see the full ranking
-      </div>
-    </div>
-  )
-}
-
 function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = false, onSelectTeam }) {
   const allMatches = getAllMatches(tournament)
   const rows = calcOverallStandings(tournament.teams, allMatches, leaguePlayers, tbOptions)
@@ -316,88 +151,6 @@ function StandingsSection({ tournament, leaguePlayers, tbOptions, isAdmin = fals
       <div className="text-[11px] text-dim text-center mt-3">
         Tap a team to see player stats
       </div>
-    </div>
-  )
-}
-
-function RecordCard(props) {
-  const { Icon, title, line1, line2, onClick } = props
-  if (!line1) return null
-  return (
-    <AppCard
-      className="rounded-2xl p-4 cursor-pointer active:opacity-80 transition-opacity"
-      onClick={onClick}
-    >
-      <div className="flex items-center justify-between mb-1.5">
-        <Icon size={20} className="text-accent" />
-        <ChevronRight size={14} className="text-dim" />
-      </div>
-      <div className="text-[10px] font-bold text-accent uppercase tracking-[0.5px] mb-1">{title}</div>
-      <div className="text-[13px] font-bold text-text leading-snug">{line1}</div>
-      {line2 && <div className="text-[11px] text-dim mt-0.5">{line2}</div>}
-    </AppCard>
-  )
-}
-
-function MatchRecords({ records, tournament, onSelectRecord }) {
-  if (!records) return <div className="px-4 text-[13px] text-dim text-center py-4">No matches played yet</div>
-
-  const tName = id => tournament.teams.find(t => t.id === id)?.name || '?'
-
-  const { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback, longestGame, longestRally } = records
-
-  return (
-    <div className="px-4 grid grid-cols-2 gap-3">
-      <RecordCard
-        Icon={Dumbbell}
-        title="Most Dominant"
-        line1={mostDominant ? `${tName(mostDominant.winner)} wins` : null}
-        line2={mostDominant ? `${mostDominant.score1}–${mostDominant.score2} (${dominance} pt gap)` : null}
-        onClick={mostDominant ? () => onSelectRecord({ match: mostDominant, title: 'Most Dominant' }) : undefined}
-      />
-      <RecordCard
-        Icon={Flame}
-        title="Highest Scoring"
-        line1={highestScoring ? `${tName(highestScoring.team1)} vs ${tName(highestScoring.team2)}` : null}
-        line2={highestScoring ? `${highestScoring.score1}–${highestScoring.score2} (${highScore} total pts)` : null}
-        onClick={highestScoring ? () => onSelectRecord({ match: highestScoring, title: 'Highest Scoring' }) : undefined}
-      />
-      {longestStreak && (
-        <RecordCard
-          Icon={Zap}
-          title="Longest Streak"
-          line1={`${longestStreak.streak} in a row`}
-          line2={`${tName(longestStreak.team === 1 ? longestStreak.match.team1 : longestStreak.match.team2)} · ${longestStreak.match.label}`}
-          onClick={() => onSelectRecord({ match: longestStreak.match, title: 'Longest Streak' })}
-        />
-      )}
-      {biggestComeback && (
-        <RecordCard
-          Icon={RotateCcw}
-          title="Best Comeback"
-          line1={`${tName(biggestComeback.team)} came back`}
-          line2={`Down ${biggestComeback.deficit} pts · ${biggestComeback.match.label}`}
-          onClick={() => onSelectRecord({ match: biggestComeback.match, title: 'Best Comeback' })}
-        />
-      )}
-      {longestGame && (
-        <RecordCard
-          Icon={Clock}
-          title="Longest Game"
-          line1={`${tName(longestGame.match.team1)} vs ${tName(longestGame.match.team2)}`}
-          line2={`${formatDuration(longestGame.duration)} · ${longestGame.match.label}`}
-          onClick={() => onSelectRecord({ match: longestGame.match, title: 'Longest Game' })}
-        />
-      )}
-      {longestRally && (
-        <RecordCard
-          Icon={Volleyball}
-          title="Longest Rally"
-          line1={formatDuration(longestRally.duration)}
-          line2={`${tName(longestRally.match.team1)} vs ${tName(longestRally.match.team2)} · ${longestRally.match.label}`}
-          onClick={() => onSelectRecord({ match: longestRally.match, title: 'Longest Rally' })}
-        />
-      )}
     </div>
   )
 }

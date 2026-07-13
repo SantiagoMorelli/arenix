@@ -7,6 +7,7 @@
  * league page already loads.
  */
 import { simulateTournamentElo } from './elo'
+import { computePlayerStats } from './tournamentStats'
 
 const BASE_ELO = 1000
 
@@ -525,6 +526,25 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
     })
   }
 
+  // Hot hand — top scorer of the tournament currently live (min 3 points)
+  const live = (league.tournaments || []).filter(
+    t => t.status !== 'completed' && ['group', 'knockout', 'freeplay'].includes(t.phase)
+  )
+  if (live.length > 0) {
+    const liveStats = computePlayerStats(live.flatMap(allTournamentMatches))
+    const hot = best(Object.entries(liveStats), ([, s]) => s.points)
+    if (hot && hot[1].points >= 3 && byId.has(hot[0])) {
+      tiles.unshift({
+        id:         'hotHand',
+        label:      'Hot hand',
+        playerId:   hot[0],
+        playerName: playerLabel(byId.get(hot[0])),
+        primary:    `${hot[1].points}`,
+        secondary:  'pts in live event',
+      })
+    }
+  }
+
   return tiles
 }
 
@@ -538,6 +558,121 @@ export function computePointDiffs(matchIndex) {
     out.set(pid, entries.reduce((sum, e) => sum + entryPointDiff(e), 0))
   }
   return out
+}
+
+// ─── League leaders ───────────────────────────────────────────────────────────
+
+/**
+ * League-wide per-player action stats aggregated from every tournament's
+ * point logs — completed AND live tournaments alike (only played matches
+ * carry a log, so in-progress events contribute what's been played so far).
+ *
+ * Matches scored without player attribution (scoring level 1) simply have no
+ * log entries and drop out; categories with no data render nothing upstream.
+ *
+ * @returns {{ [playerId]: { points, aces, spikes, blocks, tips, errors,
+ *             serves, serveWins, serveWinPct, net } }}
+ */
+export function computeLeagueLeaderStats(league) {
+  const allMatches = (league.tournaments || []).flatMap(allTournamentMatches)
+  const stats = computePlayerStats(allMatches)
+  for (const s of Object.values(stats)) {
+    s.net = s.points - s.errors
+  }
+  return stats
+}
+
+// ─── League records ───────────────────────────────────────────────────────────
+
+/**
+ * All-time league records across every tournament (completed and live):
+ * biggest blowout, closest match, longest win streak, and the most points
+ * scored by one player in a single match.
+ *
+ * @returns {{
+ *   biggestBlowout: { tournamentId, tournamentName, winnerLabel, loserLabel, winnerScore, loserScore, diff } | null,
+ *   closestMatch:   { tournamentId, tournamentName, team1Label, team2Label, score1, score2, diff } | null,
+ *   bestStreak:     { playerId, name, streak } | null,
+ *   bestSingleMatch:{ playerId, name, points, tournamentId, tournamentName } | null,
+ * }}
+ */
+export function computeLeagueRecords(league, streaks) {
+  const players = league.players || []
+  const nameOf = (pid) => playerLabel(players.find(p => p.id === pid))
+
+  let biggestBlowout = null
+  let closestMatch = null
+  let bestSingleMatch = null
+
+  for (const tournament of league.tournaments || []) {
+    const teams = tournament.teams || []
+    const teamLabel = (teamId) => {
+      const team = teams.find(tm => tm.id === teamId)
+      const names = (team?.players || []).map(nameOf).join(' & ')
+      return names || team?.name || 'Unknown'
+    }
+
+    for (const match of allTournamentMatches(tournament)) {
+      if (!match.played || !match.winner) continue
+      const diff = Math.abs((match.score1 || 0) - (match.score2 || 0))
+      const winnerIs1 = match.winner === match.team1
+
+      if (!biggestBlowout || diff > biggestBlowout.diff) {
+        biggestBlowout = {
+          tournamentId:   tournament.id,
+          tournamentName: tournament.name,
+          winnerLabel:    teamLabel(match.winner),
+          loserLabel:     teamLabel(winnerIs1 ? match.team2 : match.team1),
+          winnerScore:    winnerIs1 ? match.score1 : match.score2,
+          loserScore:     winnerIs1 ? match.score2 : match.score1,
+          diff,
+        }
+      }
+      if (!closestMatch || diff < closestMatch.diff) {
+        closestMatch = {
+          tournamentId:   tournament.id,
+          tournamentName: tournament.name,
+          team1Label:     teamLabel(match.team1),
+          team2Label:     teamLabel(match.team2),
+          score1:         match.score1,
+          score2:         match.score2,
+          diff,
+        }
+      }
+
+      // Most points by one player in a single match (needs a point log)
+      if (match.log?.length) {
+        const perPlayer = {}
+        for (const entry of match.log) {
+          if (entry.scoringPlayerId) {
+            perPlayer[entry.scoringPlayerId] = (perPlayer[entry.scoringPlayerId] || 0) + 1
+          }
+        }
+        for (const [pid, points] of Object.entries(perPlayer)) {
+          if (!bestSingleMatch || points > bestSingleMatch.points) {
+            bestSingleMatch = {
+              playerId:       pid,
+              name:           nameOf(pid),
+              points,
+              tournamentId:   tournament.id,
+              tournamentName: tournament.name,
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Longest win streak ever (min 2 so a single win doesn't read as a streak)
+  let bestStreak = null
+  for (const [pid, s] of streaks) {
+    if (s.best >= 2 && (!bestStreak || s.best > bestStreak.streak)) {
+      bestStreak = { playerId: pid, name: nameOf(pid), streak: s.best }
+    }
+  }
+
+  if (!biggestBlowout && !closestMatch && !bestStreak && !bestSingleMatch) return null
+  return { biggestBlowout, closestMatch, bestStreak, bestSingleMatch }
 }
 
 // ─── Activity feed ────────────────────────────────────────────────────────────
@@ -592,12 +727,14 @@ export function buildActivityFeed(league, limit = 12) {
  * a single useMemo over the league object.
  */
 export function computeLeagueInsights(league) {
-  const matchIndex = buildPlayerMatchIndex(league)
-  const timelines  = computeEloTimelines(league)
-  const streaks    = computeStreaks(matchIndex)
-  const champions  = computeChampions(league)
-  const pointDiffs = computePointDiffs(matchIndex)
-  const highlights = computeStatHighlights(league, { timelines, streaks, champions, pointDiffs })
+  const matchIndex  = buildPlayerMatchIndex(league)
+  const timelines   = computeEloTimelines(league)
+  const streaks     = computeStreaks(matchIndex)
+  const champions   = computeChampions(league)
+  const pointDiffs  = computePointDiffs(matchIndex)
+  const highlights  = computeStatHighlights(league, { timelines, streaks, champions, pointDiffs })
+  const leaderStats = computeLeagueLeaderStats(league)
+  const records     = computeLeagueRecords(league, streaks)
 
   return {
     matchIndex,
@@ -605,6 +742,8 @@ export function computeLeagueInsights(league) {
     streaks,
     champions,
     highlights,
+    leaderStats,
+    records,
     feed: buildActivityFeed(league),
   }
 }

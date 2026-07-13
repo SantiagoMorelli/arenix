@@ -11,5 +11,6 @@ export const AWARD_TAGLINES = {
   'block-master':     'Most points won by stopping attacks at the net',
   'tip-master':       'Most points won with soft, clever placed shots',
   'efficient-server': 'Won the most points per serve (min. 10 serves)',
+  'mvp-race':         'Points scored minus errors — the all-round leader',
   'glass-cannon':     'Most mistakes of anyone — wear it proudly',
 }

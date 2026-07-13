@@ -1,5 +1,5 @@
 import {
-  Trophy, Target, Zap, Shield, Bomb, Hand, Send,
+  Trophy, Target, Zap, Shield, Bomb, Hand, Send, Medal,
   Dumbbell, Flame, RotateCcw, Clock, Volleyball, ChevronRight,
 } from 'lucide-react'
 import { formatDuration } from '../../lib/utils'
@@ -30,6 +30,8 @@ const TOURNAMENT_AWARDS = [
   { id: 'efficient-server',title: 'Most Efficient Server', Icon: Send, statKey: 'serveWinPct', valueLabel: '%',
     tagline: AWARD_TAGLINES['efficient-server'],
     minThreshold: 10, gateKey: 'serves', secondaryKey: 'serves', secondaryLabel: 'serves' },
+  { id: 'mvp-race',        title: 'MVP Race',            Icon: Medal,  statKey: 'net',         valueLabel: 'net pts',
+    tagline: AWARD_TAGLINES['mvp-race'] },
   { id: 'glass-cannon',    title: 'Glass Cannon',        Icon: Bomb,   statKey: 'errors',      valueLabel: 'errors', funny: true,
     tagline: AWARD_TAGLINES['glass-cannon'] },
 ]

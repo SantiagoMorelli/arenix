@@ -39,11 +39,12 @@ const EMPTY_PLAYER = () => ({
   serves: 0,
   serveWins: 0,
   serveWinPct: 0,
+  net: 0,
 })
 
 // ─── Core per-player aggregator ─────────────────────────────────────────────
 // Returns { [playerId]: { points, aces, spikes, blocks, tips, errors,
-//                          serves, serveWins, serveWinPct } }
+//                          serves, serveWins, serveWinPct, net } }
 export function computePlayerStats(allMatches) {
   const stats = {}
 
@@ -78,10 +79,11 @@ export function computePlayerStats(allMatches) {
     }
   }
 
-  // Derive serveWinPct
+  // Derive serveWinPct and net contribution
   for (const pid of Object.keys(stats)) {
     const s = stats[pid]
     s.serveWinPct = s.serves ? Math.round((s.serveWins / s.serves) * 100) : 0
+    s.net = s.points - s.errors
   }
 
   return stats
@@ -121,6 +123,7 @@ export function rankPlayersByStat(playerStats, statKey, opts = {}) {
 export const TOURNAMENT_RANKING_MIN_LEVELS = {
   points: 2,
   errors: 2,
+  net: 2,
   aces: 3,
   spikes: 3,
   blocks: 3,

@@ -24,7 +24,7 @@ const LEAGUE_AWARDS = [
     tagline: AWARD_TAGLINES['efficient-server'],
     minThreshold: 10, gateKey: 'serves', secondaryKey: 'serves', secondaryLabel: 'serves' },
   { id: 'mvp-race',         title: 'MVP Race',              Icon: Medal,  statKey: 'net',         valueLabel: 'net pts',
-    tagline: 'Points scored minus errors — the all-round leader' },
+    tagline: AWARD_TAGLINES['mvp-race'] },
   { id: 'glass-cannon',     title: 'Glass Cannon',          Icon: Bomb,   statKey: 'errors',      valueLabel: 'errors', funny: true,
     tagline: AWARD_TAGLINES['glass-cannon'] },
 ]

@@ -575,11 +575,7 @@ export function computePointDiffs(matchIndex) {
  */
 export function computeLeagueLeaderStats(league) {
   const allMatches = (league.tournaments || []).flatMap(allTournamentMatches)
-  const stats = computePlayerStats(allMatches)
-  for (const s of Object.values(stats)) {
-    s.net = s.points - s.errors
-  }
-  return stats
+  return computePlayerStats(allMatches)
 }
 
 // ─── League records ───────────────────────────────────────────────────────────

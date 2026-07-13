@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Flame } from 'lucide-react'
 import { AppSheet, AppBadge } from '../ui-new'
 import { playerAvatarStyle, playerInitials } from '../../lib/utils'
+import { computePlayerCard } from '../../lib/playerCard'
 import EloSparkline from './EloSparkline'
+import PlayerCard from './PlayerCard'
 
 const RECENT_MATCHES = 6
 
@@ -37,11 +39,17 @@ export default function PlayerStatsSheet({ open, onClose, player, league, insigh
     return map
   }, [league])
 
+  // Same ranking rule as RankingsTab (elo desc) — for the card's rank/tier
+  const rankedPlayers = useMemo(
+    () => [...(league?.players || [])].sort((a, b) => (b.elo ?? 1000) - (a.elo ?? 1000)),
+    [league]
+  )
+
   if (!player) return null
 
-  const label   = player.displayName || player.name
   const streak  = insights.streaks.get(player.id) || { wins: 0, losses: 0, winPct: 0, current: 0, best: 0, last5: [] }
-  const titles  = insights.champions.titles.find(t => t.playerId === player.id)
+  const card    = computePlayerCard(player, insights, rankedPlayers)
+  const label   = player.displayName || player.name
   const curve   = (insights.timelines.byPlayer.get(player.id) || []).map(pt => pt.elo)
   const entries = insights.matchIndex.get(player.id) || []
   const recent  = entries.slice(-RECENT_MATCHES).reverse()
@@ -60,39 +68,16 @@ export default function PlayerStatsSheet({ open, onClose, player, league, insigh
         </div>
       }
     >
-      {/* ── Headline stats ── */}
-      <div className="flex gap-2 mb-3">
-        <div className="flex-1 bg-bg border border-line rounded-xl py-2.5 text-center">
-          <div className="font-display text-[22px] leading-none text-text">{streak.wins}-{streak.losses}</div>
-          <div className="text-[10px] text-dim mt-1 uppercase tracking-wide">Record</div>
-        </div>
-        <div className="flex-1 bg-bg border border-line rounded-xl py-2.5 text-center">
-          <div className="font-display text-[22px] leading-none text-text">
-            {streak.wins + streak.losses > 0 ? `${Math.round(streak.winPct * 100)}%` : '—'}
-          </div>
-          <div className="text-[10px] text-dim mt-1 uppercase tracking-wide">Win rate</div>
-        </div>
-        <div className="flex-1 bg-bg border border-line rounded-xl py-2.5 text-center">
-          <div className="font-display text-[22px] leading-none text-accent">{titles?.titles || 0}</div>
-          <div className="text-[10px] text-dim mt-1 uppercase tracking-wide">Titles</div>
-        </div>
+      {/* ── Player card ── */}
+      <div className="mb-3">
+        <PlayerCard player={player} card={card} />
       </div>
 
-      {/* ── ELO trend ── */}
-      <div className="bg-bg border border-line rounded-xl p-3 mb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[10px] text-dim uppercase tracking-wide mb-0.5">ELO Rating</div>
-            <div className="font-display text-[28px] leading-none text-text">{player.elo ?? 1000}</div>
-          </div>
-          {curve.length >= 2 && (
-            <div className="w-24 h-12">
-              <EloSparkline points={curve} />
-            </div>
-          )}
-        </div>
-        {(streak.current >= 2 || streak.best >= 2) && (
-          <div className="flex items-center gap-1.5 mt-2 text-[11px] text-dim">
+      {/* ── Form: ELO trend + streaks ── */}
+      {(curve.length >= 2 || streak.current >= 2 || streak.best >= 2) && (
+        <div className="bg-bg border border-line rounded-xl px-3 py-2.5 mb-3 flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-1 text-[11px] text-dim min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wide">Form</span>
             {streak.current >= 2 && (
               <span className="flex items-center gap-1 text-success font-semibold">
                 <Flame size={12} /> {streak.current} win streak
@@ -100,8 +85,13 @@ export default function PlayerStatsSheet({ open, onClose, player, league, insigh
             )}
             {streak.best >= 2 && <span>Best: {streak.best} in a row</span>}
           </div>
-        )}
-      </div>
+          {curve.length >= 2 && (
+            <div className="w-24 h-12 flex-shrink-0">
+              <EloSparkline points={curve} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Recent matches ── */}
       <div className="text-[11px] font-bold text-dim tracking-wide uppercase mb-2">Recent Matches</div>

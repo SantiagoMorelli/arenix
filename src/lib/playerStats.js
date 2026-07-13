@@ -379,6 +379,46 @@ const MIN_TYPE_COUNT = 4
 const STYLE_BY_TYPE = { spike: 'Aggressor', ace: 'Server', block: 'Defender', tip: 'Finesse' }
 const STYLE_TIE_ORDER = ['spike', 'ace', 'block', 'tip']
 
+/**
+ * Style label from a points-by-type breakdown: the most over-represented
+ * shot vs the baselines wins, gated by sample size. Returns null when there
+ * isn't enough scoring data to call a style (< MIN_SCORING_FOR_STYLE), and
+ * 'All-rounder' when no shot clearly dominates.
+ *
+ * @param {{ ace: number, spike: number, block: number, tip: number }} byType
+ * @param {number} [total] scoring total (defaults to the byType sum)
+ */
+export function styleFromShares(byType, total) {
+  const counts = {
+    ace:   byType?.ace   || 0,
+    spike: byType?.spike || 0,
+    block: byType?.block || 0,
+    tip:   byType?.tip   || 0,
+  }
+  const t = total ?? (counts.ace + counts.spike + counts.block + counts.tip)
+  if (t < MIN_SCORING_FOR_STYLE) return null
+
+  const dominance = {}
+  for (const k of STYLE_TIE_ORDER) {
+    dominance[k] = counts[k] / t / STYLE_BASELINES[k]
+  }
+
+  // Most over-represented shot wins; ties broken by raw count, then by
+  // the fixed STYLE_TIE_ORDER for determinism.
+  let top = STYLE_TIE_ORDER[0]
+  for (const k of STYLE_TIE_ORDER) {
+    if (
+      dominance[k] > dominance[top] ||
+      (dominance[k] === dominance[top] && counts[k] > counts[top])
+    ) top = k
+  }
+
+  if (counts[top] >= MIN_TYPE_COUNT && dominance[top] >= DOMINANCE_MARGIN) {
+    return STYLE_BY_TYPE[top]
+  }
+  return 'All-rounder'
+}
+
 // Trait thresholds — sample guards keep small samples from earning noisy badges.
 const TRAIT_CLUTCH_WIN_PCT = 0.6
 const TRAIT_CLUTCH_MIN_PLAYED = 20
@@ -405,24 +445,7 @@ function computePlaystyleValue(annotated, strengths, pressure) {
     dominance[k] = total > 0 ? share[k] / STYLE_BASELINES[k] : 0
   }
 
-  // Most over-represented shot wins; ties broken by raw count, then by
-  // the fixed STYLE_TIE_ORDER for determinism.
-  let top = STYLE_TIE_ORDER[0]
-  for (const k of STYLE_TIE_ORDER) {
-    if (
-      dominance[k] > dominance[top] ||
-      (dominance[k] === dominance[top] && strengths.byType[k] > strengths.byType[top])
-    ) top = k
-  }
-
-  let label = 'All-rounder'
-  if (
-    total >= MIN_SCORING_FOR_STYLE &&
-    strengths.byType[top] >= MIN_TYPE_COUNT &&
-    dominance[top] >= DOMINANCE_MARGIN
-  ) {
-    label = STYLE_BY_TYPE[top]
-  }
+  const label = styleFromShares(strengths.byType, total) ?? 'All-rounder'
 
   const attempts = strengths.totalScoring + strengths.totalErrors
   const riskProfile = attempts > 0 ? strengths.totalErrors / attempts : 0

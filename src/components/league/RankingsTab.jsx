@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Flame, TrendingUp, Percent, Sigma, Trophy, Crown, Zap,
-  ArrowUp, ArrowDown, ChevronRight,
+  ArrowUp, ArrowDown, ChevronRight, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { SectionLabel } from '../ui-new'
 import { computeLeagueInsights, computeRankMovement } from '../../lib/leagueInsights'
@@ -38,6 +38,7 @@ function formatDate(date) {
 export default function RankingsTab({ league, isGuest, currentUserId }) {
   const navigate = useNavigate()
   const [sheetPlayer, setSheetPlayer] = useState(null)
+  const [showAllPlayers, setShowAllPlayers] = useState(false)
 
   const insights = useMemo(() => computeLeagueInsights(league), [league])
 
@@ -206,10 +207,10 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
             })}
           </div>
 
-          {/* Rank 4+ list */}
+          {/* Rank 4+ list (top 10 by default, expandable) */}
           {rankedPlayers.length > 3 && (
             <div className="bg-surface rounded-[14px] overflow-hidden border border-line mb-4">
-              {rankedPlayers.slice(3).map((player, i, arr) => {
+              {rankedPlayers.slice(3, showAllPlayers ? undefined : 10).map((player, i, arr) => {
                 const isMe   = player.userId && player.userId === currentUserId
                 const label  = player.displayName || player.name
                 const streak = insights.streaks.get(player.id)
@@ -248,6 +249,18 @@ export default function RankingsTab({ league, isGuest, currentUserId }) {
                   </button>
                 )
               })}
+              {rankedPlayers.length > 10 && (
+                <button
+                  onClick={() => setShowAllPlayers(v => !v)}
+                  className="w-full flex items-center justify-center gap-1 py-2.5 border-t border-line bg-transparent text-accent text-[12px] font-bold cursor-pointer active:opacity-80 transition-opacity"
+                >
+                  {showAllPlayers ? (
+                    <>Show top 10 <ChevronUp size={14} /></>
+                  ) : (
+                    <>Show all {rankedPlayers.length} players <ChevronDown size={14} /></>
+                  )}
+                </button>
+              )}
             </div>
           )}
           {rankedPlayers.length <= 3 && <div className="mb-4" />}

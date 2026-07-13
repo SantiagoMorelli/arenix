@@ -16,6 +16,7 @@
  *   team:             1 | 2  — team that won the point
  *   setNum, t1, t2, timestamp, streak
  */
+import { getMatchDuration, getLongestRally } from './utils'
 
 /**
  * Maps a raw errorType value (any era) to the canonical action-based id.
@@ -263,6 +264,73 @@ export function computePlayerTournamentBreakdown(pid, allMatches, scoringLevel =
     matchesPlayed,
     setsPlayed,
   }
+}
+
+// ─── Tournament match records ────────────────────────────────────────────────
+// Blowouts, streaks, comebacks, durations across a tournament's played
+// matches. Shared by TournamentStatsScreen (completed) and the live Stats tab.
+export function computeMatchRecords(allMatches) {
+  const played = allMatches.filter(m => m.played && m.team1 && m.team2)
+  if (!played.length) return null
+
+  let mostDominant = null, dominance = -1
+  let highestScoring = null, highScore = -1
+  let longestStreak = null, streak = 0
+  let biggestComeback = null, maxComeback = 0
+
+  for (const m of played) {
+    const diff  = Math.abs(m.score1 - m.score2)
+    const total = m.score1 + m.score2
+
+    if (diff > dominance) { dominance = diff; mostDominant = m }
+    if (total > highScore) { highScore = total; highestScoring = m }
+
+    if (m.log?.length) {
+      for (const entry of m.log) {
+        if ((entry.streak || 0) > streak) { streak = entry.streak; longestStreak = { match: m, streak: entry.streak, team: entry.team } }
+      }
+
+      // Biggest comeback: per set, track max deficit overcome by winner
+      const setNums = [...new Set(m.log.map(e => e.setNum))]
+      for (const sn of setNums) {
+        const entries = m.log.filter(e => e.setNum === sn).sort((a, b) => a.pointNum - b.pointNum)
+        if (!entries.length) continue
+        const last = entries[entries.length - 1]
+        const setWinner = last.t1 > last.t2 ? 1 : 2
+
+        let maxDeficit = 0
+        for (const e of entries) {
+          const deficit = setWinner === 1 ? e.t2 - e.t1 : e.t1 - e.t2
+          if (deficit > maxDeficit) maxDeficit = deficit
+        }
+        if (maxDeficit > maxComeback) {
+          maxComeback = maxDeficit
+          biggestComeback = { match: m, team: setWinner === 1 ? m.team1 : m.team2, deficit: maxDeficit }
+        }
+      }
+    }
+  }
+
+  let longestGame = null, longestGameDuration = 0
+  let longestRallyRecord = null, longestRallyDuration = 0
+
+  for (const m of played) {
+    if (!m.log?.length) continue
+
+    const dur = getMatchDuration(m.log)
+    if (dur != null && dur > longestGameDuration) {
+      longestGameDuration = dur
+      longestGame = { match: m, duration: dur }
+    }
+
+    const rally = getLongestRally(m.log)
+    if (rally != null && rally > longestRallyDuration) {
+      longestRallyDuration = rally
+      longestRallyRecord = { match: m, duration: rally }
+    }
+  }
+
+  return { mostDominant, dominance, highestScoring, highScore, longestStreak, biggestComeback, longestGame, longestRally: longestRallyRecord }
 }
 
 // ─── Match-level points-by-type breakdown (per team) ────────────────────────

@@ -441,3 +441,25 @@ export function IconButton({ children, onClick, badge, ariaLabel }) {
     </div>
   )
 }
+
+/* ─── BallSpinner ─────────────────────────────────────────────────────────── */
+/**
+ * Arenix loading spinner: the logo's volleyball spinning inside its halo.
+ * Same drawing as the LandingMark brand logo, with the ball group animated.
+ *
+ * Props:
+ *   size  number — rendered width/height in px (default 36)
+ */
+export function BallSpinner({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" role="status" aria-label="Loading">
+      <circle cx="16" cy="16" r="14" fill="color-mix(in srgb, var(--c-accent) 18%, transparent)" />
+      <g className="animate-ball-spin">
+        <circle cx="16" cy="16" r="9" fill="none" stroke="var(--c-accent)" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M7 16 Q 16 6 25 16" stroke="var(--c-accent)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <path d="M7 16 Q 16 26 25 16" stroke="var(--c-accent)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <line x1="16" y1="7" x2="16" y2="25" stroke="var(--c-accent)" strokeWidth="1.6" strokeLinecap="round" />
+      </g>
+    </svg>
+  )
+}

@@ -118,10 +118,21 @@ body {
   animation: confetti-fly 700ms ease-out forwards;
 }
 
+/* Arenix ball spinner (BallSpinner) — rotates the ball, halo stays still */
+@keyframes ball-spin {
+  to { transform: rotate(360deg); }
+}
+.animate-ball-spin {
+  animation: ball-spin 1.1s linear infinite;
+  transform-origin: 16px 16px; /* center of the 32×32 viewBox */
+  transform-box: view-box;
+}
+
 /* Honor user's reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
   .animate-unlock-pop,
-  .confetti-dot {
+  .confetti-dot,
+  .animate-ball-spin {
     animation: none !important;
   }
 }

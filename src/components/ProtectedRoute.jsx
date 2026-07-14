@@ -1,5 +1,6 @@
 import { useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { BallSpinner } from './ui-new'
 
 /**
  * Wraps any route that requires authentication.
@@ -15,8 +16,8 @@ export default function ProtectedRoute({ children }) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg text-text">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <span className="text-[13px] text-dim font-medium">Loading…</span>
+          <BallSpinner size={44} />
+          <span className="font-display text-[15px] text-dim tracking-[0.15em]">ARENIX</span>
         </div>
       </div>
     )

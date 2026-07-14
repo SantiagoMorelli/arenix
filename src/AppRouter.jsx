@@ -26,6 +26,7 @@ import { Routes, Route } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import MainLayout     from './layouts/MainLayout'
 import LeagueLayout   from './layouts/LeagueLayout'
+import { BallSpinner } from './components/ui-new'
 
 // Kept eager: small, always needed on first paint (auth path)
 import Login  from './pages/Login'
@@ -54,11 +55,7 @@ const ChartTest            = lazy(() => import('./pages/ChartTest'))
 function RouteFallback() {
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center">
-      <div
-        className="w-8 h-8 rounded-full border-2 border-line border-t-accent animate-spin"
-        role="status"
-        aria-label="Loading"
-      />
+      <BallSpinner size={36} />
     </div>
   )
 }

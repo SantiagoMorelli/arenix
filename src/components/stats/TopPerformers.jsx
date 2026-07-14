@@ -5,6 +5,7 @@ import ExpandableStatCard from "./ExpandableStatCard";
 import PlayerMoments from "./PlayerMoments";
 import { SectionLabelWithHelp } from "./StatInfo";
 import { EXPLANATIONS } from "./explanations";
+import { ERROR_SUBTYPES, normalizeErrorType } from "./pointTypes";
 
 /**
  * Top Performers card. Each player row is an ExpandableStatCard:
@@ -32,6 +33,18 @@ export default function TopPerformers({
   const startTs = pointLog[0]?.timestamp;
   const fmt = (ts) => (startTs && ts) ? formatDuration(ts - startTs) : null;
 
+  // Per-player error breakdown by subtype (spike/tip/serve/other/untyped).
+  const errorsByType = (pid) => {
+    const out = {};
+    pointLog.forEach(e => {
+      if (e.errorPlayerId === pid) {
+        const sub = normalizeErrorType(e.errorType);
+        out[sub] = (out[sub] || 0) + 1;
+      }
+    });
+    return out;
+  };
+
   const renderTeamSection = (ids, stat, isTeam1) => {
     if (ids.length === 0) return null;
     const teamColor = isTeam1 ? "text-accent" : "text-free";
@@ -48,7 +61,7 @@ export default function TopPerformers({
             ariaLabel={`Show stats for ${firstName(pid)}`}
             chevronColor={isTeam1 ? "text-accent/60" : "text-free/60"}
             className="border-b border-line last:border-b-0"
-            header={renderRow(pid, stat, isTeam1, mvp?.pid === pid, firstName, maxPts)}
+            header={renderRow(pid, stat, isTeam1, mvp?.pid === pid, firstName, maxPts, errorsByType(pid))}
           >
             <div className="bg-bg/60 border border-line rounded-[10px] px-3 py-2.5 mb-2">
               <PlayerMoments
@@ -80,7 +93,7 @@ export default function TopPerformers({
 
 // ── Row ────────────────────────────────────────────────────────────────────
 
-function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
+function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts, errBt = {}) {
   const pts = stat.playerPts[pid] || 0;
   const bt  = stat.playerByType[pid] || {};
   const err = stat.playerErrors[pid] || 0;
@@ -94,6 +107,10 @@ function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
 
   const secondary = STAT_TYPES
     .map(s => ({ ...s, value: bt[s.key] || 0 }))
+    .filter(s => s.value > 0);
+
+  const errSecondary = ERROR_SUBTYPES
+    .map(s => ({ ...s, value: errBt[s.id] || 0 }))
     .filter(s => s.value > 0);
 
   // Net points (pts − errors) — same measure the MVP is picked by.
@@ -121,11 +138,20 @@ function renderRow(pid, stat, isTeam1, isMVP, firstName, maxPts) {
         <div className="h-[3px] bg-alt rounded-full mb-1.5 overflow-hidden">
           <div className={`h-full rounded-full ${barFill}`} style={{ width: `${barPct}%` }} />
         </div>
-        {secondary.length > 0 && (
+        {(secondary.length > 0 || errSecondary.length > 0) && (
           <div className="flex items-center gap-2">
             {secondary.map(s => (
               <span key={s.key} className={`flex items-center gap-0.5 ${s.textCls}`}>
                 <s.Icon size={9} />
+                <span className="text-[10px] font-semibold">{s.value}</span>
+              </span>
+            ))}
+            {secondary.length > 0 && errSecondary.length > 0 && (
+              <span className="w-px h-2 bg-line" />
+            )}
+            {errSecondary.map(s => (
+              <span key={`err-${s.id}`} className="flex items-center gap-0.5 text-error">
+                <s.icon size={9} />
                 <span className="text-[10px] font-semibold">{s.value}</span>
               </span>
             ))}

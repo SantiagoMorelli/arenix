@@ -5,6 +5,7 @@ import {
   ChevronDown, Plus, Bell, Check,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { BallSpinner } from '../components/ui-new'
 import { useToast } from '../contexts/ToastContext'
 import { getPublicLeagues, getMyLeagues, createLeague } from '../services/leagueService'
 import { joinLeague } from '../services/inviteService'
@@ -804,7 +805,7 @@ export default function Landing() {
   if (authLoading) {
     return (
       <div className="flex h-screen bg-bg items-center justify-center">
-        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={32} />
       </div>
     )
   }

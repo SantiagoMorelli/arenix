@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { SAVE_KEY } from '../hooks/useLiveGame'
 import { reopenMatch, quickEditMatchScores } from '../services/tournamentService'
 import useFocusTrap from '../hooks/useFocusTrap'
+import { BallSpinner } from './ui-new'
 
 function teamName(teams, id) {
   return teams?.find(t => t.id === id)?.name || '?'
@@ -259,7 +260,7 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
             >
               {saving ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <BallSpinner size={16} color="#fff" />
                   Saving…
                 </>
               ) : 'Save Changes'}
@@ -272,7 +273,7 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
             >
               {reopening ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  <BallSpinner size={16} />
                   Opening…
                 </>
               ) : (

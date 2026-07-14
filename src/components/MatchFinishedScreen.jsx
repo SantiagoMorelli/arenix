@@ -1,5 +1,5 @@
 import { Trophy, Check, Undo2 } from "lucide-react";
-import { AppButton } from "./ui-new";
+import { AppButton, BallSpinner } from "./ui-new";
 import { buildResultFraming } from "../lib/matchInsights";
 import { useAuth } from "../contexts/AuthContext";
 import { TONES, ICONS } from "./stats/storyTheme";
@@ -195,7 +195,7 @@ const MatchFinishedScreen = ({
           >
             {isSaving ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                <BallSpinner size={16} color="#fff" />
                 Saving…
               </span>
             ) : (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { getLeaguePlayers } from '../../services/playerService'
-import { AppBadge, AppButton } from '../ui-new'
+import { AppBadge, AppButton, BallSpinner } from '../ui-new'
 
 export default function AddPlayerModal({ session, onAdd, onClose }) {
   const hasLeague = !!session.league_id
@@ -82,7 +82,7 @@ export default function AddPlayerModal({ session, onAdd, onClose }) {
 
               {loadingLeague ? (
                 <div className="flex justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-free border-t-transparent rounded-full animate-spin" />
+                  <BallSpinner size={24} color="var(--c-free)" />
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="text-center text-[13px] text-dim py-8">

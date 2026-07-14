@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getLeagueByInviteCode, joinLeague } from '../services/inviteService'
 import { createNotification } from '../services/notificationService'
 import { useAuth } from '../contexts/AuthContext'
+import { BallSpinner } from '../components/ui-new'
 
 const Svg = ({ children, size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24"
@@ -60,7 +61,7 @@ export default function JoinLeague() {
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-screen bg-bg text-text">
-        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={32} />
       </div>
     )
   }

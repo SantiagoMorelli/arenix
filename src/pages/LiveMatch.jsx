@@ -6,6 +6,7 @@ import { useLiveGame, SAVE_KEY, loadSaved } from '../hooks/useLiveGame'
 import { saveMatchResult as supabaseSaveMatchResult, advanceKnockoutAfterMatch, completeTournament, releaseMatchScorer, saveTeamServeOrder, savePartialMatchLog, fetchMatchLog } from '../services/tournamentService'
 import { createNotificationsForLeagueMembers } from '../services/notificationService'
 import LiveScoreboard from '../components/LiveScoreboard'
+import { BallSpinner } from '../components/ui-new'
 const QRImportModal = lazy(() => import('../components/QRImportModal'))
 import { useToast } from '../contexts/ToastContext'
 import { ChevronLeft } from 'lucide-react'
@@ -446,7 +447,7 @@ export default function LiveMatch() {
   if (leagueLoading || roleLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={36} />
       </div>
     )
   }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useFreePlay } from '../hooks/useFreePlay'
 import { getMyLeagues } from '../services/leagueService'
-import { PillTabs } from '../components/ui-new'
+import { PillTabs, BallSpinner } from '../components/ui-new'
 import { useToast } from '../contexts/ToastContext'
 import FreePlayStatsScreen from '../components/FreePlayStatsScreen'
 import SessionHeader from '../components/freeplay/SessionHeader'
@@ -137,7 +137,7 @@ export default function FreePlaySession() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
-        <div className="w-8 h-8 border-2 border-free border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={36} color="var(--c-free)" />
       </div>
     )
   }

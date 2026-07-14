@@ -12,7 +12,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { getFreePlayByInviteCode, getFreePlay } from '../services/freePlayService'
 import { calcOverallStandings, calcPlayerStandings } from '../lib/standings'
 import { useAuth } from '../contexts/AuthContext'
-import { AppBadge } from '../components/ui-new'
+import { AppBadge, BallSpinner } from '../components/ui-new'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -178,7 +178,7 @@ export default function FreePlayJoin() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
-        <div className="w-8 h-8 border-2 border-free border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={36} color="var(--c-free)" />
       </div>
     )
   }

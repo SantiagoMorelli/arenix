@@ -448,17 +448,22 @@ export function IconButton({ children, onClick, badge, ariaLabel }) {
  * Same drawing as the LandingMark brand logo, with the ball group animated.
  *
  * Props:
- *   size  number — rendered width/height in px (default 36)
+ *   size   number — rendered width/height in px (default 36)
+ *   color  string — CSS color of the ball (default accent token).
+ *                   Use 'var(--c-free)' on free-play screens, '#fff' inside
+ *                   filled buttons. Strokes thicken at small sizes so the
+ *                   ball stays legible inside buttons.
  */
-export function BallSpinner({ size = 36 }) {
+export function BallSpinner({ size = 36, color = 'var(--c-accent)' }) {
+  const sw = size < 24 ? 2.6 : 1.6
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" role="status" aria-label="Loading">
-      <circle cx="16" cy="16" r="14" fill="color-mix(in srgb, var(--c-accent) 18%, transparent)" />
+      <circle cx="16" cy="16" r="14" fill={`color-mix(in srgb, ${color} 18%, transparent)`} />
       <g className="animate-ball-spin">
-        <circle cx="16" cy="16" r="9" fill="none" stroke="var(--c-accent)" strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M7 16 Q 16 6 25 16" stroke="var(--c-accent)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-        <path d="M7 16 Q 16 26 25 16" stroke="var(--c-accent)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-        <line x1="16" y1="7" x2="16" y2="25" stroke="var(--c-accent)" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="16" cy="16" r="9" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+        <path d="M7 16 Q 16 6 25 16" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" />
+        <path d="M7 16 Q 16 26 25 16" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" />
+        <line x1="16" y1="7" x2="16" y2="25" stroke={color} strokeWidth={sw} strokeLinecap="round" />
       </g>
     </svg>
   )

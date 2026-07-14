@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { teamName } from '../../lib/tournament'
+import { BallSpinner } from '../ui-new'
 
 export default function StartMatchModal({
   match,
@@ -127,7 +128,7 @@ export default function StartMatchModal({
                 >
                   {savingScore ? (
                     <>
-                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                      <BallSpinner size={14} color="#fff" />
                       Saving…
                     </>
                   ) : 'Save Result'}

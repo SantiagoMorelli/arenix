@@ -272,6 +272,45 @@ export async function getPublicLeagues() {
 }
 
 /**
+ * League id of the current user's most recently played match, or null.
+ *
+ * Matches carry no user_id/league_id, so participation is resolved through
+ * players (user_id) → team_players → teams → matches → tournaments (league_id).
+ */
+export async function getLastPlayedLeagueId() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: players, error: pErr } = await supabase
+    .from('players')
+    .select('id')
+    .eq('user_id', user.id)
+  if (pErr) throw pErr
+  const playerIds = (players || []).map(p => p.id)
+  if (!playerIds.length) return null
+
+  const { data: tps, error: tpErr } = await supabase
+    .from('team_players')
+    .select('team_id')
+    .in('player_id', playerIds)
+  if (tpErr) throw tpErr
+  const teamIds = [...new Set((tps || []).map(t => t.team_id))]
+  if (!teamIds.length) return null
+
+  const list = teamIds.join(',')
+  const { data: match, error: mErr } = await supabase
+    .from('matches')
+    .select('created_at, tournaments!inner(league_id)')
+    .or(`team1_id.in.(${list}),team2_id.in.(${list})`)
+    .eq('played', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (mErr) throw mErr
+  return match?.tournaments?.league_id ?? null
+}
+
+/**
  * Update editable league fields (name, location, visibility).
  */
 export async function updateLeague(leagueId, { name, location, visibility }) {

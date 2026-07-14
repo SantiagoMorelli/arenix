@@ -11,6 +11,7 @@ import TournamentsTab from '../components/league/TournamentsTab'
 import SettingsTab from '../components/league/SettingsTab'
 import LeagueHeaderMenu from '../components/league/LeagueHeaderMenu'
 import { createNotification } from '../services/notificationService'
+import { clearLastLeague } from '../lib/lastLeague'
 import { useToast } from '../contexts/ToastContext'
 import { ChevronLeft, Home, Users, Trophy, Settings } from 'lucide-react'
 
@@ -47,6 +48,14 @@ export default function LeagueDetail() {
       navigate(`/login?next=/league/${id}`, { replace: true })
     }
   }, [loading, error, league, isGuest, id, navigate])
+
+  // Self-healing: if the league is gone (deleted / access lost), forget it as
+  // "last visited" so the startup redirect falls through to its fallbacks.
+  useEffect(() => {
+    if (!loading && (error || !league) && session?.user?.id) {
+      clearLastLeague(session.user.id, id)
+    }
+  }, [loading, error, league, session, id])
 
   // Settings and Players tabs are admin-only — non-admins (e.g. arriving via
   // location.state or a notification deep link) fall back to home.

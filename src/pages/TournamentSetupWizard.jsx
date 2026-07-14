@@ -9,6 +9,7 @@ import { createNotificationsForLeagueMembers } from '../services/notificationSer
 import { uid, levelOf, generateRoundRobinSchedule } from '../lib/utils'
 import { useToast } from '../contexts/ToastContext'
 import AddPlayerSheet from '../components/AddPlayerSheet'
+import { BallSpinner } from '../components/ui-new'
 import ScoringLevelSelect from '../components/ScoringLevelSelect'
 
 const FORMAT_OPTIONS = [
@@ -343,7 +344,7 @@ export default function TournamentSetupWizard() {
   if (!league) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg text-text">
-        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={32} />
       </div>
     )
   }

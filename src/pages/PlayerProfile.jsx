@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { PillTabs } from '../components/ui-new'
+import { PillTabs, BallSpinner } from '../components/ui-new'
 import ProfileHeroCard from '../components/profile/ProfileHeroCard'
 import AchievementsSection from '../components/profile/AchievementsSection'
 import PlayerStatsSection from '../components/profile/PlayerStatsSection'
@@ -358,7 +358,7 @@ export default function PlayerProfile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-line border-t-accent animate-spin" />
+        <BallSpinner size={36} />
       </div>
     )
   }

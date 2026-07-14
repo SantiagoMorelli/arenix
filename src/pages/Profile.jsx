@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Settings as SettingsIcon, ChevronLeft } from 'lucide-react'
-import { SectionLabel, AppToast, PillTabs } from '../components/ui-new'
+import { SectionLabel, AppToast, PillTabs, BallSpinner } from '../components/ui-new'
 import { HelpToggle, InfoPanel } from '../components/stats/StatInfo'
 import { PROFILE_EXPLANATIONS } from '../components/profile/profileExplanations'
 import { useAuth } from '../contexts/AuthContext'
@@ -364,7 +364,7 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="flex flex-col h-screen bg-bg text-text items-center justify-center">
-        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={32} />
       </div>
     )
   }

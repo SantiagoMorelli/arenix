@@ -21,7 +21,7 @@ import { createNotification, createNotificationsForLeagueMembers } from '../serv
 import { buildKnockout, buildFinalOnly } from '../lib/tournament'
 import { resolveScoringLevel } from '../lib/scoring'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
-import { PillTabs, ConfirmModal } from '../components/ui-new'
+import { PillTabs, ConfirmModal, BallSpinner } from '../components/ui-new'
 import { useToast } from '../contexts/ToastContext'
 import TournamentHeader from '../components/tournament/TournamentHeader'
 import StandingsTab from '../components/tournament/StandingsTab'
@@ -103,7 +103,7 @@ export default function TournamentDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg text-text">
-        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={32} />
       </div>
     )
   }

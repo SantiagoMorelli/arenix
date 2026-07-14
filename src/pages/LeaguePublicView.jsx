@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { getLeagueIdByInviteCode } from '../services/inviteService'
 import { useAuth } from '../contexts/AuthContext'
+import { BallSpinner } from '../components/ui-new'
 
 export default function LeaguePublicView() {
   const { code }    = useParams()
@@ -75,7 +76,7 @@ export default function LeaguePublicView() {
   // Loading / resolving
   return (
     <div className="flex items-center justify-center min-h-screen bg-bg">
-      <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <BallSpinner size={36} />
     </div>
   )
 }

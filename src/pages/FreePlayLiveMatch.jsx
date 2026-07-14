@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useFreePlay } from '../hooks/useFreePlay'
 import { useLiveGame, FP_SAVE_KEY } from '../hooks/useLiveGame'
 import LiveScoreboard from '../components/LiveScoreboard'
+import { BallSpinner } from '../components/ui-new'
 import { saveFreePlayGame, saveFreePlayTeamServeOrder } from '../services/freePlayService'
 import { useToast } from '../contexts/ToastContext'
 import { ChevronLeft } from 'lucide-react'
@@ -349,7 +350,7 @@ export default function FreePlayLiveMatch() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg">
-        <div className="w-8 h-8 border-2 border-free border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={36} color="var(--c-free)" />
       </div>
     )
   }

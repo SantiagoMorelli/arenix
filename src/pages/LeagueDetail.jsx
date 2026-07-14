@@ -4,7 +4,7 @@ import { useLeague } from '../hooks/useLeague'
 import { useLeagueRole } from '../hooks/useLeagueRole'
 import { useAuth } from '../contexts/AuthContext'
 import { addPlayer, updatePlayer, deletePlayer } from '../services/playerService'
-import { BottomNav } from '../components/ui-new'
+import { BottomNav, BallSpinner } from '../components/ui-new'
 import LeaguePlayersTab from '../components/LeaguePlayersTab'
 import RankingsTab from '../components/league/RankingsTab'
 import TournamentsTab from '../components/league/TournamentsTab'
@@ -119,7 +119,7 @@ export default function LeagueDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-bg text-text">
-        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <BallSpinner size={32} />
       </div>
     )
   }

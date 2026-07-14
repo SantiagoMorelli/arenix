@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { getMyLeagues } from '../services/leagueService'
 import { getLeaguePlayers } from '../services/playerService'
-import { AppBadge, AppButton } from '../components/ui-new'
+import { AppBadge, AppButton, BallSpinner } from '../components/ui-new'
 import { useToast } from '../contexts/ToastContext'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -457,7 +457,7 @@ export default function FreePlayWizard() {
                 </div>
                 {lpLoading ? (
                   <div className="flex justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-free border-t-transparent rounded-full animate-spin" />
+                    <BallSpinner size={24} color="var(--c-free)" />
                   </div>
                 ) : filteredLeaguePlayers.length === 0 ? (
                   <div className="text-center text-[13px] text-dim py-8">

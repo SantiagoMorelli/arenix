@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadAvatar } from '../services/profileService'
+import { BallSpinner } from '../components/ui-new'
 
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -245,7 +246,7 @@ export default function EditProfile() {
             className="w-full bg-accent text-white font-bold text-[14px] py-3.5 rounded-xl cursor-pointer border-0 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {saving && (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <BallSpinner size={16} color="#fff" />
             )}
             {saving ? 'Saving…' : 'Save Changes'}
           </button>

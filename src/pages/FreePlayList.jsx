@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getFreePlays } from '../services/freePlayService'
-import { AppCard, AppBadge } from '../components/ui-new'
+import { AppCard, AppBadge, BallSpinner } from '../components/ui-new'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Svg = ({ children, size = 20 }) => (
@@ -66,7 +66,7 @@ export default function FreePlayList() {
       <div className="screen__body px-4 pb-8">
         {loading ? (
           <div className="flex items-center justify-center h-40">
-            <div className="w-7 h-7 border-2 border-free border-t-transparent rounded-full animate-spin" />
+            <BallSpinner size={32} color="var(--c-free)" />
           </div>
         ) : sessions.length === 0 ? (
           /* Empty state */

@@ -3,7 +3,7 @@ import {
   Trophy, Check, Volleyball, Undo2, X, Target, Zap, Shield, Hand, HelpCircle,
 } from "lucide-react";
 import { formatDuration, getMatchDuration, getLongestRally } from "../lib/utils";
-import { AppCard, AppButton, PillTabs } from "./ui-new";
+import { AppCard, AppButton, PillTabs, BallSpinner } from "./ui-new";
 import {
   calcLeadStats, calcDynamics, calcMVP, calcPressureTags,
 } from "../lib/matchStats";
@@ -593,7 +593,7 @@ const GameStats = ({
           >
             {isSaving ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                <BallSpinner size={16} color="#fff" />
                 Saving…
               </span>
             ) : (

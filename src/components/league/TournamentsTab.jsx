@@ -3,6 +3,16 @@ import { Trophy, Plus, ChevronRight, Crown } from 'lucide-react'
 import { SectionLabel } from '../ui-new'
 import { getTournamentPodium } from '../../lib/leagueInsights'
 
+function formatDate(val) {
+  if (!val) return ''
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    const [y, m, d] = val.split('-')
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  const d = new Date(val)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 function isLive(t) {
   return t.status !== 'completed' && ['group', 'knockout', 'freeplay'].includes(t.phase)
 }
@@ -121,7 +131,8 @@ export default function TournamentsTab({ league, isAdmin, isGuest }) {
           <SectionLabel>Completed</SectionLabel>
           <div className="flex flex-col gap-2 mb-4">
             {completed.map(t => {
-              const podium = getTournamentPodium(t, league?.players || [])
+              const podium    = getTournamentPodium(t, league?.players || [])
+              const dateLabel = formatDate(t.date)
               return (
                 <div
                   key={t.id}
@@ -136,7 +147,10 @@ export default function TournamentsTab({ league, isAdmin, isGuest }) {
                       <div className="text-[14px] font-bold text-text truncate">{t.name}</div>
                       <div className="text-[11px] text-dim">{tournamentMeta(t)}</div>
                     </div>
-                    <ChevronRight size={16} className="text-dim flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {dateLabel && <span className="text-[10px] text-dim">{dateLabel}</span>}
+                      <ChevronRight size={16} className="text-dim" />
+                    </div>
                   </div>
                   {podium?.first && (
                     <div className="pt-2.5 border-t border-line/50 flex items-center gap-2 min-w-0">

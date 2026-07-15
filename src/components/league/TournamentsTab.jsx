@@ -1,14 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus, ChevronRight } from 'lucide-react'
+import { Trophy, Plus, ChevronRight, Crown } from 'lucide-react'
 import { SectionLabel } from '../ui-new'
 import { getTournamentPodium } from '../../lib/leagueInsights'
-
-// Medal disc tints by podium place
-const MEDAL = [
-  { key: 'first',  bg: 'bg-accent' },
-  { key: 'second', bg: 'bg-dim' },
-  { key: 'third',  bg: 'bg-[#b87333]/80' },
-]
 
 function isLive(t) {
   return t.status !== 'completed' && ['group', 'knockout', 'freeplay'].includes(t.phase)
@@ -26,7 +19,7 @@ function tournamentMeta(t) {
 
 /**
  * Tournaments tab — status-grouped sections: live tournaments first in green,
- * then upcoming (setup phase), then completed with a medal podium strip.
+ * then upcoming (setup phase), then completed with a champion strip.
  */
 export default function TournamentsTab({ league, isAdmin, isGuest }) {
   const navigate    = useNavigate()
@@ -145,20 +138,17 @@ export default function TournamentsTab({ league, isAdmin, isGuest }) {
                     </div>
                     <ChevronRight size={16} className="text-dim flex-shrink-0" />
                   </div>
-                  {podium && (
-                    <div className="pt-2.5 border-t border-line/50 flex flex-col gap-1.5">
-                      {MEDAL.map(({ key, bg }, i) =>
-                        podium[key] ? (
-                          <div key={key} className="flex items-center gap-2 min-w-0">
-                            <span className={`w-[18px] h-[18px] rounded-full ${bg} text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0`}>
-                              {i + 1}
-                            </span>
-                            <span className={`text-[12px] truncate ${i === 0 ? 'text-text font-semibold' : 'text-dim'}`}>
-                              {podium[key]}
-                            </span>
-                          </div>
-                        ) : null
-                      )}
+                  {podium?.first && (
+                    <div className="pt-2.5 border-t border-line/50 flex items-center gap-2 min-w-0">
+                      <span className="w-[22px] h-[22px] rounded-full bg-accent/15 text-accent flex items-center justify-center flex-shrink-0">
+                        <Crown size={12} />
+                      </span>
+                      <span className="text-[10px] font-bold text-accent tracking-[0.4px] uppercase flex-shrink-0">
+                        Champion
+                      </span>
+                      <span className="text-[12px] font-semibold text-text truncate">
+                        {podium.first}
+                      </span>
                     </div>
                   )}
                 </div>

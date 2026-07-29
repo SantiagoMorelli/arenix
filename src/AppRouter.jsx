@@ -50,6 +50,7 @@ const FreePlayJoin         = lazy(() => import('./pages/FreePlayJoin'))
 const LeaguePublicView     = lazy(() => import('./pages/LeaguePublicView'))
 const PlayerProfile        = lazy(() => import('./pages/PlayerProfile'))
 const ChartTest            = lazy(() => import('./pages/ChartTest'))
+const DebugStorage         = lazy(() => import('./pages/DebugStorage'))
 
 // ── Suspense fallback ──────────────────────────────────────────────────────────
 function RouteFallback() {
@@ -112,9 +113,10 @@ export default function AppRouter() {
         <Routes>
 
           {/* ── Public (no auth required) ── */}
-          <Route path="/login"      element={<Login />}      />
-          <Route path="/signup"     element={<Signup />}     />
-          <Route path="/chart-test" element={<ChartTest />}  />
+          <Route path="/login"         element={<Login />}         />
+          <Route path="/signup"        element={<Signup />}        />
+          <Route path="/chart-test"    element={<ChartTest />}     />
+          <Route path="/debug-storage" element={<DebugStorage />}  />
 
           {/* ── Semi-public: Home (branches to GuestHome when not logged in) ── */}
           <Route element={<MainLayout />}>

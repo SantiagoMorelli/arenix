@@ -13,7 +13,8 @@ import LeagueHeaderMenu from '../components/league/LeagueHeaderMenu'
 import { createNotification } from '../services/notificationService'
 import { clearLastLeague } from '../lib/lastLeague'
 import { useToast } from '../contexts/ToastContext'
-import { ChevronLeft, Home, Users, Trophy, Settings } from 'lucide-react'
+import { getLeagueView, setLeagueView, SOCIAL } from '../lib/leagueViewPref'
+import { ChevronLeft, Home, Users, Trophy, Settings, Sparkles } from 'lucide-react'
 
 // Tabs visible to guests and non-admin members; admins also get Players + Settings
 const BASE_NAV_ITEMS = [
@@ -41,6 +42,14 @@ export default function LeagueDetail() {
   const { session, profile }                 = useAuth()
 
   const isGuest = !session
+
+  // Honour the remembered league-home design. Skipped when the caller asked for
+  // a specific tab (notification deep links, the social view's "Events" button)
+  // so an explicit destination always wins over the preference.
+  useEffect(() => {
+    if (location.state?.tab) return
+    if (getLeagueView() === SOCIAL) navigate(`/league/${id}/social`, { replace: true })
+  }, [id, location.state, navigate])
 
   // Redirect guests who land on a private league to login with ?next=
   useEffect(() => {
@@ -156,6 +165,14 @@ export default function LeagueDetail() {
             {league.location && <> · {league.location}</>}
           </div>
         </div>
+        {/* Design toggle — jump to the experimental social feed view */}
+        <button
+          onClick={() => { setLeagueView(SOCIAL); navigate(`/league/${id}/social`) }}
+          className="shrink-0 w-8 h-8 rounded-full bg-alt flex items-center justify-center text-dim border-0 cursor-pointer"
+          aria-label="Switch to the social league view"
+        >
+          <Sparkles size={15} />
+        </button>
         {/* Guest: show Log in button in header */}
         {isGuest && (
           <button

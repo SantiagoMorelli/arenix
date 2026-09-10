@@ -15,6 +15,7 @@
  *   /free-play                     → Free Play
  *   /free-play/join/:code          → FreePlayJoin (public — invite link)
  *   /league/:id                    → LeagueDetail (public for public leagues)
+ *   /league/:id/social             → LeagueSocial (experimental feed design)
  *   /league/:id/tournament/new     → TournamentSetupWizard
  *   /league/:id/tournament/:tid    → TournamentDetail (public for public leagues)
  *   /league/:id/tournament/:tid/match/:mid → Live Match (protected)
@@ -38,6 +39,7 @@ const Profile              = lazy(() => import('./pages/Profile'))
 const Settings             = lazy(() => import('./pages/Settings'))
 const EditProfile          = lazy(() => import('./pages/EditProfile'))
 const LeagueDetail         = lazy(() => import('./pages/LeagueDetail'))
+const LeagueSocial         = lazy(() => import('./pages/LeagueSocial'))
 const TournamentDetail     = lazy(() => import('./pages/TournamentDetail'))
 const TournamentSetupWizard = lazy(() => import('./pages/TournamentSetupWizard'))
 const LiveMatch            = lazy(() => import('./pages/LiveMatch'))
@@ -149,6 +151,8 @@ export default function AppRouter() {
                /league/:id/tournament/new and /match/:mid remain protected. ── */}
           <Route path="/league/:id" element={<LeagueLayout />}>
             <Route index element={<LeagueDetail />} />
+            {/* Experimental social-feed design for the league home — same data, different UI */}
+            <Route path="social" element={<LeagueSocial />} />
             <Route path="tournament/new"        element={<ProtectedRoute><TournamentSetupWizard /></ProtectedRoute>} />
             <Route path="tournament/:tid"       element={<TournamentDetail />} />
             <Route path="tournament/:tid/match/:mid" element={<ProtectedRoute><LiveMatch /></ProtectedRoute>} />

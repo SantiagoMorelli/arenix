@@ -677,7 +677,7 @@ export function computeLeagueRecords(league, streaks) {
  * Most recent played matches across all tournaments, newest first.
  *
  * @returns {Array<{ matchId, tournamentId, tournamentName, date, ts,
- *   team1: { name, playerNames }, team2: { name, playerNames },
+ *   team1: { name, playerIds, playerNames }, team2: { name, playerIds, playerNames },
  *   score1, score2, sets, winnerSide: 1|2 }>}
  */
 export function buildActivityFeed(league, limit = 12) {
@@ -691,6 +691,7 @@ export function buildActivityFeed(league, limit = 12) {
       const team = teams.find(tm => tm.id === teamId)
       return {
         name:        team?.name || 'Unknown',
+        playerIds:   team?.players || [],
         playerNames: (team?.players || []).map(nameOf).join(', '),
       }
     }

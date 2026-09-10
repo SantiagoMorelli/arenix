@@ -51,6 +51,24 @@
   /* Typography */
   --font-sans:    'DM Sans', sans-serif;
   --font-display: 'Bebas Neue', cursive;
+
+  /* ── Social league view (experimental) ────────────────────────────────────
+     A deliberately separate design language from the handoff: fixed values,
+     never theme-swapped, so /league/:id/social keeps one committed dark look
+     in both light and dark mode. Only components under components/social/
+     and pages/LeagueSocial.jsx may use these. */
+  --color-soc-bg:      #08080C;
+  --color-soc-surface: #121218;
+  --color-soc-alt:     #1C1C25;
+  --color-soc-line:    #2A2A36;
+  --color-soc-text:    #F5F5F7;
+  --color-soc-dim:     #8E8EA6;
+  --color-soc-lime:    #D8FF3E;
+  --color-soc-pink:    #FF3D71;
+  --color-soc-cyan:    #34E2F0;
+  --color-soc-violet:  #7C5CFF;
+
+  --font-soc: 'Archivo Black', 'DM Sans', sans-serif;
 }
 
 /* ─── Base styles ───────────────────────────────────────────────────────────── */
@@ -128,11 +146,32 @@ body {
   transform-box: view-box;
 }
 
+/* ─── Social view animations ────────────────────────────────────────────────── */
+
+/* Feed cards rise into place as the list renders */
+@keyframes soc-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-soc-rise {
+  animation: soc-rise 380ms cubic-bezier(.22,.9,.28,1) backwards;
+}
+
+/* Story ring sweep for players on an active win streak */
+@keyframes soc-ring {
+  to { transform: rotate(360deg); }
+}
+.animate-soc-ring {
+  animation: soc-ring 3.2s linear infinite;
+}
+
 /* Honor user's reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
   .animate-unlock-pop,
   .confetti-dot,
-  .animate-ball-spin {
+  .animate-ball-spin,
+  .animate-soc-rise,
+  .animate-soc-ring {
     animation: none !important;
   }
 }

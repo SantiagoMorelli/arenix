@@ -432,9 +432,10 @@ function entryPointDiff(e) {
 
 /**
  * Headline stat tiles for the horizontal highlights strip. Tiles whose
- * conditions aren't met are omitted, as are tiles whose record is shared by
- * two or more players — a tile names a single owner or it isn't shown. The
- * result may be empty.
+ * conditions aren't met are omitted — the result may be empty. A record held
+ * by several players (the usual case: teammates share every match-derived
+ * stat) names them all, as "Ana & Luis" or "Ana +2"; `playerId` is the first
+ * holder, so tapping the tile opens their card.
  *
  * @returns {Array<{ id, label, playerId, playerName, primary, secondary }>}
  */
@@ -443,44 +444,52 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
   const byId    = new Map(players.map(p => [p.id, p]))
   const tiles   = []
 
-  // Top item by score, but only when the maximum is unique: a tile is shown
-  // solely when a single player owns the record, so ties drop the tile.
-  const bestUnique = (iterable, score) => {
-    let top = null
+  // Every item sharing the maximum score. Records are usually held by two
+  // players at once: teammates play the exact same matches, so their wins,
+  // win %, streaks and point diff are identical by construction.
+  const topTied = (iterable, score) => {
+    let top = []
     let topScore = -Infinity
-    let tied = false
     for (const item of iterable) {
       const s = score(item)
-      if (s > topScore) { topScore = s; top = item; tied = false }
-      else if (s === topScore) { tied = true }
+      if (s > topScore) { topScore = s; top = [item] }
+      else if (s === topScore) top.push(item)
     }
-    return tied ? null : top
+    return top
+  }
+
+  // "Ana" · "Ana & Luis" · "Ana +2" — names every holder without overflowing
+  // the 124px tile.
+  const tiedLabel = (labels) => {
+    if (labels.length === 2) return `${labels[0]} & ${labels[1]}`
+    if (labels.length > 2)   return `${labels[0]} +${labels.length - 1}`
+    return labels[0] || 'Unknown'
   }
 
   // On fire — longest active win streak (min 2)
-  const fire = bestUnique(streaks.entries(), ([, s]) => s.current)
-  if (fire && fire[1].current >= 2) {
+  const fire = topTied(streaks.entries(), ([, s]) => s.current)
+  if (fire.length > 0 && fire[0][1].current >= 2) {
     tiles.push({
       id:         'onFire',
       label:      'On fire',
-      playerId:   fire[0],
-      playerName: playerLabel(byId.get(fire[0])),
-      primary:    `${fire[1].current}`,
+      playerId:   fire[0][0],
+      playerName: tiedLabel(fire.map(([pid]) => playerLabel(byId.get(pid)))),
+      primary:    `${fire[0][1].current}`,
       secondary:  'win streak',
     })
   }
 
   // Best win % — players with enough matches
   const eligible = [...streaks.entries()].filter(([, s]) => s.wins + s.losses >= minMatches)
-  const sharp = bestUnique(eligible, ([, s]) => s.winPct)
-  if (sharp && sharp[1].winPct > 0) {
+  const sharp = topTied(eligible, ([, s]) => s.winPct)
+  if (sharp.length > 0 && sharp[0][1].winPct > 0) {
     tiles.push({
       id:         'bestWinPct',
       label:      'Best win %',
-      playerId:   sharp[0],
-      playerName: playerLabel(byId.get(sharp[0])),
-      primary:    `${Math.round(sharp[1].winPct * 100)}%`,
-      secondary:  `${sharp[1].wins}W - ${sharp[1].losses}L`,
+      playerId:   sharp[0][0],
+      playerName: tiedLabel(sharp.map(([pid]) => playerLabel(byId.get(pid)))),
+      primary:    `${Math.round(sharp[0][1].winPct * 100)}%`,
+      secondary:  `${sharp[0][1].wins}W - ${sharp[0][1].losses}L`,
     })
   }
 
@@ -490,44 +499,44 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
       const curve = timelines.byPlayer.get(p.id)
       return { p, delta: curve[curve.length - 1].elo - curve[curve.length - 2].elo }
     })
-    const climber = bestUnique(deltas, d => d.delta)
-    if (climber && climber.delta > 0) {
+    const climbers = topTied(deltas, d => d.delta)
+    if (climbers.length > 0 && climbers[0].delta > 0) {
       tiles.push({
         id:         'mostImproved',
         label:      'Climbing',
-        playerId:   climber.p.id,
-        playerName: playerLabel(climber.p),
-        primary:    `+${climber.delta}`,
+        playerId:   climbers[0].p.id,
+        playerName: tiedLabel(climbers.map(c => playerLabel(c.p))),
+        primary:    `+${climbers[0].delta}`,
         secondary:  'ELO last event',
       })
     }
   }
 
   // Point machine — best cumulative point differential
-  const topDiff = bestUnique(
+  const topDiff = topTied(
     [...pointDiffs].filter(([, diff]) => diff > 0),
     ([, diff]) => diff
   )
-  if (topDiff) {
+  if (topDiff.length > 0) {
     tiles.push({
       id:         'pointDiff',
       label:      'Point machine',
-      playerId:   topDiff[0],
-      playerName: playerLabel(byId.get(topDiff[0])),
-      primary:    `+${topDiff[1]}`,
+      playerId:   topDiff[0][0],
+      playerName: tiedLabel(topDiff.map(([pid]) => playerLabel(byId.get(pid)))),
+      primary:    `+${topDiff[0][1]}`,
       secondary:  'point diff',
     })
   }
 
   // Most titles — top of the champions wall
-  const champ = champions.titles[0]
-  const titlesTied = champions.titles[1]?.titles === champ?.titles
-  if (champ && champ.titles >= 1 && !titlesTied) {
+  const champ  = champions.titles[0]
+  const champs = champions.titles.filter(t => t.titles === champ?.titles)
+  if (champ && champ.titles >= 1) {
     tiles.push({
       id:         'mostTitles',
       label:      'Most titles',
       playerId:   champ.playerId,
-      playerName: champ.name,
+      playerName: tiedLabel(champs.map(t => t.name)),
       primary:    `${champ.titles}`,
       secondary:  champ.titles === 1 ? 'tournament won' : 'tournaments won',
     })
@@ -539,14 +548,17 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
   )
   if (live.length > 0) {
     const liveStats = computePlayerStats(live.flatMap(allTournamentMatches))
-    const hot = bestUnique(Object.entries(liveStats), ([, s]) => s.points)
-    if (hot && hot[1].points >= 3 && byId.has(hot[0])) {
+    const hot = topTied(
+      Object.entries(liveStats).filter(([pid]) => byId.has(pid)),
+      ([, s]) => s.points
+    )
+    if (hot.length > 0 && hot[0][1].points >= 3) {
       tiles.unshift({
         id:         'hotHand',
         label:      'Hot hand',
-        playerId:   hot[0],
-        playerName: playerLabel(byId.get(hot[0])),
-        primary:    `${hot[1].points}`,
+        playerId:   hot[0][0],
+        playerName: tiedLabel(hot.map(([pid]) => playerLabel(byId.get(pid)))),
+        primary:    `${hot[0][1].points}`,
         secondary:  'pts in live event',
       })
     }

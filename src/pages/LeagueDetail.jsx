@@ -194,6 +194,7 @@ export default function LeagueDetail() {
           {effectiveTab === 'home' && (
             <RankingsTab
               league={league}
+              isAdmin={isAdmin}
               isGuest={isGuest}
               currentUserId={profile?.id}
             />

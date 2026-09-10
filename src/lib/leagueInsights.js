@@ -432,7 +432,9 @@ function entryPointDiff(e) {
 
 /**
  * Headline stat tiles for the horizontal highlights strip. Tiles whose
- * conditions aren't met are omitted — the result may be empty.
+ * conditions aren't met are omitted, as are tiles whose record is shared by
+ * two or more players — a tile names a single owner or it isn't shown. The
+ * result may be empty.
  *
  * @returns {Array<{ id, label, playerId, playerName, primary, secondary }>}
  */
@@ -441,18 +443,22 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
   const byId    = new Map(players.map(p => [p.id, p]))
   const tiles   = []
 
-  const best = (iterable, score) => {
+  // Top item by score, but only when the maximum is unique: a tile is shown
+  // solely when a single player owns the record, so ties drop the tile.
+  const bestUnique = (iterable, score) => {
     let top = null
     let topScore = -Infinity
+    let tied = false
     for (const item of iterable) {
       const s = score(item)
-      if (s > topScore) { topScore = s; top = item }
+      if (s > topScore) { topScore = s; top = item; tied = false }
+      else if (s === topScore) { tied = true }
     }
-    return top
+    return tied ? null : top
   }
 
   // On fire — longest active win streak (min 2)
-  const fire = best(streaks.entries(), ([, s]) => s.current)
+  const fire = bestUnique(streaks.entries(), ([, s]) => s.current)
   if (fire && fire[1].current >= 2) {
     tiles.push({
       id:         'onFire',
@@ -466,7 +472,7 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
 
   // Best win % — players with enough matches
   const eligible = [...streaks.entries()].filter(([, s]) => s.wins + s.losses >= minMatches)
-  const sharp = best(eligible, ([, s]) => s.winPct)
+  const sharp = bestUnique(eligible, ([, s]) => s.winPct)
   if (sharp && sharp[1].winPct > 0) {
     tiles.push({
       id:         'bestWinPct',
@@ -484,7 +490,7 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
       const curve = timelines.byPlayer.get(p.id)
       return { p, delta: curve[curve.length - 1].elo - curve[curve.length - 2].elo }
     })
-    const climber = best(deltas, d => d.delta)
+    const climber = bestUnique(deltas, d => d.delta)
     if (climber && climber.delta > 0) {
       tiles.push({
         id:         'mostImproved',
@@ -498,24 +504,25 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
   }
 
   // Point machine — best cumulative point differential
-  let topDiff = null
-  for (const [pid, diff] of pointDiffs) {
-    if (diff > 0 && (!topDiff || diff > topDiff.diff)) topDiff = { pid, diff }
-  }
+  const topDiff = bestUnique(
+    [...pointDiffs].filter(([, diff]) => diff > 0),
+    ([, diff]) => diff
+  )
   if (topDiff) {
     tiles.push({
       id:         'pointDiff',
       label:      'Point machine',
-      playerId:   topDiff.pid,
-      playerName: playerLabel(byId.get(topDiff.pid)),
-      primary:    `+${topDiff.diff}`,
+      playerId:   topDiff[0],
+      playerName: playerLabel(byId.get(topDiff[0])),
+      primary:    `+${topDiff[1]}`,
       secondary:  'point diff',
     })
   }
 
   // Most titles — top of the champions wall
   const champ = champions.titles[0]
-  if (champ && champ.titles >= 1) {
+  const titlesTied = champions.titles[1]?.titles === champ?.titles
+  if (champ && champ.titles >= 1 && !titlesTied) {
     tiles.push({
       id:         'mostTitles',
       label:      'Most titles',
@@ -532,7 +539,7 @@ export function computeStatHighlights(league, { timelines, streaks, champions, p
   )
   if (live.length > 0) {
     const liveStats = computePlayerStats(live.flatMap(allTournamentMatches))
-    const hot = best(Object.entries(liveStats), ([, s]) => s.points)
+    const hot = bestUnique(Object.entries(liveStats), ([, s]) => s.points)
     if (hot && hot[1].points >= 3 && byId.has(hot[0])) {
       tiles.unshift({
         id:         'hotHand',

@@ -1,43 +1,18 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Flame } from 'lucide-react'
-import { AppSheet, AppBadge } from '../ui-new'
+import { AppSheet } from '../ui-new'
 import { playerAvatarStyle, playerInitials } from '../../lib/utils'
 import { computePlayerCard } from '../../lib/playerCard'
 import EloSparkline from './EloSparkline'
 import PlayerCard from './PlayerCard'
 
-const RECENT_MATCHES = 6
-
-function formatDate(date) {
-  if (!date) return ''
-  const d = new Date(date)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function setsLine(match) {
-  if (Array.isArray(match.sets) && match.sets.length > 0) {
-    return match.sets.map(s => `${s.s1 ?? 0}-${s.s2 ?? 0}`).join(' · ')
-  }
-  return `${match.score1 ?? 0}-${match.score2 ?? 0}`
-}
-
 /**
- * Bottom sheet with a player's league stats: record, ELO trend, titles,
- * streaks, and recent matches. All data comes from the precomputed insights
- * object — no fetching.
+ * Bottom sheet with a player's league stats: card, ELO trend and streaks.
+ * All data comes from the precomputed insights object — no fetching.
  */
 export default function PlayerStatsSheet({ open, onClose, player, league, insights, isGuest = false }) {
   const navigate = useNavigate()
-
-  // teamId → team name, across every tournament (for opponent labels)
-  const teamNames = useMemo(() => {
-    const map = new Map()
-    for (const t of league?.tournaments || []) {
-      for (const team of t.teams || []) map.set(team.id, team.name)
-    }
-    return map
-  }, [league])
 
   // Same ranking rule as RankingsTab (elo desc) — for the card's rank/tier
   const rankedPlayers = useMemo(
@@ -51,8 +26,6 @@ export default function PlayerStatsSheet({ open, onClose, player, league, insigh
   const card    = computePlayerCard(player, insights, rankedPlayers)
   const label   = player.displayName || player.name
   const curve   = (insights.timelines.byPlayer.get(player.id) || []).map(pt => pt.elo)
-  const entries = insights.matchIndex.get(player.id) || []
-  const recent  = entries.slice(-RECENT_MATCHES).reverse()
 
   return (
     <AppSheet
@@ -91,32 +64,6 @@ export default function PlayerStatsSheet({ open, onClose, player, league, insigh
             </div>
           )}
         </div>
-      )}
-
-      {/* ── Recent matches ── */}
-      <div className="text-[11px] font-bold text-dim tracking-wide uppercase mb-2">Recent Matches</div>
-      {recent.length > 0 ? (
-        <div className="bg-bg border border-line rounded-xl overflow-hidden mb-3">
-          {recent.map((e, i, arr) => (
-            <div
-              key={e.match.id}
-              className={`flex items-center gap-2.5 px-3 py-2.5 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}
-            >
-              <AppBadge text={e.won ? 'W' : 'L'} variant={e.won ? 'success' : 'error'} />
-              <div className="flex-1 min-w-0">
-                <div className="text-[12px] font-medium text-text truncate">
-                  vs {teamNames.get(e.opponentTeamId) || 'Unknown'}
-                </div>
-                <div className="text-[10px] text-dim truncate">
-                  {e.tournamentName}{formatDate(e.date) && <> · {formatDate(e.date)}</>}
-                </div>
-              </div>
-              <span className="text-[12px] font-semibold text-dim flex-shrink-0">{setsLine(e.match)}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-[12px] text-dim text-center py-5 mb-3">No matches yet</div>
       )}
 
       {/* ── Full profile link ── */}

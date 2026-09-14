@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, X, MapPin, Trophy, Play, Calendar,
-  ChevronDown, Plus, Bell, Check,
+  ChevronDown, Plus, Bell, Check, WifiOff,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { BallSpinner } from '../components/ui-new'
@@ -1024,6 +1024,28 @@ export default function Landing() {
             </div>
           </div>
         )}
+
+        {/* ── Device-only tournaments ──
+             Shown to everyone: it needs no account and no signal, and it is the
+             only thing on this screen that still works with neither. ── */}
+        <div className="px-4 pb-[18px]">
+          <button
+            onClick={() => navigate('/local')}
+            className="w-full flex items-center gap-3 px-[14px] py-3 bg-surface border border-line rounded-[14px] text-left cursor-pointer active:bg-alt/40 transition-colors"
+          >
+            <span className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center text-accent shrink-0">
+              <WifiOff size={17} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[13px] font-bold text-text leading-snug">
+                Tournament without signal
+              </span>
+              <span className="block text-[11px] text-dim mt-0.5 leading-snug">
+                Runs entirely on this phone. No account needed.
+              </span>
+            </span>
+          </button>
+        </div>
 
         {/* Breathing room when logged in */}
         {isLoggedIn && <div className="h-6" />}

@@ -18,6 +18,21 @@ import { entryPath } from '../lib/appEntry'
 
 const FLAG = 'arenix.startupRedirect.done'
 
+// Hard ceiling on the whole decision. Every query below is a "nice to have"
+// shortcut past the landing page, so a slow or dead network must never hold
+// the app hostage: on a beach with no signal the fetches hang until the TCP
+// stack gives up (minutes), leaving the user staring at a spinner with no way
+// to reach the app at all. When the budget runs out we simply render Landing.
+const DECISION_TIMEOUT_MS = 3500
+
+/** Resolves to `fallback` if `promise` has not settled within `ms`. */
+function withTimeout(promise, ms, fallback = null) {
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve(fallback), ms)),
+  ])
+}
+
 function redirectAlreadyDone() {
   try { return sessionStorage.getItem(FLAG) === '1' } catch { return true }
 }
@@ -83,26 +98,29 @@ export function useStartupRedirect() {
     // and failed queries also count; never retry within the session.
     markRedirectDone()
 
-    ;(async () => {
-      let target = null
-      try {
-        if (session) {
-          const userId = session.user.id
-          const leagueId =
-            getLastLeague(userId) ||
-            (await getLastPlayedLeagueId()) ||
-            (await getMyLeagues()).at(-1)?.id // ordered granted_at asc → last = most recent
-          if (leagueId) target = `/league/${leagueId}`
-        } else {
-          target = pickGuestTarget(await getPublicLeagues())
-        }
-      } catch {
-        target = null // any failure = stay on landing
+    async function decide() {
+      if (session) {
+        const userId = session.user.id
+        // Reads localStorage, so it resolves offline: a logged-in user with a
+        // known league still gets the shortcut with no network at all.
+        const cached = getLastLeague(userId)
+        if (cached) return `/league/${cached}`
+
+        const leagueId =
+          (await getLastPlayedLeagueId()) ||
+          (await getMyLeagues()).at(-1)?.id // ordered granted_at asc → last = most recent
+        return leagueId ? `/league/${leagueId}` : null
       }
-      if (cancelled) return
-      if (target) navigate(target, { replace: true })
-      else setDeciding(false)
-    })()
+      return pickGuestTarget(await getPublicLeagues())
+    }
+
+    withTimeout(decide(), DECISION_TIMEOUT_MS)
+      .catch(() => null) // any failure = stay on landing
+      .then(target => {
+        if (cancelled) return
+        if (target) navigate(target, { replace: true })
+        else setDeciding(false)
+      })
 
     return () => { cancelled = true }
   }, [deciding, session, navigate])

@@ -98,6 +98,29 @@ export default function LocalLiveMatch() {
     )
   }
 
+  // A played match must never reach the scoring screen — re-scoring it would
+  // overwrite the recorded result and, in a knockout, re-advance the bracket.
+  // The tab wiring already routes finished matches to their stats, so this only
+  // catches a stale back-navigation or a pasted URL.
+  const thisMatch = allMatches.find(m => m.id === mid)
+  if (thisMatch?.played) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text gap-2 px-6 text-center">
+        <div className="text-[18px] font-bold">Match already played</div>
+        <div className="text-[13px] text-dim">
+          {thisMatch.score1} – {thisMatch.score2}. Open it from the tournament to
+          see the full stats.
+        </div>
+        <button
+          onClick={backToTournament}
+          className="mt-4 text-[13px] text-accent font-semibold bg-transparent border-0 cursor-pointer"
+        >
+          ← Back to tournament
+        </button>
+      </div>
+    )
+  }
+
   if (live.showRestore) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-bg text-text p-6">

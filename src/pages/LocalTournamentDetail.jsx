@@ -26,6 +26,7 @@ import MatchesTab from '../components/tournament/MatchesTab'
 import StatsTab from '../components/tournament/StatsTab'
 import TournamentStatsScreen from '../components/TournamentStatsScreen'
 import StatusBadge from '../components/tournament/StatusBadge'
+import MatchStatsOverlay from '../components/tournament/MatchStatsOverlay'
 import { useToast } from '../contexts/ToastContext'
 
 export default function LocalTournamentDetail() {
@@ -37,6 +38,7 @@ export default function LocalTournamentDetail() {
 
   const [activeTab, setActiveTab] = useState('standings')
   const [showStats, setShowStats] = useState(false)
+  const [statsMatch, setStatsMatch] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [confirm, setConfirm] = useState(null)
 
@@ -86,9 +88,16 @@ export default function LocalTournamentDetail() {
   const scoringLevel = resolveScoringLevel(tournament, null)
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+  // MatchesTab and KnockoutResults split these two deliberately: onStartMatch
+  // only fires for a match that has not been played, onMatchClick only for one
+  // that has. Wiring both to the live screen would reopen match setup on a
+  // finished game and let it be scored a second time.
   const handleStartMatch = (match) => {
+    if (match?.played) { setStatsMatch(match); return }
     navigate(`/local/${tid}/match/${match.id}`)
   }
+
+  const handleMatchClick = (match) => setStatsMatch(match)
 
   const handleRenameTeam = async (teamId, newName) => {
     try {
@@ -207,7 +216,7 @@ export default function LocalTournamentDetail() {
             onGenerateKnockout={handleGenerateKnockout}
             isGeneratingKnockout={generating}
             onRenameTeam={handleRenameTeam}
-            onMatchClick={handleStartMatch}
+            onMatchClick={handleMatchClick}
           />
         )}
 
@@ -217,7 +226,7 @@ export default function LocalTournamentDetail() {
             players={players}
             canScore
             onStartMatch={handleStartMatch}
-            onMatchClick={handleStartMatch}
+            onMatchClick={handleMatchClick}
           />
         )}
 
@@ -250,6 +259,23 @@ export default function LocalTournamentDetail() {
           </div>
         </div>
       </main>
+
+      {statsMatch && (
+        <MatchStatsOverlay
+          match={statsMatch}
+          tournament={tournament}
+          leaguePlayers={players}
+          scoringLevel={scoringLevel}
+          navigate={navigate}
+          tournamentId={tid}
+          // Editing a finished match needs local reopen/quick-edit backends that
+          // do not exist yet, and on a knockout it has to unwind the bracket.
+          // Read-only until that is built, rather than offering a broken menu.
+          isAdmin={false}
+          onClose={() => setStatsMatch(null)}
+          onSaved={() => setStatsMatch(null)}
+        />
+      )}
 
       {showStats && (
         <TournamentStatsScreen

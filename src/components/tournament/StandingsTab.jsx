@@ -98,9 +98,9 @@ export default function StandingsTab({
             <button
               onClick={handleGenerateClick}
               disabled={!allMatchesPlayed || isGeneratingKnockout}
-              className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white border-0 transition-all ${
+              className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold border-0 transition-all ${
                 allMatchesPlayed && !isGeneratingKnockout
-                  ? 'bg-free cursor-pointer hover:opacity-90'
+                  ? 'bg-free text-white cursor-pointer hover:opacity-90'
                   : 'bg-surface border border-line text-dim cursor-not-allowed'
               }`}
             >
@@ -162,9 +162,9 @@ export default function StandingsTab({
           <button
             onClick={handleGenerateClick}
             disabled={!allGroupMatchesPlayed || isGeneratingKnockout}
-            className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold text-white border-0 transition-all ${
+            className={`w-full min-h-[44px] rounded-xl text-[14px] font-bold border-0 transition-all ${
               allGroupMatchesPlayed && !isGeneratingKnockout
-                ? 'bg-free cursor-pointer hover:opacity-90'
+                ? 'bg-free text-white cursor-pointer hover:opacity-90'
                 : 'bg-surface border border-line text-dim cursor-not-allowed'
             }`}
           >

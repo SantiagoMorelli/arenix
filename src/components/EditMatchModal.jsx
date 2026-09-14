@@ -61,7 +61,25 @@ function reconstructGameState(match, tournament) {
   }
 }
 
-export default function EditMatchModal({ match, tournament, teams, leagueId, tournamentId, onSave, onClose, navigate }) {
+/**
+ * EditMatchModal
+ *
+ * The backend operations are injected so the same modal serves both league
+ * matches and device-only local tournaments. Defaults point at Supabase, so
+ * existing call sites need no changes.
+ *
+ * @param {function} [quickEdit]   (matchId, sets, score1, score2, winnerId, tournament) => Promise
+ * @param {function} [reopen]      (matchId, tournament) => Promise
+ * @param {string}   [saveKey]     localStorage key the reopened game restores from
+ * @param {function} [buildMatchPath] (matchId) => route to the live match screen
+ */
+export default function EditMatchModal({
+  match, tournament, teams, leagueId, tournamentId, onSave, onClose, navigate,
+  quickEdit = quickEditMatchScores,
+  reopen = reopenMatch,
+  saveKey = SAVE_KEY,
+  buildMatchPath,
+}) {
   const hasSets = match.sets && match.sets.length > 0
 
   // Build editable sets array: [{ s1, s2 }]
@@ -117,7 +135,7 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
       const newSets = hasSets
         ? computedSets.map(s => ({ s1: s.s1, s2: s.s2, winner: s.winner }))
         : null
-      await quickEditMatchScores(match.id, newSets, newScore1, newScore2, matchWinner, tournament)
+      await quickEdit(match.id, newSets, newScore1, newScore2, matchWinner, tournament)
       onSave()
     } catch (err) {
       setError('Failed to save. Please try again.')
@@ -130,10 +148,14 @@ export default function EditMatchModal({ match, tournament, teams, leagueId, tou
     setReopening(true)
     setError(null)
     try {
-      await reopenMatch(match.id, tournament)
+      await reopen(match.id, tournament)
       const gameState = reconstructGameState(match, tournament)
-      try { localStorage.setItem(SAVE_KEY, JSON.stringify(gameState)) } catch {}
-      navigate(`/league/${leagueId}/tournament/${tournamentId}/match/${match.id}`)
+      try { localStorage.setItem(saveKey, JSON.stringify(gameState)) } catch {}
+      navigate(
+        buildMatchPath
+          ? buildMatchPath(match.id)
+          : `/league/${leagueId}/tournament/${tournamentId}/match/${match.id}`
+      )
     } catch (err) {
       setError('Failed to reopen match. Please try again.')
       setReopening(false)

@@ -51,6 +51,10 @@ const LeaguePublicView     = lazy(() => import('./pages/LeaguePublicView'))
 const PlayerProfile        = lazy(() => import('./pages/PlayerProfile'))
 const ChartTest            = lazy(() => import('./pages/ChartTest'))
 const DebugStorage         = lazy(() => import('./pages/DebugStorage'))
+const LocalTournamentList   = lazy(() => import('./pages/LocalTournamentList'))
+const LocalTournamentWizard = lazy(() => import('./pages/LocalTournamentWizard'))
+const LocalTournamentDetail = lazy(() => import('./pages/LocalTournamentDetail'))
+const LocalLiveMatch        = lazy(() => import('./pages/LocalLiveMatch'))
 
 // ── Suspense fallback ──────────────────────────────────────────────────────────
 function RouteFallback() {
@@ -136,6 +140,14 @@ export default function AppRouter() {
               Visitors following old /free-play/:id/join links land here; the FreePlayJoin
               component will handle fetching by id fallback. */}
           <Route path="/free-play/:id/join"   element={<FreePlayJoin />} />
+
+          {/* ── Public: device-only tournaments ──
+               Outside ProtectedRoute and outside /league/* by design: a local
+               tournament needs no account, no signal, and belongs to no league. ── */}
+          <Route path="/local"                 element={<LocalTournamentList />}   />
+          <Route path="/local/new"             element={<LocalTournamentWizard />} />
+          <Route path="/local/:tid"            element={<LocalTournamentDetail />} />
+          <Route path="/local/:tid/match/:mid" element={<LocalLiveMatch />}        />
 
           {/* ── Protected: join league via invite code ── */}
           <Route path="/join/:code" element={<ProtectedRoute><JoinLeague /></ProtectedRoute>} />
